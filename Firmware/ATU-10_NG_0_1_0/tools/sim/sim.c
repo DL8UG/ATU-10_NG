@@ -20,6 +20,9 @@
 //   --tol %        component tolerances (random per seed)
 //   --cal A B      real detector calibration (the firmware assumes 1.14 0.4)
 //   --retune %     tune, move the frequency by this much, report the 2nd tune
+//   --hop N        band changes: per antenna and band set (e.g. 20 <-> 30 m)
+//                  N tunes alternating between the bands (memory of good tunes)
+//   --nomem        forget the memory before every tune
 //   --seed n       random seed
 //   --search n     Cell 12 (search effort), --target n  Cell 11
 
@@ -30,6 +33,7 @@
 #include "model.h"
 
 extern const char *glue_name;
+extern int glue_nomem;
 void glue_init(int search, int target);
 void glue_cold(void);
 void glue_tune(void);
@@ -63,6 +67,48 @@ static double best_swr(void) {
    return swr_of(best);
 }
 
+static void report(const char *suite, const char *label, double mhz, double best) {
+   printf("%s\t%s\t%.3f\t%.3f\t%.3f\t%ld\t%ld\t%.2f\t%d/%d/%d\t%d/%d/%d\n", suite, label, mhz,
+          swr_of(gamma_of(r_l, r_c, r_sw)), best, relay_steps, measurements, time_s,
+          r_sw, r_l, r_c, bsw, bl, bc);
+}
+
+// Band changes as an operator makes them: per antenna a few band sets
+// (e.g. 20 <-> 30 m), N tunes switching between the bands of the set,
+// each at a random frequency within the band, without forgetting in between
+static const int hop_sets[][4] = {   // band indices (see band_names), -1 = end
+   {4, 3, -1}, {2, 4, -1}, {1, 2, -1}, {4, 5, 6, -1}, {2, 3, 4, -1}, {6, 8, -1},
+};
+
+static void run_hop(const char *suite, int n) {
+   unsigned lcg = 12345;   // own generator: the same bands whatever the noise uses
+   char label[96];
+   for(int a = 0; a < n_antennas; a++) {
+      if(strcmp(suite, "ant") && strcmp(suite, antennas[a].suite)) continue;
+      cur_ant = &antennas[a];
+      for(size_t hs = 0; hs < sizeof hop_sets / sizeof *hop_sets; hs++) {
+         int nb = 0;
+         while(nb < 4 && hop_sets[hs][nb] >= 0) nb++;
+         snprintf(label, sizeof label, "%s, bands", antennas[a].name);
+         for(int i = 0; i < nb; i++)
+            snprintf(label + strlen(label), sizeof label - strlen(label), " %s", band_names[hop_sets[hs][i]]);
+         glue_cold();
+         for(int t = 0; t < n; t++) {
+            int b = hop_sets[hs][t % nb];
+            lcg = lcg * 1103515245u + 12345u;
+            double lo = band_freqs[b][0], hi = band_freqs[b][2];
+            double mhz = lo + (hi - lo) * ((lcg >> 16) & 0x7FFF) / 32768.0;
+            set_freq(mhz * 1e6);
+            double best = best_swr();
+            relay_steps = measurements = 0;
+            time_s = 0;
+            glue_tune();
+            report(antennas[a].suite, label, mhz, best);
+         }
+      }
+   }
+}
+
 static void run(const char *suite, const char *label, double mhz) {
    double best;
    glue_cold();
@@ -75,9 +121,7 @@ static void run(const char *suite, const char *label, double mhz) {
    relay_steps = measurements = 0;
    time_s = 0;
    glue_tune();
-   printf("%s\t%s\t%.3f\t%.3f\t%.3f\t%ld\t%ld\t%.2f\t%d/%d/%d\t%d/%d/%d\n", suite, label, mhz,
-          swr_of(gamma_of(r_l, r_c, r_sw)), best, relay_steps, measurements, time_s,
-          r_sw, r_l, r_c, bsw, bl, bc);
+   report(suite, label, mhz, best);
 }
 
 static void run_std(void) {
@@ -104,7 +148,7 @@ static void run_ants(const char *suite) {
 int main(int argc, char **argv) {
    unsigned seed = 1;
    double tol = 0;
-   int search = 0, target = -1, ant = -1;
+   int search = 0, target = -1, ant = -1, hop = 0;
    double case_mhz = 0, case_r = 0, case_x = 0;
    const char *suite = "std";
    for(int i = 1; i < argc; i++) {
@@ -117,6 +161,8 @@ int main(int argc, char **argv) {
       else if(!strcmp(o, "--tol") && more >= 1) tol = atof(argv[++i]);
       else if(!strcmp(o, "--retune") && more >= 1) retune = atof(argv[++i]);
       else if(!strcmp(o, "--seed") && more >= 1) seed = (unsigned)atoi(argv[++i]);
+      else if(!strcmp(o, "--hop") && more >= 1) hop = atoi(argv[++i]);
+      else if(!strcmp(o, "--nomem")) glue_nomem = 1;
       else if(!strcmp(o, "--search") && more >= 1) search = atoi(argv[++i]);
       else if(!strcmp(o, "--target") && more >= 1) target = atoi(argv[++i]);
       else if(!strcmp(o, "--cal") && more >= 2) { true_a = atof(argv[++i]); true_b = atof(argv[++i]); }
@@ -150,7 +196,8 @@ int main(int argc, char **argv) {
       }
       return 0;
    }
-   if(!strcmp(suite, "std")) run_std();
+   if(hop > 0) run_hop(!strcmp(suite, "std") ? "ant" : suite, hop);
+   else if(!strcmp(suite, "std")) run_std();
    else run_ants(suite);
    return 0;
 }

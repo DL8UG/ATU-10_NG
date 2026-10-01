@@ -9,6 +9,7 @@
 #include "swr.h"
 
 const char *glue_name = "ref";
+int glue_nomem;
 char ind, cap, SW;
 int PWR, SWR, PWR_fixed_old, min_for_start = 10, max_for_start = 150;
 volatile __bit B_short, B_xlong;
