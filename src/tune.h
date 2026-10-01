@@ -22,6 +22,16 @@ enum {
    TUNE_NO_MATCH,                  // nothing better than bypass: relays in bypass
 };
 
+// Memory of the last good tunes (most recent first). The tuner does not
+// know the frequency; it measures the remembered settings at the start of
+// a tune instead, and the one that fits starts a short local search. The
+// firmware keeps the memory in the data EEPROM (tune_mem_changed).
+#define MEM_SLOTS    12
+#define MEM_MAX_SWR  200           // results up to SWR 2.00 are remembered
+extern relays_t tune_mem[MEM_SLOTS];
+extern uint8_t tune_mem_swr[MEM_SLOTS];   // SWR x 100 - 100 reached then (max 255)
+extern uint8_t tune_mem_n, tune_mem_changed;
+
 // Result of the last tune
 extern relays_t tune_best;
 extern uint32_t tune_g2;           // reflection reached, G2_ONE = none
@@ -29,8 +39,9 @@ extern uint16_t tune_swr;          // SWR x 100 reached
 
 // Tunes. 'from' is the current relay setting. If it is the result of an
 // earlier tune, last_swr is the SWR x 100 reached then (0 = no earlier
-// result): a local search from there comes first and is kept if it gets
-// at most QUICK_MARGIN worse than that.
+// result). The current setting and the memory are measured first; from
+// the best of them a local search follows, kept if it gets at most
+// QUICK_MARGIN worse than when that setting was found.
 uint8_t tune_run(const relays_t *from, uint16_t last_swr);
 
 // Provided by the firmware or the simulator

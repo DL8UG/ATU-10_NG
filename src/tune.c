@@ -7,8 +7,10 @@
 // the value a lot and the valley jumps by many steps. A search that changes
 // L and C one after the other stops on the valley's slope. This one:
 //
-//  1. quick retune: after a small QSY the optimum is usually close to the
-//     last result - a local search from there, done if good enough
+//  1. quick retune: the current setting and the memory of the last 12 good
+//     results are measured; after a QSY or a band change the optimum is
+//     usually close to one of them - a local search from the best, done
+//     if it is about as good as when that setting was found
 //  2. coarse grid: g2 on a logarithmic L x C grid for both capacitor
 //     positions finds the valleys anywhere, not only the nearest one
 //  3. local search from the best grid points that lie in different places:
@@ -51,6 +53,9 @@
 #endif
 #ifndef VALLEY_DIV
 #define VALLEY_DIV     4             // first valley move: 1/4 of the value
+#endif
+#ifndef QUICK_GOOD
+#define QUICK_GOOD     0             // quick retune also kept at this SWR x 100 or better (0 = off)
 #endif
 #ifndef QUICK_MARGIN
 #define QUICK_MARGIN   5             // quick retune kept if at most 0.05 worse than last time
@@ -95,6 +100,9 @@ static const uint8_t grid3[] = {GRID3};
 relays_t tune_best;
 uint32_t tune_g2;
 uint16_t tune_swr;
+relays_t tune_mem[MEM_SLOTS];
+uint8_t tune_mem_swr[MEM_SLOTS];
+uint8_t tune_mem_n, tune_mem_changed;
 
 typedef struct {
    uint32_t g;                       // g2, Pr / Pf
@@ -256,9 +264,13 @@ static uint8_t line_search(relays_t *p, val_t *v, uint8_t axis) {
 static const int8_t dir_l[8] = {1, -1, 0, 0, 1, -1, 1, -1};
 static const int8_t dir_c[8] = {0, 0, 1, -1, -1, 1, 1, -1};
 
-// Pattern search from p until no move of single relay steps improves
+// Pattern search from p until no move of single relay steps improves.
+// Starts with steps of a quarter of the values, or of single relay steps
+// near a known good setting (fine).
+static uint8_t fine;
+
 static uint8_t pattern_search(relays_t *p, val_t *v) {
-   uint8_t sl = p->l / 4, sc = p->c / 4, d, moved, r;
+   uint8_t sl = fine ? 1 : p->l / 4, sc = fine ? 1 : p->c / 4, d, moved, r;
    relays_t q;
    val_t vn;
    if(sl < 1) sl = 1;
@@ -300,7 +312,8 @@ static uint8_t local_search(relays_t *p, val_t *v) {
       PHASE(3);
       for(axis = 0; axis < 2; axis++) {      // 0: move C, search L; 1: move L, search C
          x = axis ? p->l : p->c;
-         for(st = x / VALLEY_DIV > 1 ? (uint8_t)(x / VALLEY_DIV) : 1; ; st = (uint8_t)(st / 2)) {
+         x = fine ? 1 : x / VALLEY_DIV;
+         for(st = x > 1 ? x : 1; ; st = (uint8_t)(st / 2)) {
             for(d = 1; d >= -1; d -= 2) {
                q = *p;
                if(axis) q.l = clamp_add(q.l, (int8_t)(d * (int8_t)st));
@@ -373,17 +386,44 @@ static void keep(relays_t *res, val_t *rv, uint8_t *n, const relays_t *p, const 
    rv[w] = *v;
 }
 
+static uint8_t near(uint8_t a, uint8_t b) {
+   uint8_t d = a > b ? a - b : b - a;
+   return d <= 2 || d <= (a > b ? a : b) / 8;
+}
+
+// puts the result first into the memory; an entry at about the same place
+// is replaced, the oldest one drops out
+static void remember(void) {
+   uint8_t i, j, n = tune_mem_n;
+   if(tune_swr > MEM_MAX_SWR || (tune_best.l == 0 && tune_best.c == 0)) return;
+   for(i = 0; i < n; i++)
+      if(tune_mem[i].sw == tune_best.sw && near(tune_mem[i].l, tune_best.l) && near(tune_mem[i].c, tune_best.c))
+         break;
+   if(i == n && n < MEM_SLOTS) n++;          // nothing to replace: grows
+   if(i == n) i = n - 1;                     // full: the oldest goes
+   for(j = i; j > 0; j--) {
+      tune_mem[j] = tune_mem[j - 1];
+      tune_mem_swr[j] = tune_mem_swr[j - 1];
+   }
+   tune_mem[0] = tune_best;
+   tune_mem_swr[0] = (uint8_t)(tune_swr - 100 > 255 ? 255 : tune_swr - 100);
+   tune_mem_n = n;
+   tune_mem_changed = 1;
+}
+
 uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
    const uint8_t *grid;
    uint8_t ng, k, sw, i, j, a, b, r, n_cand = 0, n_res = 0;
    relays_t cand[CAND_MAX], res[2], p;
    val_t cv[CAND_MAX], rv[2], v, vb;
    uint8_t gi[CAND_MAX], gj[CAND_MAX];
+   uint16_t ref_swr;
 
    i = 0;
    do cache_key[i] = 0; while(++i);          // all 256
    cache_used = 0;
    carrier_seen = 0;
+   fine = 0;
    steps = 0;
    min_uw = (uint32_t)cfg[CFG_MIN_PWR] * 100000;
    max_uw = (uint32_t)cfg[CFG_MAX_PWR] * 1000000;
@@ -405,19 +445,38 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
    if(r != M_OK) goto stop;
    if(target_reached(&v)) {
       finish(&p, v.g);
+      remember();
       return TUNE_OK;
    }
 
-   // 1. quick retune from the last result
-   if(last_swr) {
+   // 1. quick retune from the current setting or a remembered one, the
+   //    one that measures best now
+   ref_swr = last_swr;
+   for(i = 0; i < tune_mem_n; i++) {
+      val_t vm;
+      relays_t *q = &tune_mem[i];
+      if(q->l == p.l && q->c == p.c && q->sw == p.sw) continue;
+      r = probe_at(q, MEAS_N_GRID, &vm);
+      if(r == M_BUDGET) break;
+      if(r != M_OK) goto stop;
+      if(vm.g < v.g || !ref_swr) {
+         p = *q;
+         v = vm;
+         ref_swr = 100 + tune_mem_swr[i];
+      }
+   }
+   if(ref_swr) {
+      fine = 1;
       r = local_search(&p, &v);
+      fine = 0;
       if(r == M_BUDGET) {
          keep(res, rv, &n_res, &p, &v);
          goto results;
       }
       if(r != M_OK) goto stop;
-      if(target_reached(&v) || swr_x100(v.g) <= last_swr + QUICK_MARGIN) {
+      if(target_reached(&v) || swr_x100(v.g) <= ref_swr + QUICK_MARGIN || swr_x100(v.g) <= QUICK_GOOD) {
          finish(&p, v.g);
+         remember();
          return TUNE_OK;
       }
       keep(res, rv, &n_res, &p, &v);
@@ -486,6 +545,7 @@ results:
       return vb.g >= G2_ONE ? TUNE_NO_MATCH : TUNE_OK;
    }
    finish(&res[i], rv[i].g);
+   remember();
    return TUNE_OK;
 
 stop:   // aborted or carrier gone: best setting so far

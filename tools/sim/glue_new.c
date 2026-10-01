@@ -12,6 +12,7 @@ volatile uint8_t Cells[16] = {
    0x05, 0x30, 0x07, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02 };
 
 const char *glue_name = "new";
+int glue_nomem;                    // forget the memory before every tune
 static relays_t cur;
 static uint16_t last_swr;
 
@@ -73,6 +74,7 @@ void glue_init(int search, int target) {
 void glue_cold(void) {   // no earlier result, relays in bypass
    cur.l = cur.c = cur.sw = 0;
    last_swr = 0;
+   tune_mem_n = 0;
    model_relay_set(0, 0, 0);
 }
 
@@ -91,6 +93,7 @@ void glue_tune(void) {
 #ifdef TUNE_STATS
    if(!tunes++) atexit(stats_print);
 #endif
+   if(glue_nomem) tune_mem_n = 0;
    tune_run(&cur, last_swr);
    cur = tune_best;
    last_swr = tune_g2 < G2_ONE && (cur.l || cur.c) ? tune_swr : 0;
