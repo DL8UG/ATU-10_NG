@@ -31,7 +31,7 @@ CELLS = [
     (8, 'Calibration b', 'value / 10', 0, 99, 4),
     (9, 'Calibration a', '1 + value / 100', 0, 99, 14),
     (10, 'Peak hold', '10 ms', 1, 99, 60),
-    (11, 'Tuning target', 'SWR 1 + value / 100, 0 = always full search', 0, 99, 8),
+    (11, 'Tuning target', 'SWR 1 + value / 100, 0 = always full search', 0, 99, 5),
     (12, 'Search effort', '1 = quick, 2 = normal, 3 = thorough', 1, 3, 2),
 ]
 

@@ -9,11 +9,11 @@
 #include "cells.h"
 
 volatile uint8_t Cells[16] = {
-   0x05, 0x30, 0x07, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x08, 0x02 };
+   0x05, 0x30, 0x07, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02 };
 
 const char *glue_name = "new";
 static relays_t cur;
-static uint8_t have_result;
+static uint16_t last_swr;
 
 extern double gauss(void);
 
@@ -72,12 +72,26 @@ void glue_init(int search, int target) {
 
 void glue_cold(void) {   // no earlier result, relays in bypass
    cur.l = cur.c = cur.sw = 0;
-   have_result = 0;
+   last_swr = 0;
    model_relay_set(0, 0, 0);
 }
 
+#ifdef TUNE_STATS
+extern long tune_stats[6];
+static long tunes;
+static void stats_print(void) {
+   static const char *name[] = {"start", "grid", "pattern", "valley", "verify", ""};
+   fprintf(stderr, "relay steps per tune:");
+   for(int i = 0; i < 5; i++) fprintf(stderr, " %s %.1f", name[i], (double)tune_stats[i] / tunes);
+   fprintf(stderr, "\n");
+}
+#endif
+
 void glue_tune(void) {
-   tune_run(&cur, have_result);
+#ifdef TUNE_STATS
+   if(!tunes++) atexit(stats_print);
+#endif
+   tune_run(&cur, last_swr);
    cur = tune_best;
-   have_result = tune_g2 < G2_ONE && (cur.l || cur.c);
+   last_swr = tune_g2 < G2_ONE && (cur.l || cur.c) ? tune_swr : 0;
 }

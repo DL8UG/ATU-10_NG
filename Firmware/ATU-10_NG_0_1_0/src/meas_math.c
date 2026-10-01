@@ -66,11 +66,22 @@ static uint8_t close(uint16_t a, uint16_t b, uint16_t margin) {
    return d <= m;
 }
 
+// |a - b| / max(a, b) in 1/256
+static uint16_t rel_diff(uint16_t a, uint16_t b) {
+   uint16_t d = a > b ? a - b : b - a, mx = a > b ? a : b;
+   return mx ? (uint16_t)(((uint32_t)d << 8) / mx) : 0;
+}
+
 void meas_finish(meas_t *m, uint16_t f1, uint16_t r1, uint16_t r2, uint16_t f2) {
+   uint16_t sp;
    m->fwd = (uint16_t)(((uint32_t)f1 + f2 + 1) / 2);
    m->rev = (uint16_t)(((uint32_t)r1 + r2 + 1) / 2);
    m->pf = power_uw(m->fwd);
    m->pr = power_uw(m->rev);
    m->g2 = g2_calc(m->pf, m->pr);
    m->stable = close(f1, f2, 3 * Q_PER_MV) && close(r1, r2, 3 * Q_PER_MV);
+   // Pr / Pf follows the voltage ratio to the power 1 .. 2: the relative
+   // difference of the halves in g2 is about the sum of both
+   sp = rel_diff(r1, r2) + rel_diff(f1, f2);
+   m->spread = sp > 255 ? 255 : (uint8_t)sp;
 }

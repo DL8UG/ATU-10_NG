@@ -23,6 +23,7 @@ typedef struct {
    uint32_t pf, pr;        // forward and reverse power, uW
    uint32_t g2;            // Pr / Pf, 2^24 = 1
    uint8_t stable;         // the two halves of the measurement agreed
+   uint8_t spread;         // how much the halves differ, relative, 1/256 (noise estimate)
    uint8_t overflow;       // a detector voltage was above the ADC range
 } meas_t;
 

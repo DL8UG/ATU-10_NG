@@ -5,7 +5,7 @@ uint8_t cfg[CELL_COUNT];
 //                                      1   2   3   4   5   6   7   8   9  10  11  12
 const uint8_t cell_min[CELL_COUNT] = {  0,  0,  2,  1,  1, 11,  0,  0,  0,  1,  0,  1 };
 const uint8_t cell_max[CELL_COUNT] = { 99, 99, 30, 99, 99, 99,  1, 99, 99, 99, 99,  3 };
-const uint8_t cell_def[CELL_COUNT] = {  5, 30,  7, 10, 15, 13,  1,  4, 14, 60,  8,  2 };
+const uint8_t cell_def[CELL_COUNT] = {  5, 30,  7, 10, 15, 13,  1,  4, 14, 60,  5,  2 };
 
 #ifdef __XC8
 // volatile: the compiler must read the values from program memory at run
@@ -21,7 +21,7 @@ const volatile uint8_t Cells[CELLS_SIZE] __at(CELLS_ADDR) = {
    0x04,   // 8  calibration b = 0.4 (BAT41 detector diodes)
    0x14,   // 9  calibration a = 1.14 (BAT41)
    0x60,   // 10 peak hold 600 ms
-   0x08,   // 11 tuning target SWR 1.08
+   0x05,   // 11 tuning target SWR 1.05
    0x02,   // 12 search effort 2
    0x00, 0x00, 0x00, 0x00   // spare
 };

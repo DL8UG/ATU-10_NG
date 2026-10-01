@@ -27,9 +27,11 @@ extern relays_t tune_best;
 extern uint32_t tune_g2;           // reflection reached, G2_ONE = none
 extern uint16_t tune_swr;          // SWR x 100 reached
 
-// Tunes. 'from' is the current relay setting; if 'quick' is set it is a
-// good earlier result and a local search from there is tried first.
-uint8_t tune_run(const relays_t *from, uint8_t quick);
+// Tunes. 'from' is the current relay setting. If it is the result of an
+// earlier tune, last_swr is the SWR x 100 reached then (0 = no earlier
+// result): a local search from there comes first and is kept if it gets
+// at most QUICK_MARGIN worse than that.
+uint8_t tune_run(const relays_t *from, uint16_t last_swr);
 
 // Provided by the firmware or the simulator
 void hal_relay_set(uint8_t l, uint8_t c, uint8_t sw);
