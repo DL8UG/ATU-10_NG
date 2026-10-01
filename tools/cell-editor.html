@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATU-10 NG Cell Editor</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --panel: #ffffff; --ink: #1d2124; --muted: #5d656b; --line: #d9d6cc;
+    --accent: #1f6f5c; --accent-ink: #ffffff; --warn: #a3381c; --field: #fbfaf7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15181a; --panel: #1e2225; --ink: #e8e6e1; --muted: #9aa3a8; --line: #343a3e;
+      --accent: #4fb39a; --accent-ink: #0f1412; --warn: #ef8a6b; --field: #181b1d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .drop { border: 2px dashed var(--line); border-radius: 10px; padding: 22px; text-align: center; color: var(--muted); cursor: pointer; }
+  .drop.over { border-color: var(--accent); color: var(--ink); }
+  .file { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
+  td.n { color: var(--muted); width: 2.2em; }
+  td.hex { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--muted); width: 3.5em; }
+  .name { font-weight: 600; }
+  .help { color: var(--muted); font-size: 0.85rem; }
+  input[type=number], select { width: 6.5em; padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px;
+         background: var(--field); color: var(--ink); font: inherit; }
+  .means { font-family: ui-monospace, Menlo, Consolas, monospace; white-space: nowrap; }
+  .changed td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .bad { color: var(--warn); }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
+           background: var(--panel); color: var(--ink); cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  .msg { margin: 0; }
+  .note { color: var(--muted); font-size: 0.85rem; }
+  @media (max-width: 640px) {
+    td.hex, th.hex { display: none; }
+    .help { display: block; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>ATU-10 NG Cell Editor</h1>
+  <p class="sub">Change the settings in a firmware hex file. Runs offline in your browser, nothing is uploaded.</p>
+
+  <div class="panel">
+    <div class="drop" id="drop" tabindex="0">Drop the firmware <b>.hex</b> file here or click to choose it
+      <div class="file" id="fname"></div></div>
+    <input type="file" id="file" accept=".hex,.HEX" hidden>
+    <p class="msg" id="msg"></p>
+  </div>
+
+  <div class="panel" id="editor" hidden>
+    <table>
+      <thead><tr><th>#</th><th>Setting</th><th>Value</th><th>Means</th><th class="hex">Hex</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <div class="panel actions" id="actions" hidden>
+    <button class="primary" id="save">Save hex file</button>
+    <button id="defaults">Default values</button>
+    <button id="reset">Undo changes</button>
+    <span class="note">Copy the saved file onto the tuner's USB drive as usual.</span>
+  </div>
+
+  <p class="note">The settings ("Cells") are 12 BCD coded bytes at address 0xEEE0 of the hex file
+    (records <code>:10EEE000</code> and <code>:10EEF000</code>). The editor changes only these
+    bytes and the record checksums. Values set later in the tuner's setup menu take
+    precedence until the hex file's Cells change.</p>
+</main>
+
+<script id="cells-core">
+// ---- pure logic, also used by the automatic test (tests/test_cell_editor.mjs)
+const CELLS_ADDR = 0xEEE0;
+const CELLS = [
+  // name, help, min, max, default, meaning(v)
+  ["Display off", "minutes without activity, 0 = never", 0, 99, 5, v => v ? v + " min" : "never"],
+  ["Power off", "minutes without activity, 0 = never", 0, 99, 30, v => v ? v + " min" : "never"],
+  ["Relay pulse", "ms per relay pulse", 2, 30, 7, v => v + " ms"],
+  ["Min. tune power", "in 0.1 W", 1, 99, 10, v => (v / 10).toFixed(1) + " W"],
+  ["Max. tune power", "in W", 1, 99, 15, v => v + " W"],
+  ["Auto tune: SWR change", "retune if the SWR changed by more than (value - 10) / 10", 11, 99, 13,
+     v => "> " + ((v - 10) / 10).toFixed(1)],
+  ["Auto tune", "1 = on, 0 = off", 0, 1, 1, v => v ? "on" : "off"],
+  ["Calibration b (1 W)", "b = value / 10, 4 for BAT41 detector diodes", 0, 99, 4, v => "b = " + (v / 10).toFixed(1)],
+  ["Calibration a (10 W)", "a = 1 + value / 100, 14 for BAT41", 0, 99, 14, v => "a = " + (1 + v / 100).toFixed(2)],
+  ["Power peak hold", "in 10 ms", 1, 99, 60, v => v * 10 + " ms"],
+  ["Tune target", "stop at SWR 1 + value / 100, 0 = always full search", 0, 99, 5,
+     v => v ? "SWR " + (1 + v / 100).toFixed(2) : "full search"],
+  ["Search effort", "1 quick, 2 normal, 3 thorough", 1, 3, 2, v => ["", "quick", "normal", "thorough"][v]],
+];
+
+// Parses an Intel HEX text into records, keeping each line as it is
+function parseHex(text) {
+  const lines = text.split(/\r?\n/);
+  const crlf = /\r\n/.test(text);
+  const recs = {};           // address (upper 16 bits 0) -> line index
+  let upper = 0;
+  lines.forEach((line, i) => {
+    if (!line.startsWith(":")) return;
+    const b = hexBytes(line.slice(1));
+    if (b.length !== b[0] + 5 || b.reduce((s, x) => s + x, 0) & 0xFF)
+      throw new Error("line " + (i + 1) + " is not a valid record");
+    if (b[3] === 4) upper = b[4] << 8 | b[5];
+    else if (b[3] === 0 && upper === 0) recs[b[1] << 8 | b[2]] = i;
+  });
+  return { lines, crlf, recs };
+}
+
+function hexBytes(s) {
+  const out = [];
+  for (let i = 0; i < s.length; i += 2) out.push(parseInt(s.slice(i, i + 2), 16));
+  return out;
+}
+
+function record(h, addr) {
+  const i = h.recs[addr];
+  return i === undefined ? null : hexBytes(h.lines[i].slice(1));
+}
+
+// The two Cells records; an error text if the file does not have them
+function checkLayout(h) {
+  for (const a of [CELLS_ADDR, CELLS_ADDR + 16]) {
+    const b = record(h, a);
+    if (!b) return "this hex file has no Cells at 0x" + a.toString(16).toUpperCase() + " (not an ATU-10 NG firmware?)";
+    if (b[0] !== 16) return "the record at 0x" + a.toString(16).toUpperCase() + " is not 16 bytes long";
+    for (let k = 0; k < 8; k++) if (b[5 + 2 * k] !== 0x34) return "the Cells are not stored as RETLW words";
+  }
+  return null;
+}
+
+function readCells(h) {
+  const d = record(h, CELLS_ADDR).slice(4, 20).concat(record(h, CELLS_ADDR + 16).slice(4, 20));
+  return CELLS.map((_, i) => d[2 * i]);
+}
+
+// value -> BCD byte; raw byte -> value or null if invalid
+const toBcd = v => Math.floor(v / 10) << 4 | v % 10;
+function fromBcd(raw, i) {
+  const hi = raw >> 4, lo = raw & 15;
+  if (hi > 9 || lo > 9) return null;
+  const v = hi * 10 + lo;
+  return v >= CELLS[i][2] && v <= CELLS[i][3] ? v : null;
+}
+
+function writeCells(h, values) {
+  values.forEach((v, i) => {
+    const addr = CELLS_ADDR + (i >> 3) * 16;
+    const b = record(h, addr);
+    b[4 + 2 * (i & 7)] = toBcd(v);
+    b[b.length - 1] = -b.slice(0, -1).reduce((s, x) => s + x, 0) & 0xFF;
+    h.lines[h.recs[addr]] = ":" + b.map(x => x.toString(16).toUpperCase().padStart(2, "0")).join("");
+  });
+}
+
+function hexText(h) {
+  return h.lines.join(h.crlf ? "\r\n" : "\n");
+}
+</script>
+
+<script>
+// ---- user interface
+let hex = null, name = "", original = [];
+const $ = id => document.getElementById(id);
+
+function message(text, bad) {
+  $("msg").textContent = text;
+  $("msg").className = "msg" + (bad ? " bad" : "");
+}
+
+function load(file) {
+  file.text().then(text => {
+    try {
+      const h = parseHex(text);
+      const err = checkLayout(h);
+      if (err) throw new Error(err);
+      hex = h;
+      name = file.name;
+      original = readCells(h);
+      $("fname").textContent = file.name;
+      build(original);
+      const invalid = original.filter((r, i) => fromBcd(r, i) === null).length;
+      message(invalid ? invalid + " Cell(s) hold an invalid value; the firmware uses the default for them."
+                      : "Cells read. Change the values and save.", invalid > 0);
+    } catch (e) {
+      hex = null;
+      $("editor").hidden = $("actions").hidden = true;
+      message(e.message, true);
+    }
+  });
+}
+
+function build(raws) {
+  const rows = $("rows");
+  rows.textContent = "";
+  CELLS.forEach(([title, help, min, max, def, means], i) => {
+    const v = fromBcd(raws[i], i);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td class="n">${i + 1}</td>
+      <td><div class="name"></div><div class="help"></div></td>
+      <td><input type="number" min="${min}" max="${max}" step="1"></td>
+      <td class="means"></td><td class="hex"></td>`;
+    tr.querySelector(".name").textContent = title;
+    tr.querySelector(".help").textContent = help + " (" + min + ".." + max + ", default " + def + ")";
+    const input = tr.querySelector("input");
+    input.value = v === null ? def : v;
+    input.dataset.i = i;
+    input.addEventListener("input", update);
+    rows.appendChild(tr);
+  });
+  $("editor").hidden = $("actions").hidden = false;
+  update();
+}
+
+function values() {
+  return [...document.querySelectorAll("#rows input")].map(inp => Number(inp.value));
+}
+
+function update() {
+  let ok = true;
+  document.querySelectorAll("#rows tr").forEach((tr, i) => {
+    const inp = tr.querySelector("input");
+    const v = Number(inp.value), c = CELLS[i];
+    const valid = inp.value !== "" && Number.isInteger(v) && v >= c[2] && v <= c[3];
+    ok = ok && valid;
+    tr.querySelector(".means").textContent = valid ? c[5](v) : "invalid";
+    tr.querySelector(".means").className = "means" + (valid ? "" : " bad");
+    tr.querySelector(".hex").textContent = valid ? "0x" + toBcd(v).toString(16).toUpperCase().padStart(2, "0") : "";
+    tr.classList.toggle("changed", valid && toBcd(v) !== original[i]);
+  });
+  $("save").disabled = !ok;
+}
+
+$("drop").addEventListener("click", () => $("file").click());
+$("drop").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") $("file").click(); });
+$("file").addEventListener("change", e => e.target.files[0] && load(e.target.files[0]));
+["dragenter", "dragover"].forEach(t => $("drop").addEventListener(t, e => { e.preventDefault(); $("drop").classList.add("over"); }));
+["dragleave", "drop"].forEach(t => $("drop").addEventListener(t, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
+$("drop").addEventListener("drop", e => e.dataTransfer.files[0] && load(e.dataTransfer.files[0]));
+
+$("save").addEventListener("click", () => {
+  writeCells(hex, values());
+  original = readCells(hex);
+  const blob = new Blob([hexText(hex)], { type: "application/octet-stream" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  update();
+  message("Saved as " + name + " (check your downloads folder).");
+});
+$("defaults").addEventListener("click", () => {
+  document.querySelectorAll("#rows input").forEach((inp, i) => inp.value = CELLS[i][4]);
+  update();
+});
+$("reset").addEventListener("click", () => build(original));
+</script>
+</body>
+</html>
