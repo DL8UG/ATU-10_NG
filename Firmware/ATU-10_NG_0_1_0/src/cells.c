@@ -25,7 +25,9 @@ const volatile uint8_t Cells[CELLS_SIZE] __at(CELLS_ADDR) = {
    0x02,   // 12 search effort 2
    0x00, 0x00, 0x00, 0x00   // spare
 };
-#endif   // on the PC the unit test defines Cells[] (writable) before including this file
+#else
+extern volatile uint8_t Cells[CELLS_SIZE];   // on the PC: defined by the test / simulator
+#endif
 
 uint8_t cell_decode(uint8_t i, uint8_t bcd) {
    uint8_t v;
