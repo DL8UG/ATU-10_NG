@@ -48,14 +48,18 @@ static void set_freq(double f) {
    if(cur_ant) z_load = ant_eval(cur_ant, f);
 }
 
+static int bl, bc, bsw;
+
 static double best_swr(void) {
    double best = 1;
+   bl = bc = bsw = 0;
    for(int sw = 0; sw < 2; sw++)
       for(int l = 0; l < 128; l++)
          for(int c = 0; c < 128; c++) {
             double g = gamma_of(l, c, sw);
-            if(g < best) best = g;
+            if(g < best) { best = g; bl = l; bc = c; bsw = sw; }
          }
+   if(trace) fprintf(stderr, "optimum: SW=%d L=%d C=%d SWR %.3f\n", bsw, bl, bc, swr_of(best));
    return swr_of(best);
 }
 
@@ -71,8 +75,9 @@ static void run(const char *suite, const char *label, double mhz) {
    relay_steps = measurements = 0;
    time_s = 0;
    glue_tune();
-   printf("%s\t%s\t%.3f\t%.3f\t%.3f\t%ld\t%ld\t%.2f\n", suite, label, mhz,
-          swr_of(gamma_of(r_l, r_c, r_sw)), best, relay_steps, measurements, time_s);
+   printf("%s\t%s\t%.3f\t%.3f\t%.3f\t%ld\t%ld\t%.2f\t%d/%d/%d\t%d/%d/%d\n", suite, label, mhz,
+          swr_of(gamma_of(r_l, r_c, r_sw)), best, relay_steps, measurements, time_s,
+          r_sw, r_l, r_c, bsw, bl, bc);
 }
 
 static void run_std(void) {

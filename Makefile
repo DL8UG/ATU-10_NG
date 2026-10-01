@@ -54,7 +54,7 @@ test: $(addprefix build/test_, $(TESTS)) $(TARGET).hex
 # ---- PC simulator of the tuning algorithm (tools/sim, see sim.c)
 SIM_SRC  = $(addprefix tools/sim/, sim.c model.c antennas.c)
 SIM_FW   = src/tune.c src/meas_math.c src/cells.c
-SIMFLAGS = -O2 -std=c99 -Wall -D_DEFAULT_SOURCE
+SIMFLAGS = -O2 -std=c99 -Wall -D_DEFAULT_SOURCE $(SIMDEF)
 
 build/sim: $(SIM_SRC) tools/sim/glue_new.c tools/sim/model.h $(SIM_FW) $(HDR)
 	mkdir -p build
