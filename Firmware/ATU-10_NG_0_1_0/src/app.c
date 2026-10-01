@@ -13,6 +13,8 @@
 #include "nvm.h"
 #include "buttons.h"
 #include "display.h"
+#include "settings.h"
+#include "setup.h"
 #include "version.h"
 
 #define BATT_MS     3000       // battery check and LED blink
@@ -23,7 +25,7 @@
 #define AUTO_STEADY 4          // auto tune after this many measurements in a row
 
 static uint32_t t_batt, t_watch, t_show, t_refresh, t_active, t_led, t_msg;
-static uint8_t led_on, msg_on, auto_cnt, auto_tune;
+static uint8_t led_on, msg_on, auto_cnt, auto_tune, go_off;
 static uint16_t swr_ref;       // SWR of the last tune, reference for auto tune
 static uint16_t shown_pwr = 0xFFFF, shown_swr = 0xFFFF;
 static meas_t peak;            // peak hold for the display
@@ -198,13 +200,15 @@ static void greeting(void) {
 static void start_screen(void) {
    disp_power(1);
    greeting();
+   if(BUTTON_DOWN) setup_run();                // still held after the greeting
    show_screen();
    buttons_clear();                            // the press that woke us is no event
    t_active = tick_ms();
 }
 
 // Sleeps until the button is held for 1.6 s. The relays keep their setting
-// without power; the watchdog is off while sleeping.
+// without power; the watchdog is off while sleeping. The caller starts the
+// display again (start_screen) - one hardware stack level less.
 static void power_off(void) {
    uint8_t n;
    disp_power(0);
@@ -231,7 +235,6 @@ static void power_off(void) {
    INTCONbits.GIE = 1;
    WDT_ON();
    meas_battery();
-   start_screen();
 }
 
 static void battery_check(void) {
@@ -243,11 +246,7 @@ static void battery_check(void) {
    else LED_RED = 0;
    led_on = 1;
    t_led = tick_ms();
-   if(vbat_mv < LOW_BATT_MV) {
-      wake();
-      message_wait("LOW BATT", 2000);
-      power_off();
-   }
+   if(vbat_mv < LOW_BATT_MV) go_off = 2;         // main loop switches off
 }
 
 // Why the PIC was reset, shown for 2 s; nothing after a normal power-up
@@ -301,7 +300,7 @@ void main(void) {
    uint32_t now;
    board_init();
    bor_only = PCON0bits.nPOR && !PCON0bits.nBOR;
-   cells_load();
+   settings_load();
    meas_init();
    meas_battery();
    mem_load();
@@ -338,7 +337,7 @@ void main(void) {
       switch(ev) {
          case EV_SHORT:     wake(); bypass_toggle(!st.bypass); break;
          case EV_LONG:      do_tune(); break;
-         case EV_XLONG:     wake(); message_wait("POWER OFF", 1500); power_off(); break;
+         case EV_XLONG:     go_off = 1; break;
          case EV_EXT_SHORT: wake(); bypass_toggle(1); break;
          case EV_EXT_LONG:  do_tune(); break;
       }
@@ -372,7 +371,18 @@ void main(void) {
       if(disp_is_on() && cfg[CFG_DISP_OFF] && now - t_active >= (uint32_t)cfg[CFG_DISP_OFF] * 60000)
          disp_power(0);
       if(cfg[CFG_POWER_OFF] && now - t_active >= (uint32_t)cfg[CFG_POWER_OFF] * 60000)
+         go_off = 3;
+      if(go_off) {
+         if(go_off < 3) {
+            wake();
+            message_wait(go_off == 1 ? "POWER OFF" : "LOW BATT", 1500);
+         }
+         go_off = 0;
          power_off();
+         start_screen();
+         now = tick_ms();
+         t_batt = t_watch = t_show = t_refresh = now;
+      }
       disp_service();
    }
 }

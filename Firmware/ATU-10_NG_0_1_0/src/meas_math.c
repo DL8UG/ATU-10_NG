@@ -68,11 +68,9 @@ static uint8_t close(uint16_t a, uint16_t b, uint16_t margin) {
    return d <= m;
 }
 
-// |a - b| / max(a, b) in 1/256
-static uint16_t rel_diff(uint16_t a, uint16_t b) {
-   uint16_t d = a > b ? a - b : b - a, mx = a > b ? a : b;
-   return mx ? (uint16_t)(((uint32_t)d << 8) / mx) : 0;
-}
+// |a - b| / max(a, b) in 1/256 (a macro: no extra hardware stack level)
+#define REL_DIFF(a, b) ((a) > (b) ? (uint16_t)(((uint32_t)((a) - (b)) << 8) / (a)) \
+                      : (b) ? (uint16_t)(((uint32_t)((b) - (a)) << 8) / (b)) : 0)
 
 void meas_finish(meas_t *m, uint16_t f1, uint16_t r1, uint16_t r2, uint16_t f2) {
    uint16_t sp;
@@ -84,6 +82,6 @@ void meas_finish(meas_t *m, uint16_t f1, uint16_t r1, uint16_t r2, uint16_t f2) 
    m->stable = close(f1, f2, 3 * Q_PER_MV) && close(r1, r2, 3 * Q_PER_MV);
    // Pr / Pf follows the voltage ratio to the power 1 .. 2: the relative
    // difference of the halves in g2 is about the sum of both
-   sp = rel_diff(r1, r2) + rel_diff(f1, f2);
+   sp = REL_DIFF(r1, r2) + REL_DIFF(f1, f2);
    m->spread = sp > 255 ? 255 : (uint8_t)sp;
 }
