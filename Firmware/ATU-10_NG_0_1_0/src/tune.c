@@ -148,47 +148,44 @@ static uint8_t slot_of(uint16_t key) {
    return s;
 }
 
-// One valid measurement at the current relay setting: waits for a carrier
-// in the allowed power range, repeats unsteady ones a few times
-static uint8_t take(meas_t *m, uint8_t n) {
-   uint16_t wait = 0;
-   uint8_t unstable = 0;
-   for(;;) {
-      if(hal_abort()) return M_ABORT;
-      hal_sample(m, n);
-      if(m->overflow) {             // detector above the ADC range: a QRP rig delivers
-         m->g2 = G2_ONE;            // more at a strong mismatch, count it as useless
-         m->spread = 0;
+// g2 of a setting. Switches the relays and takes one valid measurement:
+// waits for a carrier in the allowed power range, repeats an unsteady one
+// up to UNSTABLE_MAX times. Each setting is measured once per tune
+// (cached); n = MEAS_N_VERIFY measures again with more averaging.
+static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
+   meas_t m;
+   uint16_t key = key_of(l, c, sw), wait = 0;
+   uint8_t s = slot_of(key), unstable = 0;
+   if(n != MEAS_N_VERIFY) {
+      if(cache_key[s] == key) {
+         v->g = cache_g[s] == 0xFFFF ? G2_ONE : (uint32_t)cache_g[s] << 8;
+         v->sp = cache_sp[s];
          return M_OK;
       }
-      if(m->pf < min_uw || pnet_uw(m) > max_uw) {
+      if(steps >= budget) return M_BUDGET;
+      steps++;
+      COUNT();
+   }
+   hal_relay_set(l, c, sw);
+   for(;;) {
+      if(hal_abort()) return M_ABORT;
+      hal_sample(&m, n);
+      if(m.overflow) {               // detector above the ADC range: a QRP rig delivers
+         m.g2 = G2_ONE;              // more at a strong mismatch, count it as useless
+         m.spread = 0;
+         break;
+      }
+      if(m.pf < min_uw || pnet_uw(&m) > max_uw) {
          if(++wait > (carrier_seen ? WAIT_LOST : WAIT_START)) return M_NO_CARRIER;
          hal_wait_ms(10);
          continue;
       }
       carrier_seen = 1;
-      if(m->stable || ++unstable >= UNSTABLE_MAX) return M_OK;
+      if(m.stable || ++unstable >= UNSTABLE_MAX) break;
    }
-}
-
-// g2 of a setting, switched and measured once per tune (cached)
-static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
-   meas_t m;
-   uint16_t key = key_of(l, c, sw);
-   uint8_t s = slot_of(key), r;
-   if(cache_key[s] == key) {
-      v->g = cache_g[s] == 0xFFFF ? G2_ONE : (uint32_t)cache_g[s] << 8;
-      v->sp = cache_sp[s];
-      return M_OK;
-   }
-   if(steps >= budget) return M_BUDGET;
-   steps++;
-   COUNT();
-   hal_relay_set(l, c, sw);
-   r = take(&m, n);
-   if(r != M_OK) return r;
    v->g = m.g2;
    v->sp = m.spread;
+   if(n == MEAS_N_VERIFY) return M_OK;
    if(cache_used < CACHE_SIZE - 1) {
       cache_key[s] = key;
       cache_g[s] = m.g2 >= G2_ONE ? 0xFFFF : (uint16_t)(m.g2 >> 8);
@@ -200,7 +197,6 @@ static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
       best.l = l;
       best.c = c;
       best.sw = sw;
-      hal_progress(swr_x100(best_g));
    }
    return M_OK;
 }
@@ -218,10 +214,6 @@ static uint8_t clamp_add(uint8_t v, int8_t d) {
    return (uint8_t)r;
 }
 
-static uint8_t probe_at(const relays_t *p, uint8_t n, val_t *v) {
-   return probe(p->l, p->c, p->sw, n, v);
-}
-
 // Minimum along one axis (0 = L, 1 = C) from p: steps growing while it
 // improves, then shrinking around the best point
 static uint8_t line_search(relays_t *p, val_t *v, uint8_t axis) {
@@ -234,7 +226,7 @@ static uint8_t line_search(relays_t *p, val_t *v, uint8_t axis) {
       q = *p;
       if(axis) q.c = clamp_add(q.c, dir); else q.l = clamp_add(q.l, dir);
       if(q.l == p->l && q.c == p->c) continue;
-      r = probe_at(&q, MEAS_N_FINE, &vn);
+      r = probe(q.l, q.c, q.sw, MEAS_N_FINE, &vn);
       if(r != M_OK) return r;
       if(better(&vn, v)) break;
    }
@@ -246,7 +238,7 @@ static uint8_t line_search(relays_t *p, val_t *v, uint8_t axis) {
       if(axis) q.c = clamp_add(q.c, (int8_t)(dir * (int8_t)s));
       else q.l = clamp_add(q.l, (int8_t)(dir * (int8_t)s));
       if(q.l != p->l || q.c != p->c) {
-         r = probe_at(&q, MEAS_N_FINE, &vn);
+         r = probe(q.l, q.c, q.sw, MEAS_N_FINE, &vn);
          if(r != M_OK) return r;
          if(better(&vn, v)) {
             *p = q;
@@ -283,7 +275,7 @@ static uint8_t pattern_search(relays_t *p, val_t *v) {
             q.l = clamp_add(p->l, (int8_t)(dir_l[d] * (int8_t)sl));
             q.c = clamp_add(p->c, (int8_t)(dir_c[d] * (int8_t)sc));
             if(q.l == p->l && q.c == p->c) break;
-            r = probe_at(&q, MEAS_N_FINE, &vn);
+            r = probe(q.l, q.c, q.sw, MEAS_N_FINE, &vn);
             if(r != M_OK) return r;
             if(!better(&vn, v)) break;
             *p = q;
@@ -319,7 +311,7 @@ static uint8_t local_search(relays_t *p, val_t *v) {
                if(axis) q.l = clamp_add(q.l, (int8_t)(d * (int8_t)st));
                else q.c = clamp_add(q.c, (int8_t)(d * (int8_t)st));
                if(q.l == p->l && q.c == p->c) continue;
-               r = probe_at(&q, MEAS_N_FINE, &vq);
+               r = probe(q.l, q.c, q.sw, MEAS_N_FINE, &vq);
                if(r != M_OK) return r;
                r = line_search(&q, &vq, axis);
                if(r != M_OK) return r;
@@ -336,7 +328,7 @@ static uint8_t local_search(relays_t *p, val_t *v) {
       // almost the same network, and the better match may be on the other
       q = *p;
       q.sw ^= 1;
-      r = probe_at(&q, MEAS_N_FINE, &vq);
+      r = probe(q.l, q.c, q.sw, MEAS_N_FINE, &vq);
       if(r != M_OK) return r;
       if(vq.g < 2 * v->g) {                  // promising: search there
          r = pattern_search(&q, &vq);
@@ -363,17 +355,6 @@ static void finish(const relays_t *p, uint32_t g2) {
    hal_relay_set(p->l, p->c, p->sw);
 }
 
-// Remeasures a setting with more averaging (not cached)
-static uint8_t verify(const relays_t *p, val_t *v) {
-   meas_t m;
-   uint8_t r;
-   hal_relay_set(p->l, p->c, p->sw);
-   r = take(&m, MEAS_N_VERIFY);
-   v->g = m.g2;
-   v->sp = m.spread;
-   return r;
-}
-
 // keeps the two best results of the local searches
 static void keep(relays_t *res, val_t *rv, uint8_t *n, const relays_t *p, const val_t *v) {
    uint8_t w;
@@ -386,9 +367,11 @@ static void keep(relays_t *res, val_t *rv, uint8_t *n, const relays_t *p, const 
    rv[w] = *v;
 }
 
-static uint8_t near(uint8_t a, uint8_t b) {
-   uint8_t d = a > b ? a - b : b - a;
-   return d <= 2 || d <= (a > b ? a : b) / 8;
+static uint8_t near(uint8_t a, uint8_t b) {   // within 2 steps or 1/8
+   uint8_t d, mx;
+   if(a > b) { d = (uint8_t)(a - b); mx = a; }
+   else { d = (uint8_t)(b - a); mx = b; }
+   return d <= 2 || d <= (uint8_t)(mx >> 3);
 }
 
 // puts the result first into the memory; an entry at about the same place
@@ -441,7 +424,7 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
    // the setting the relays hold now
    PHASE(0);
    p = *from;
-   r = probe_at(&p, MEAS_N_FINE, &v);
+   r = probe(p.l, p.c, p.sw, MEAS_N_FINE, &v);
    if(r != M_OK) goto stop;
    if(target_reached(&v)) {
       finish(&p, v.g);
@@ -456,7 +439,7 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
       val_t vm;
       relays_t *q = &tune_mem[i];
       if(q->l == p.l && q->c == p.c && q->sw == p.sw) continue;
-      r = probe_at(q, MEAS_N_GRID, &vm);
+      r = probe(q->l, q->c, q->sw, MEAS_N_GRID, &vm);
       if(r == M_BUDGET) break;
       if(r != M_OK) goto stop;
       if(vm.g < v.g || !ref_swr) {
@@ -491,7 +474,7 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
             p.l = grid[i];
             p.c = grid[j];
             p.sw = sw;
-            r = probe_at(&p, MEAS_N_GRID, &v);
+            r = probe(p.l, p.c, p.sw, MEAS_N_GRID, &v);
             if(r == M_BUDGET) goto results;
             if(r != M_OK) goto stop;
             if(p.l == 0 && p.c == 0 && sw == 0) vb = v;   // bypass
@@ -516,6 +499,8 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
             }
          }
 
+   hal_progress(swr_x100(best_g));
+
    // 3. local search from each candidate
    for(i = 0; i < n_cand; i++) {
       p = cand[i];
@@ -523,6 +508,7 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
       r = local_search(&p, &v);
       if(r != M_OK && r != M_BUDGET) goto stop;
       keep(res, rv, &n_res, &p, &v);         // with the budget used up: as far as it got
+      hal_progress(swr_x100(best_g));
       if(r == M_BUDGET || target_reached(&v)) break;
    }
 results:
@@ -535,7 +521,7 @@ results:
    // 4. the best results again with more averaging; bypass if not better
    PHASE(4);
    for(i = 0; i < n_res; i++) {
-      r = verify(&res[i], &rv[i]);
+      r = probe(res[i].l, res[i].c, res[i].sw, MEAS_N_VERIFY, &rv[i]);
       if(r != M_OK) goto stop;
    }
    i = n_res > 1 && rv[1].g < rv[0].g ? 1 : 0;

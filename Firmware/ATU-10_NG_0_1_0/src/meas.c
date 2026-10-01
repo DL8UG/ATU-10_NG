@@ -39,13 +39,14 @@ static void adc_ref(uint8_t ref) {
    __delay_us(100);              // reference settles
 }
 
-static uint16_t adc_read(uint8_t ch) {
-   ADPCH = ch;
-   __delay_us(20);               // acquisition
-   ADCON0bits.ADGO = 1;
-   while(ADCON0bits.ADGO) continue;
-   return (uint16_t)ADRESH << 8 | ADRESL;
-}
+// one conversion (a macro: saves a hardware stack level in the tuning)
+#define ADC_READ(ch, res) do { \
+   ADPCH = (ch); \
+   __delay_us(20);               /* acquisition */ \
+   ADCON0bits.ADGO = 1; \
+   while(ADCON0bits.ADGO) continue; \
+   (res) = (uint16_t)ADRESH << 8 | ADRESL; \
+} while(0)
 
 // Average of n samples of a detector in 1/8 mV. Starts in the most
 // sensitive range and moves up when a sample does not fit.
@@ -57,7 +58,7 @@ static uint16_t detector(uint8_t ch, uint8_t n) {
       adc_ref(ref);
       sum = 0;
       for(i = 0; i < n; i++) {
-         s = adc_read(ch);
+         ADC_READ(ch, s);
          if(s > RANGE_TOP && ref != REF_VDD) break;
          if(s >= 1023) ovf = 1;
          sum += s;
@@ -74,9 +75,12 @@ static uint16_t detector(uint8_t ch, uint8_t n) {
 
 uint16_t meas_battery(void) {
    uint8_t i;
-   uint16_t sum = 0;
+   uint16_t sum = 0, s;
    adc_ref(REF_FVR1);
-   for(i = 0; i < 8; i++) sum += adc_read(ADC_CH_BAT);
+   for(i = 0; i < 8; i++) {
+      ADC_READ(ADC_CH_BAT, s);
+      sum += s;
+   }
    vbat_mv = (uint16_t)(((uint32_t)sum * 11 + 4) / 8);
    return vbat_mv;
 }

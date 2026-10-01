@@ -4,10 +4,12 @@
 // P = a V^2 + b V with V in volts, a = 1 + Cell9 / 100, b = Cell8 / 10.
 // With v in 1/8 mV: P[uW] = (100 + c9) v^2 / 6400 + 12.5 c8 v
 // v^2 / 64 < 17.7e6 and (100 + c9) <= 199: the product fits 32 bits.
+// (a macro, so meas_finish needs no extra hardware stack level for it)
+#define POWER_UW(v) ((((uint32_t)(v) * (v)) >> 6) * (uint32_t)(100 + cfg[CFG_CAL_A]) / 100 \
+                     + ((uint32_t)(v) * cfg[CFG_CAL_B] * 25) / 2)
+
 uint32_t power_uw(uint16_t v) {
-   uint32_t sq = ((uint32_t)v * v) >> 6;
-   return sq * (uint32_t)(100 + cfg[CFG_CAL_A]) / 100
-        + ((uint32_t)v * cfg[CFG_CAL_B] * 25) / 2;
+   return POWER_UW(v);
 }
 
 // Pr / Pf as a 24 bit binary fraction, by long division: exact without
@@ -76,8 +78,8 @@ void meas_finish(meas_t *m, uint16_t f1, uint16_t r1, uint16_t r2, uint16_t f2) 
    uint16_t sp;
    m->fwd = (uint16_t)(((uint32_t)f1 + f2 + 1) / 2);
    m->rev = (uint16_t)(((uint32_t)r1 + r2 + 1) / 2);
-   m->pf = power_uw(m->fwd);
-   m->pr = power_uw(m->rev);
+   m->pf = POWER_UW(m->fwd);
+   m->pr = POWER_UW(m->rev);
    m->g2 = g2_calc(m->pf, m->pr);
    m->stable = close(f1, f2, 3 * Q_PER_MV) && close(r1, r2, 3 * Q_PER_MV);
    // Pr / Pf follows the voltage ratio to the power 1 .. 2: the relative

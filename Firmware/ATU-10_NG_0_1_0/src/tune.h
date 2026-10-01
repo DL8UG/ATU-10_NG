@@ -45,10 +45,19 @@ extern uint16_t tune_swr;          // SWR x 100 reached
 uint8_t tune_run(const relays_t *from, uint16_t last_swr);
 
 // Provided by the firmware or the simulator
+#ifdef __XC8   // firmware: called directly, one hardware stack level less
+#define hal_relay_set relays_set
+#define hal_sample    meas_take
+#define hal_wait_ms   delay_ms
+void relays_set(uint8_t l, uint8_t c, uint8_t sw);
+void meas_take(meas_t *m, uint8_t n);
+void delay_ms(uint16_t ms);
+#else
 void hal_relay_set(uint8_t l, uint8_t c, uint8_t sw);
 void hal_sample(meas_t *m, uint8_t n);       // one measurement (meas_take)
-uint8_t hal_abort(void);                     // 1 = stop tuning now
 void hal_wait_ms(uint8_t ms);
-void hal_progress(uint16_t swr);             // best SWR so far, for the display
+#endif
+uint8_t hal_abort(void);                     // 1 = stop tuning now
+void hal_progress(uint16_t swr);             // best SWR so far, for the display (between phases)
 
 #endif

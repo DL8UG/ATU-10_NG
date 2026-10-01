@@ -10,7 +10,8 @@ XC8    ?= $(firstword $(wildcard /opt/microchip/xc8/*/bin/xc8-cc) xc8-cc)
 CPU     = 16LF18877
 # Device Family Pack from https://packs.download.microchip.com (XC8 v3+ ships without it)
 DFP    ?= $(lastword $(wildcard $(HOME)/.local/share/microchip/packs/PIC16F1xxxx_DFP/*))
-SRC     = $(addprefix src/, app.c board.c cells.c config.c meas.c meas_math.c timer.c)
+SRC     = $(addprefix src/, app.c board.c buttons.c cells.c config.c display.c i2c_soft.c \
+             meas.c meas_math.c nvm.c oled.c relays.c timer.c tune.c)
 HDR     = $(wildcard src/*.h)
 # must match the #pragma config values in src/config.c
 CONFIG  = 2904,3CA1,072D,3003,0003
@@ -41,7 +42,7 @@ clean:
 # ---- host unit tests (gcc)
 HOSTCC   = gcc
 HOSTFLAGS = -O2 -std=c99 -Wall -Wextra -D_DEFAULT_SOURCE -Isrc
-TESTS    = cells meas antennas
+TESTS    = cells meas antennas nvm display
 
 build/test_%: tests/test_%.c tests/check.h $(HDR) $(wildcard src/*.c tools/sim/*)
 	mkdir -p build
