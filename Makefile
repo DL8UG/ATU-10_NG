@@ -37,7 +37,7 @@ $(TARGET).hex: build/fw.hex tools/normalize_hex.py tools/cells.py
 clean:
 	rm -rf build
 
-.PHONY: all clean test sim simcompare simretune
+.PHONY: all clean test sim simcompare simretune docs
 
 # ---- host unit tests (gcc)
 HOSTCC   = gcc
@@ -96,3 +96,17 @@ simcompare: $(foreach s,clean noise hard,build/new_$(s).tsv $(if $(HAVE_REF),bui
 simretune: build/sim
 	for p in -3 -1 1 3; do build/sim --suite ant --retune $$p --noise 3; done > build/new_retune.tsv
 	python3 tools/sim/compare.py build/new_retune.tsv
+
+# ---- charts and pictures for the documentation (docs/ at the top of the repository)
+DOCS = ../../docs
+docs: build/sim build/test_display
+	mkdir -p $(DOCS)
+	build/sim --ant 5 3.65 --noise 3 --map build/map.tsv 2> /dev/null > /dev/null
+	python3 tools/sim/plot.py landscape build/map.tsv $(DOCS)/search-landscape.svg \
+	   "Random wire 25.6 m with 9:1 unun, 3.65 MHz"
+	sh tools/sim/run.sh build/sim build/doc_cold.tsv "1 2 3" --noise 3
+	build/sim --hop 12 --noise 3 > build/doc_hop.tsv
+	python3 tools/sim/plot.py times build/doc_cold.tsv build/doc_hop.tsv $(DOCS)/tuning-time.svg
+	build/test_display > /dev/null
+	python3 tools/sim/plot.py screen build/screen_main.pbm $(DOCS)/display-main.png
+	python3 tools/sim/plot.py screen build/screen_greeting.pbm $(DOCS)/display-greeting.png

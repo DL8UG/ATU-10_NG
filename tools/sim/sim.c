@@ -23,6 +23,8 @@
 //   --hop N        band changes: per antenna and band set (e.g. 20 <-> 30 m)
 //                  N tunes alternating between the bands (memory of good tunes)
 //   --nomem        forget the memory before every tune
+//   --map FILE     with --case / --ant: writes the SWR of all relay settings
+//                  ("sw l c swr") and the relay steps of the tune ("step sw l c")
 //   --seed n       random seed
 //   --search n     Cell 12 (search effort), --target n  Cell 11
 
@@ -45,6 +47,7 @@ static const double complex std_loads[] = {
 };
 
 static double retune;
+static FILE *map;
 static const antenna_t *cur_ant;
 
 static void set_freq(double f) {
@@ -64,6 +67,12 @@ static double best_swr(void) {
             if(g < best) { best = g; bl = l; bc = c; bsw = sw; }
          }
    if(trace) fprintf(stderr, "optimum: SW=%d L=%d C=%d SWR %.3f\n", bsw, bl, bc, swr_of(best));
+   if(map) {
+      for(int sw = 0; sw < 2; sw++)
+         for(int l = 0; l < 128; l++)
+            for(int c = 0; c < 128; c++) fprintf(map, "map\t%d\t%d\t%d\t%.4f\n", sw, l, c, swr_of(gamma_of(l, c, sw)));
+      fprintf(map, "opt\t%d\t%d\t%d\t%.4f\n", bsw, bl, bc, swr_of(best));
+   }
    return swr_of(best);
 }
 
@@ -149,6 +158,7 @@ int main(int argc, char **argv) {
    unsigned seed = 1;
    double tol = 0;
    int search = 0, target = -1, ant = -1, hop = 0;
+   const char *map_file = NULL;
    double case_mhz = 0, case_r = 0, case_x = 0;
    const char *suite = "std";
    for(int i = 1; i < argc; i++) {
@@ -163,6 +173,7 @@ int main(int argc, char **argv) {
       else if(!strcmp(o, "--seed") && more >= 1) seed = (unsigned)atoi(argv[++i]);
       else if(!strcmp(o, "--hop") && more >= 1) hop = atoi(argv[++i]);
       else if(!strcmp(o, "--nomem")) glue_nomem = 1;
+      else if(!strcmp(o, "--map") && more >= 1) map_file = argv[++i];
       else if(!strcmp(o, "--search") && more >= 1) search = atoi(argv[++i]);
       else if(!strcmp(o, "--target") && more >= 1) target = atoi(argv[++i]);
       else if(!strcmp(o, "--cal") && more >= 2) { true_a = atof(argv[++i]); true_b = atof(argv[++i]); }
@@ -184,6 +195,7 @@ int main(int argc, char **argv) {
    glue_init(search, target);
    if(case_mhz > 0) {
       trace = 1;
+      if(map_file) trace_file = map = fopen(map_file, "w");
       if(ant >= 0 && ant < n_antennas) {
          cur_ant = &antennas[ant];
          run(cur_ant->suite, cur_ant->name, case_mhz);
