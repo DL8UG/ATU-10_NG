@@ -201,14 +201,24 @@ static void bypass_toggle(uint8_t on) {
 
 // ---------------------------------------------------------------- power
 
+// centred: big text 12 px, small text 6 px per character, 128 px wide
+#define CENTRE_BIG(s)   ((128 - 12 * (sizeof(s) - 1)) / 2)
+#define CENTRE_SMALL(s) ((128 - 6 * (sizeof(s) - 1)) / 2)
+#define GREET_FW "NG " FW_VERSION
+
+// two pages of 1.5 s: the hardware, then the firmware and its version
 static void greeting(void) {
    disp_clear();
-   disp_big(LINE1, 28, "ATU-10");
-   disp_small(2, 31, "FW NG " FW_VERSION);
-   disp_small(3, 13, "DESIGNED BY DL8UG");
+   disp_big(LINE1, CENTRE_BIG("ATU-10"), "ATU-10");
+   disp_small(3, CENTRE_SMALL("HARDWARE BY N7DDC"), "HARDWARE BY N7DDC");
    disp_flush();
    LED_GREEN = 0;
-   delay_ms(3000);
+   delay_ms(1500);
+   disp_clear();
+   disp_big(LINE1, CENTRE_BIG(GREET_FW), GREET_FW);
+   disp_small(3, CENTRE_SMALL("FIRMWARE BY DL8UG"), "FIRMWARE BY DL8UG");
+   disp_flush();
+   delay_ms(1500);
    LED_GREEN = 1;
 }
 

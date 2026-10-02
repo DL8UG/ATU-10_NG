@@ -50,9 +50,12 @@ int main(void) {
    // greeting
    disp_clear();
    disp_big(LINE1, 28, "ATU-10");
-   disp_small(2, 31, "FW NG " FW_VERSION);
-   disp_small(3, 13, "DESIGNED BY DL8UG");
+   disp_small(3, 13, "HARDWARE BY N7DDC");
    dump("greeting");
+   disp_clear();
+   disp_big(LINE1, 16, "NG " FW_VERSION);
+   disp_small(3, 13, "FIRMWARE BY DL8UG");
+   dump("greeting2");
    // main screen
    disp_clear();
    disp_big(LINE1, 0, "PWR");
