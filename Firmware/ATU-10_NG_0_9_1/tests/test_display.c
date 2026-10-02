@@ -49,13 +49,17 @@ int main(void) {
    disp_power(1);
    // greeting
    disp_clear();
-   disp_big(LINE1, 28, "ATU-10");
+   disp_big(LINE1, 29, "ATU-10");
    disp_small(3, 13, "HARDWARE BY N7DDC");
    dump("greeting");
    disp_clear();
-   disp_big(LINE1, 16, "NG " FW_VERSION);
+   disp_big(LINE1, 17, "NG " FW_VERSION);
    disp_small(3, 13, "FIRMWARE BY DL8UG");
    dump("greeting2");
+   // power off: alone in the middle
+   disp_clear();
+   disp_big(LINE_MID, 11, "POWER OFF");
+   dump("poweroff");
    // main screen
    disp_clear();
    disp_big(LINE1, 0, "PWR");

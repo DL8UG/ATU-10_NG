@@ -99,7 +99,7 @@ static void message_end(void) {
    shown_swr = 0xFFFF;
 }
 
-static void message_wait(const char *s, uint16_t ms) {   // blocking, for start-up / power off
+static void message_wait(const char *s, uint16_t ms) {   // blocking, for start-up
    message(s, ms);
    disp_flush();
    delay_ms(ms);
@@ -201,9 +201,10 @@ static void bypass_toggle(uint8_t on) {
 
 // ---------------------------------------------------------------- power
 
-// centred: big text 12 px, small text 6 px per character, 128 px wide
-#define CENTRE_BIG(s)   ((128 - 12 * (sizeof(s) - 1)) / 2)
-#define CENTRE_SMALL(s) ((128 - 6 * (sizeof(s) - 1)) / 2)
+// centred on the 128 px: big text 12 px, small text 6 px per character,
+// without the gap after the last one
+#define CENTRE_BIG(s)   ((128 - 12 * (sizeof(s) - 1) + 2) / 2)
+#define CENTRE_SMALL(s) ((128 - 6 * (sizeof(s) - 1) + 1) / 2)
 #define GREET_FW "NG " FW_VERSION
 
 // two pages of 1.5 s: the hardware, then the firmware and its version
@@ -405,7 +406,12 @@ void main(void) {
       if(go_off) {
          if(go_off < 3) {
             wake();
-            message_wait(go_off == 1 ? "POWER OFF" : "LOW BATT", 1500);
+            // alone in the middle of the display
+            disp_clear();
+            if(go_off == 1) disp_big(LINE_MID, CENTRE_BIG("POWER OFF"), "POWER OFF");
+            else disp_big(LINE_MID, CENTRE_BIG("LOW BATT"), "LOW BATT");
+            disp_flush();
+            delay_ms(1500);
          }
          go_off = 0;
          power_off();
