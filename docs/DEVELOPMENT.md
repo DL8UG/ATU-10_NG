@@ -128,5 +128,5 @@ initialization (`oled.c`), font (`font5x8.h`).
    ```sh
    gh release create v0.9.0 Firmware/ATU-10_NG_0_9_0/ATU-10_NG_0_9_0.hex \
       Firmware/ATU-10_NG_0_9_0.zip Firmware/ATU-10_NG_0_9_0/LICENSE \
-      --title "ATU-10 NG 0.9.0" --notes-file notes.md --prerelease
+      --title "ATU-10 NG 0.9.0" --notes-file notes.md   # --prerelease for a beta
    ```
