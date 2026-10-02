@@ -6,8 +6,7 @@ stable tuner – not the fastest tune.
 
 ![Display](docs/display-main.png)
 
-**Status: 0.9.1, not yet tested on the device (0.9.0 is).** See the
-[timeline](#development-status) below.
+**Status: 0.9.1, tested on the device.** See the [timeline](#development-status) below.
 
 ## Contents
 
@@ -53,7 +52,7 @@ here in the repository: [`Firmware/ATU-10_NG_0_9_1.zip`](Firmware/ATU-10_NG_0_9_
 with the hex file `ATU-10_NG_0_9_1.hex` and the license. What is new: see
 [its README](Firmware/ATU-10_NG_0_9_1/README.md#changes-since-090).
 
-The previous version 0.9.0 (tested on the device) stays available on its
+The previous version 0.9.0 stays available on its
 [release page](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.0).
 
 ## Flashing
@@ -242,7 +241,7 @@ not come on, switch the tuner off and on again.
 |---|---|---|---|
 | 2026-10-02 | 0.1.0 | development | complete new firmware: search, memory of 12 tunes, setup menu, Cells editor; simulator and PC tests |
 | 2026-10-02 | 0.9.0 | release, tested on the device | first device tests passed; review fixes, display clean-up after tuning |
-| 2026-10-02 | 0.9.1 | release, not yet tested on the device | review fixes (auto tune near the minimum power, NO MATCH, tune target 0, bypass pulse during a tune), greeting on two pages, POWER OFF screen |
+| 2026-10-02 | 0.9.1 | release, tested on the device | review fixes (auto tune near the minimum power, NO MATCH, tune target 0, bypass pulse during a tune), greeting on two pages, POWER OFF screen |
 
 More: [Settings in detail](docs/SETTINGS.md) · [How tuning works](docs/TUNING.md) · [Development](docs/DEVELOPMENT.md)
 
