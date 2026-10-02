@@ -217,9 +217,15 @@ More: [Settings in detail](docs/SETTINGS.md) · [How tuning works](docs/TUNING.m
 
 ## Feedback
 
-Reports from use on the air are very welcome – please open an
-[issue](https://github.com/DL8UG/ATU-10_NG/issues) and describe the antenna,
-band, power, the firmware version and what the display showed.
+Problems, questions and reports from use on the air are very welcome. Please
+report them with a detailed description
+
+- as an [issue here on GitHub](https://github.com/DL8UG/ATU-10_NG/issues), or
+- in the groups.io thread [ATU-10 NG firmware](https://groups.io/g/ATU100/topic/atu_10_ng_firmware/121543821).
+
+Please include: the firmware version (shown in the greeting), the antenna and
+feed line, band and frequency, transceiver and power, what the display showed
+(SWR, messages), what you expected instead, and how to make it happen again.
 
 ## License
 
