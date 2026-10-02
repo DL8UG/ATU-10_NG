@@ -88,5 +88,5 @@ initialization (`oled.c`), font (`font5x8.h`).
 1. new folder `Firmware/ATU-10_NG_x_y_z` as a copy of the last one, version in
    `src/version.h` and `Makefile`
 2. `make && make test`, simulator runs
-3. zip with the hex file only, README of the folder, top level README
-   (download link, timeline)
+3. zip with the hex file only, README and LICENSE in the folder, top level
+   README (download link, timeline)

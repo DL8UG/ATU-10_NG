@@ -36,7 +36,7 @@ are spare (`00`).
 
 ## License
 
-Beerware, see [LICENSE](../../LICENSE).
+Beerware, see [LICENSE](LICENSE) (the same as in the top folder).
 
 ## Build
 
