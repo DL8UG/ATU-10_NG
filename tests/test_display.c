@@ -85,6 +85,19 @@ int main(void) {
    disp_big(LINE2, 0, "SWR ");
    dump("tune");
 
+   // drawing what is already there sends nothing (the battery symbol is
+   // drawn again every 3 s)
+   disp_power(1);
+   disp_flush();
+   writes = 0;
+   disp_battery(4200);
+   disp_big(LINE2, 60, "1.05");
+   disp_flush();
+   CHECK_EQ(writes, 0);
+   disp_battery(3000);                           // a change is sent
+   disp_flush();
+   CHECK(writes > 0);
+
    // ---- restart of a display that does not answer
    {
       uint32_t t_init[20];
