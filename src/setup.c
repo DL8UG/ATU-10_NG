@@ -3,7 +3,7 @@
 // Entered when the button is still held after the greeting (keep it
 // pressed when switching on). Then:
 //   short press  next value of the setting shown
-//   long press   next setting; after the last: SAVE, HEX DEFAULTS, EXIT
+//   long press   next setting; after the last: SAVE, HEX VALUES, EXIT
 // On SAVE / HEX VALUES / EXIT a short press does it. Without a press for
 // 60 s the menu ends without saving.
 
@@ -14,6 +14,7 @@
 #include "buttons.h"
 #include "display.h"
 #include "setup.h"
+#include "text.h"
 
 #define TIMEOUT_MS 60000
 
@@ -52,18 +53,8 @@ static const uint8_t list_len[CELL_COUNT] = {
 
 static char txt[11];
 
-// v / 10^dec with dec decimals (dec 0..2) into txt, returns the end
 static char *fmt(char *p, uint16_t v, uint8_t dec) {
-   char t[6];
-   uint8_t n = 0;
-   do {
-      t[n++] = (char)('0' + v % 10);
-      v /= 10;
-      if(n == dec) t[n++] = '.';
-   } while(v || (dec && n <= dec + 1));
-   while(n) *p++ = t[--n];
-   *p = 0;
-   return p;
+   return fmt_num(p, v, dec, 0);
 }
 
 static void cat(char *p, const char *s) {

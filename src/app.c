@@ -15,6 +15,7 @@
 #include "display.h"
 #include "settings.h"
 #include "setup.h"
+#include "text.h"
 #include "version.h"
 
 #define BATT_MS     3000       // battery check and LED blink
@@ -45,18 +46,8 @@ static uint32_t since(uint32_t t) {
 
 static char buf[8];
 
-// v / 10^dec as text with dec decimals, at least 'width' characters
 static const char *num(uint16_t v, uint8_t dec, uint8_t width) {
-   char t[6];
-   uint8_t n = 0, i = 0;
-   do {
-      t[n++] = (char)('0' + v % 10);
-      v /= 10;
-      if(n == dec) t[n++] = '.';
-   } while(v || (dec && n <= dec + 1));
-   while(n < width && i < sizeof buf - 1) { buf[i++] = ' '; width--; }
-   while(n) buf[i++] = t[--n];
-   buf[i] = 0;
+   fmt_num(buf, v, dec, width);
    return buf;
 }
 
@@ -144,29 +135,36 @@ uint8_t hal_abort(void) {
 
 static void do_tune(void) {
    uint8_t r;
+   relays_t from = rel;
    wake();
    LED_GREEN = 0;
    EXT_KEY_OUT = 0;                            // tells the transceiver: tuning
    msg_on = 0;
+   disp_big(LINE2, 0, "         ");            // a message may still be there
    disp_big(LINE2, 0, "TUNE");                 // the SWR so far follows at the right
    disp_flush();
    // in bypass the relays hold no tune result (the memory has it)
    r = tune_run(&rel, !st.bypass && st.last_swr ? (uint16_t)(100 + st.last_swr) : 0);
-   // A result ends the bypass. A stopped tune (e.g. the long press that
-   // goes on to power off) leaves the relays as they were if no carrier
-   // was there; then the bypass stays.
-   if(r == TUNE_OK || r == TUNE_NO_MATCH || rel.l || rel.c || rel.sw) st.bypass = 0;
-   // last_swr: SWR - 1.00 in hundredths, 1..255 (0 = no tune result, so
-   // a perfect 1.00 is kept as 1.01)
-   if(!st.bypass)
-      st.last_swr = (r == TUNE_OK && (rel.l || rel.c))
-                    ? (uint8_t)(tune_swr - 100 > 255 ? 255 : tune_swr > 101 ? tune_swr - 100 : 1) : 0;
+   if(r != TUNE_OK && r != TUNE_NO_MATCH && rel.l == from.l && rel.c == from.c && rel.sw == from.sw) {
+      // Stopped without a change (no carrier, or stopped before anything
+      // better was found, e.g. by the long press that goes on to power
+      // off): everything stays as it was, the bypass too
+   }
+   else {
+      // a result ends the bypass
+      if(r == TUNE_OK || r == TUNE_NO_MATCH || rel.l || rel.c || rel.sw) st.bypass = 0;
+      // last_swr: SWR - 1.00 in hundredths, 1..255 (0 = no tune result,
+      // so a perfect 1.00 is kept as 1.01)
+      if(!st.bypass)
+         st.last_swr = (r == TUNE_OK && (rel.l || rel.c))
+                       ? (uint8_t)(tune_swr - 100 > 255 ? 255 : tune_swr > 101 ? tune_swr - 100 : 1) : 0;
+      swr_ref = tune_swr;
+      swr_last = tune_swr;
+   }
    save_state();
-   swr_ref = tune_swr;
-   swr_last = tune_swr;
    show_swr_label();
    shown_swr = 0xFFFF;
-   show_swr(tune_swr);
+   show_swr(swr_last);
    if(r == TUNE_NO_CARRIER) message("NO POWER", 2000);
    else if(r == TUNE_NO_MATCH) message("NO MATCH", 2000);
    else if(r == TUNE_ABORTED) message("STOP", 1000);
@@ -340,8 +338,10 @@ void main(void) {
       CLRWDT();
 
       ev = buttons_event();
-      if(ev != EV_NONE && !disp_is_on() && ev != EV_EXT_LONG && ev != EV_XLONG) {
-         wake();                               // a dark display: the press only wakes it
+      // a dark display: a button press only wakes it (the user could not
+      // see what it would do); the transceiver's commands and power off act
+      if((ev == EV_SHORT || ev == EV_LONG) && !disp_is_on()) {
+         wake();
          ev = EV_NONE;
       }
       switch(ev) {

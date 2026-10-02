@@ -378,8 +378,10 @@ static uint8_t near(uint8_t a, uint8_t b) {   // within 2 steps or 1/8
 static void remember(void) {
    uint8_t i, j, newest = 0, age, oldest = 0;
    if(tune_swr > MEM_MAX_SWR || (tune_best.l == 0 && tune_best.c == 0)) return;
-   for(j = 0; j < tune_mem_n; j++)           // newest sequence number
-      if(j == 0 || (uint8_t)(tune_mem_seq[j] - newest) < 128) newest = tune_mem_seq[j];
+   for(j = 0, i = 0; j < tune_mem_n; j++) {  // newest sequence number of the used slots
+      if(!tune_mem[j].l && !tune_mem[j].c) continue;
+      if(!i++ || (uint8_t)(tune_mem_seq[j] - newest) < 128) newest = tune_mem_seq[j];
+   }
    for(i = 0; i < tune_mem_n; i++)
       if(tune_mem[i].sw == tune_best.sw && near(tune_mem[i].l, tune_best.l) && near(tune_mem[i].c, tune_best.c))
          break;
@@ -399,6 +401,9 @@ static void remember(void) {
    tune_mem_dirty |= (uint16_t)(1u << i);
 }
 
+// grid point i, j (side sw) next to candidate a, diagonals included
+#define NEIGHBOUR(a) (cand[a].sw == sw && (uint8_t)(gi[a] - i + 1) <= 2 && (uint8_t)(gj[a] - j + 1) <= 2)
+
 uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
    const uint8_t *grid;
    uint8_t ng, k, sw, i, j, a, b, r, n_cand = 0, n_res = 0;
@@ -417,8 +422,6 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
    max_uw = (uint32_t)cfg[CFG_MAX_PWR] * 1000000;
    best_g = G2_ONE + 1;
    best = *from;
-   vb.g = G2_ONE;
-   vb.sp = 0;
 
    switch(cfg[CFG_SEARCH]) {
       case 1:  grid = grid1; ng = sizeof grid1; k = K1; budget = BUDGET1; break;
@@ -437,11 +440,11 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
       return TUNE_OK;
    }
 
-   // 1. quick retune from the current setting or a remembered one, the
-   //    one that measures best now. A check whether a setting "fits"
-   //    (measures about as well as when found) made it slower in the
-   //    simulator without better results: the rule below (kept only if at
-   //    most QUICK_MARGIN worse than when found) already decides.
+   // 1. quick retune from the current setting (if it is a tune result) or
+   //    a remembered one, the one that measures best now. A check whether
+   //    a setting "fits" (measures about as well as when found) made it
+   //    slower in the simulator without better results: the rule below
+   //    (kept only if at most QUICK_MARGIN worse than when found) decides.
    ref_swr = last_swr;
    for(i = 0; i < tune_mem_n; i++) {
       val_t vm;
@@ -450,7 +453,7 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
       r = probe(q->l, q->c, q->sw, MEAS_N_GRID, &vm);
       if(r == M_BUDGET) break;
       if(r != M_OK) goto stop;
-      if(vm.g < v.g || !ref_swr) {
+      if(vm.g < v.g) {
          p = *q;
          v = vm;
          ref_swr = 100 + tune_mem_swr[i];
@@ -485,13 +488,14 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
             r = probe(p.l, p.c, p.sw, MEAS_N_GRID, &v);
             if(r == M_BUDGET) goto results;
             if(r != M_OK) goto stop;
-            if(p.l == 0 && p.c == 0 && sw == 0) vb = v;   // bypass
-            for(a = 0; a < n_cand; a++)                    // a better neighbour?
-               if(cand[a].sw == sw && (uint8_t)(gi[a] - i + 1) <= 2 && (uint8_t)(gj[a] - j + 1) <= 2)
-                  break;
-            if(a < n_cand) {
-               if(v.g >= cv[a].g) continue;
-               for(b = a; b + 1 < n_cand; b++) {           // drop the worse neighbour
+            // a neighbour that is at least as good: this point adds nothing;
+            // else all worse neighbours go (one candidate per valley)
+            for(a = 0; a < n_cand; a++)
+               if(NEIGHBOUR(a) && cv[a].g <= v.g) break;
+            if(a < n_cand) continue;
+            for(a = 0; a < n_cand; ) {
+               if(!NEIGHBOUR(a)) { a++; continue; }
+               for(b = a; b + 1 < n_cand; b++) {
                   cand[b] = cand[b + 1]; cv[b] = cv[b + 1]; gi[b] = gi[b + 1]; gj[b] = gj[b + 1];
                }
                n_cand--;
@@ -526,12 +530,16 @@ results:
       keep(res, rv, &n_res, &p, &v);
    }
 
-   // 4. the best results again with more averaging; bypass if not better
+   // 4. the best results and bypass again with more averaging (bypass
+   //    also when the budget ended the search before the grid measured
+   //    it); bypass if the best result is not clearly better
    PHASE(4);
    for(i = 0; i < n_res; i++) {
       r = probe(res[i].l, res[i].c, res[i].sw, MEAS_N_VERIFY, &rv[i]);
       if(r != M_OK) goto stop;
    }
+   r = probe(0, 0, 0, MEAS_N_VERIFY, &vb);
+   if(r != M_OK) goto stop;
    i = n_res > 1 && rv[1].g < rv[0].g ? 1 : 0;
    if(!better(&rv[i], &vb)) {
       p.l = p.c = p.sw = 0;

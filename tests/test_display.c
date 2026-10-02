@@ -13,6 +13,7 @@ static void delay_ms(uint16_t ms) { now_ms += ms; }
 uint32_t tick_ms(void) { return now_ms; }
 uint8_t oled_init(void) { inits++; return !display_ok; }
 uint8_t oled_present(void) { return display_ok; }
+uint8_t oled_on(void) { return !display_ok; }
 uint8_t oled_write(uint8_t page, uint8_t x, const uint8_t *d, uint8_t n) {
    (void)page; (void)x; (void)d; (void)n;
    writes++;
@@ -107,9 +108,9 @@ int main(void) {
       // plugged in again: found by the ping within about a second
       display_ok = 1;
       inits = 0;
-      for(int k = 0; k < 200 && !inits; k++) { disp_service(); now_ms += 10; }
-      CHECK_EQ(inits, 1);
       writes = 0;
+      for(int k = 0; k < 200 && !inits; k++) { disp_service(); now_ms += 10; }
+      CHECK_EQ(inits, 1);                        // and the picture sent with it
       for(int k = 0; k < 10; k++) disp_service();
       CHECK(writes > 0 && !restart && !backoff);
       // a display that answers the ping but not the data: the back-off holds
