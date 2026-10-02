@@ -26,7 +26,7 @@ stable tuner – not the fastest tune.
 
 ## Download
 
-**Version 0.9.0** (pre-release): on the
+**Version 0.9.0**: on the
 [release page](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.0), or
 here in the repository: [`Firmware/ATU-10_NG_0_9_0.zip`](Firmware/ATU-10_NG_0_9_0.zip)
 with the hex file `ATU-10_NG_0_9_0.hex` and the license.
@@ -211,7 +211,7 @@ not come on, switch the tuner off and on again.
 | Date | Version | Status | Content |
 |---|---|---|---|
 | 2026-10-02 | 0.1.0 | development | complete new firmware: search, memory of 12 tunes, setup menu, Cells editor; simulator and PC tests |
-| 2026-10-02 | 0.9.0 | tested on the device, pre-release | first device tests passed; review fixes, display clean-up after tuning |
+| 2026-10-02 | 0.9.0 | release, tested on the device | first device tests passed; review fixes, display clean-up after tuning |
 
 More: [Settings in detail](docs/SETTINGS.md) · [How tuning works](docs/TUNING.md) · [Development](docs/DEVELOPMENT.md)
 
