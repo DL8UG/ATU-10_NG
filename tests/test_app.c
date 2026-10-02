@@ -232,7 +232,7 @@ static void checkpoint(uint32_t t) {
       printf("%6.1f s  btn %d held %3d  oled %d  sleeps %d  relay_ms %d  ticks %u\n", (t - 91 * MIN) / 1000.0,
              !PORTBbits.RB5, btn_held, OLED_PWR, sleeps, cfg[CFG_RELAY_MS], tick_ms());
    switch(t) {
-   case 4000:                        // after the greeting
+   case 5000:                        // after the greeting (4.2 s)
       CHECK(OLED_PWR);
       CHECK_EQ(sleeps, 0);
       CHECK(rel.l == 0 && rel.c == 0);
@@ -440,7 +440,7 @@ static int run_variant(void) {
    }
    n_press = 0;
    if(mode == M_BLIP) {                                       // ends 0.4 s after the greeting
-      press[0].from = 2800; press[0].to = 3600;
+      press[0].from = 3800; press[0].to = 4600;
       n_press = 1;
    }
    if(mode == M_NOPOWER) {                                    // long press, no carrier
