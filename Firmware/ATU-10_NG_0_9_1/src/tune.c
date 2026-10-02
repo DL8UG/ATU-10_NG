@@ -524,10 +524,15 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
       if(r == M_BUDGET || target_reached(&v)) break;
    }
 results:
-   if(n_res == 0) {                           // budget used up before any result
-      p = best;
+   // when the budget ended the search, the best setting measured takes
+   // part too: it may be a grid point that no local search started from
+   // (not always: a single lucky reading would push out a real result)
+   for(i = 0; i < n_res && (res[i].l != best.l || res[i].c != best.c || res[i].sw != best.sw); i++)
+      continue;
+   if(i == n_res && (n_res == 0 || steps >= budget)) {
       v.g = best_g;
-      keep(res, rv, &n_res, &p, &v);
+      v.sp = 0;
+      keep(res, rv, &n_res, &best, &v);
    }
 
    // 4. the best results and bypass again with more averaging (bypass
