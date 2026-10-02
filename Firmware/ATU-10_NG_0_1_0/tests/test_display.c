@@ -8,6 +8,7 @@
 #define BOARD_H
 static uint8_t OLED_PWR, I2C_SCL, I2C_SDA;
 static void delay_ms(uint16_t ms) { (void)ms; }
+uint32_t tick_ms(void) { return 0; }
 uint8_t oled_init(void) { return 0; }
 uint8_t oled_write(uint8_t page, uint8_t x, const uint8_t *d, uint8_t n) { (void)page; (void)x; (void)d; (void)n; return 0; }
 void i2c_init(void) {}

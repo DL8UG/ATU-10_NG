@@ -23,8 +23,10 @@
 #define REFRESH_MS  30000      // send the whole picture again
 #define LOW_BATT_MV 3400
 #define AUTO_STEADY 4          // auto tune after this many measurements in a row
+#define AUTO_HOLD   3000       // ms after a tune without auto tune
+#define SETUP_HOLD  100        // x 10 ms held at the end of the greeting: setup menu
 
-static uint32_t t_batt, t_watch, t_show, t_refresh, t_active, t_led, t_msg;
+static uint32_t t_batt, t_watch, t_show, t_refresh, t_active, t_led, t_msg, t_tuned;
 static uint8_t led_on, msg_on, auto_cnt, auto_tune, go_off;
 static uint16_t swr_ref;       // SWR of the last tune, reference for auto tune
 static uint16_t shown_pwr = 0xFFFF, shown_swr = 0xFFFF;
@@ -172,7 +174,7 @@ static void do_tune(void) {
    EXT_KEY_OUT = 1;
    LED_GREEN = 1;
    auto_cnt = 0;
-   t_active = tick_ms();
+   t_active = t_tuned = tick_ms();
 }
 
 static void bypass_toggle(uint8_t on) {
@@ -209,7 +211,7 @@ static void greeting(void) {
 static void start_screen(void) {
    disp_power(1);
    greeting();
-   if(BUTTON_DOWN) setup_run();                // still held after the greeting
+   if(btn_held >= SETUP_HOLD) setup_run();     // held through the greeting
    show_screen();
    buttons_clear();                            // the press that woke us is no event
    t_active = tick_ms();
@@ -287,11 +289,13 @@ static void watch(void) {
    swr = swr_x100(m.g2);
    if(p10 >= cfg[CFG_MIN_PWR]) swr_last = swr;
 
-   // auto tune: enough power, SWR above 1.20 and changed since the last tune
+   // auto tune: enough power, SWR above 1.20 and changed by more than
+   // Cell 6 since the last tune (not again right after a tune, and not
+   // again and again when the antenna cannot be matched better)
    delta = (uint16_t)(cfg[CFG_AUTO_DELTA] - 10) * 10;
    if(cfg[CFG_AUTO] && !st.bypass && p10 >= cfg[CFG_MIN_PWR] && pnet_uw(&m) <= (uint32_t)cfg[CFG_MAX_PWR] * 1000000
-      && m.stable && swr > 120
-      && (swr > swr_ref + delta || swr + delta < swr_ref || swr > SWR_MAX - delta)) {
+      && m.stable && swr > 120 && since(t_tuned) >= AUTO_HOLD
+      && (swr > swr_ref + delta || swr + delta < swr_ref)) {
       if(++auto_cnt >= AUTO_STEADY) auto_tune = 1;   // main loop starts it
    }
    else auto_cnt = 0;
