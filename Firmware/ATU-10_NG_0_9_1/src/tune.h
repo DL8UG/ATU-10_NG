@@ -19,7 +19,8 @@ enum {
    TUNE_OK,                        // tuned (or already good)
    TUNE_NO_CARRIER,                // no or too much power: relays unchanged or best so far
    TUNE_ABORTED,                   // button: relays on the best setting so far
-   TUNE_NO_MATCH,                  // nothing better than bypass: relays in bypass
+   TUNE_NO_MATCH,                  // nothing better than bypass, which is above SWR 1.20:
+                                   // relays in bypass
 };
 
 // Memory of the last good tunes. The tuner does not know the frequency; it
