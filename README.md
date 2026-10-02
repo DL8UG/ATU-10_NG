@@ -151,12 +151,13 @@ band, power and what the display showed.
 
 ## License
 
-Public domain ([Unlicense](LICENSE)): free to use, change and pass on, for
-any purpose, without conditions.
+[Beerware](LICENSE) (SPDX: `Beerware`): do whatever you want with it, as
+long as you keep the license notice. If we meet some day, and you think this
+stuff is worth it, you can buy me a beer in return.
 
 ## Credits
 
 The ATU-10 hardware is a design by David Fainitski, N7DDC. The pin
 assignment, the relay pulse sequence, the display initialization and the
-5x8 font follow his ATU-10 firmware, which he also released into the public
+5x8 font follow his ATU-10 firmware, which he released into the public
 domain. Everything else in this firmware is written anew by DL8UG.

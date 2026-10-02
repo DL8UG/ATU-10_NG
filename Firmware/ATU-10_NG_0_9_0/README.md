@@ -36,7 +36,7 @@ are spare (`00`).
 
 ## License
 
-Public domain (Unlicense), see [LICENSE](../../LICENSE).
+Beerware, see [LICENSE](../../LICENSE).
 
 ## Build
 
