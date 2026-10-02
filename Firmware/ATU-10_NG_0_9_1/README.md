@@ -1,8 +1,9 @@
 # ATU-10 NG firmware 0.9.1
 
-Status: **in development, not yet tested on the device**.
+Status: **not yet tested on the device** (0.9.0 is).
 
-Hex file: `ATU-10_NG_0_9_1.hex`.
+Hex file: `ATU-10_NG_0_9_1.hex` (also in `../ATU-10_NG_0_9_1.zip`), and on
+the [GitHub release v0.9.1](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.1).
 Flashing, operation and settings: see the [main README](../../README.md).
 
 ## Contents

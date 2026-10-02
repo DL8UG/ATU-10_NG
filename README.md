@@ -6,7 +6,8 @@ stable tuner – not the fastest tune.
 
 ![Display](docs/display-main.png)
 
-**Status: 0.9.0, tested on the device.** See the [timeline](#development-status) below.
+**Status: 0.9.1, not yet tested on the device (0.9.0 is).** See the
+[timeline](#development-status) below.
 
 ## Contents
 
@@ -46,17 +47,24 @@ stable tuner – not the fastest tune.
 
 ## Download
 
-**Version 0.9.0**: on the
-[release page](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.0), or
-here in the repository: [`Firmware/ATU-10_NG_0_9_0.zip`](Firmware/ATU-10_NG_0_9_0.zip)
-with the hex file `ATU-10_NG_0_9_0.hex` and the license.
+**Version 0.9.1**: on the
+[release page](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.1), or
+here in the repository: [`Firmware/ATU-10_NG_0_9_1.zip`](Firmware/ATU-10_NG_0_9_1.zip)
+with the hex file `ATU-10_NG_0_9_1.hex` and the license. What is new: see
+[its README](Firmware/ATU-10_NG_0_9_1/README.md#changes-since-090).
+
+The previous version 0.9.0 (tested on the device) stays available on its
+[release page](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.0).
 
 ## Flashing
 
 1. Connect the tuner to the computer with a USB cable.
 2. A USB drive appears. Copy the `.hex` file onto it.
-3. Wait until the tuner restarts and shows the greeting
-   "ATU-10 / FW NG 0.9.0 / DESIGNED BY DL8UG".
+3. Wait until the tuner restarts and shows the greeting, two pages of 2
+   seconds: "ATU-10 / HARDWARE BY N7DDC", then the version "NG 0.9.1 /
+   FIRMWARE BY DL8UG".
+
+   ![Greeting, page 1](docs/display-greeting.png) ![Greeting, page 2](docs/display-greeting2.png)
 
 Any other firmware hex file for the ATU-10 can be flashed the same way at any
 time – this firmware never blocks the way back.
@@ -97,8 +105,9 @@ seconds, a tune on a band used before about 2 seconds.
   otherwise everything stays as it was.
 - A short press during tuning stops it; the tuner keeps the best setting
   found so far (STOP).
-- If no setting is better than the direct connection, the tuner switches to
-  bypass (NO MATCH).
+- If no setting is better than the direct connection and the SWR there is
+  above 1.2, the tuner switches the relays off (NO MATCH). At or below 1.2
+  the antenna is simply left connected directly, without a message.
 
 **Auto tune:** while you transmit, the tuner tunes again by itself when the
 SWR is above 1.2 and has changed by more than 0.3 since the last tune
@@ -116,10 +125,11 @@ after a tune.
 | TUNE | tuning in progress |
 | BYPASS / TUNED | after a short press: bypass on / back to the tuned setting |
 | NO POWER | no carrier for tuning |
-| NO MATCH | nothing better than bypass found, bypass is on |
+| NO MATCH | nothing better than the direct connection found (SWR above 1.2), the relays are off |
 | STOP | tuning stopped by a button press |
 | OVERLOAD | too much power for the measurement |
 | LOW BATT | battery below 3.4 V: the tuner switches off; also shown at a restart after a voltage drop |
+| POWER OFF | the tuner switches off (button held, see [Button](#button)) |
 | WDT RST, STACK RST | the firmware restarted itself after a fault (please report it) |
 | POWER OFF | switching off |
 
@@ -232,6 +242,7 @@ not come on, switch the tuner off and on again.
 |---|---|---|---|
 | 2026-10-02 | 0.1.0 | development | complete new firmware: search, memory of 12 tunes, setup menu, Cells editor; simulator and PC tests |
 | 2026-10-02 | 0.9.0 | release, tested on the device | first device tests passed; review fixes, display clean-up after tuning |
+| 2026-10-02 | 0.9.1 | release, not yet tested on the device | review fixes (auto tune near the minimum power, NO MATCH, tune target 0, bypass pulse during a tune), greeting on two pages, POWER OFF screen |
 
 More: [Settings in detail](docs/SETTINGS.md) · [How tuning works](docs/TUNING.md) · [Development](docs/DEVELOPMENT.md)
 
