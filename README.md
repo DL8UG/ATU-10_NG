@@ -233,3 +233,5 @@ The ATU-10 hardware is a design by David Fainitski, N7DDC. The pin
 assignment, the relay pulse sequence, the display initialization and the
 5x8 font follow his ATU-10 firmware, which he released into the public
 domain. Everything else in this firmware is written anew by DL8UG.
+
+Developed with the help of [Claude Code](https://claude.com/claude-code).
