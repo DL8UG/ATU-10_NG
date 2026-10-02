@@ -78,8 +78,8 @@ algorithm against the same model for comparison.
 
 ## License
 
-Public domain ([Unlicense](../LICENSE)). Parts that follow N7DDC's ATU-10
-firmware (also public domain) say so at the top of their file: pin
+Beerware ([LICENSE](../LICENSE), SPDX `Beerware`). Parts that follow N7DDC's
+ATU-10 firmware (public domain) say so at the top of their file: pin
 assignment (`board.h`), relay pulse sequence (`relays.c`), display
 initialization (`oled.c`), font (`font5x8.h`).
 
