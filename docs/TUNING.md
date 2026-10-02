@@ -50,7 +50,7 @@ on the antenna side.
 ```
 
 - 7 coil relays: 0.1, 0.22, 0.45, 1.0, 2.2, 4.5, 10 µH (0 .. 18.5 µH, 128 steps)
-- 7 capacitor relays: 22, 47, 100, 220, 470, 1000, 2200 pF (0 .. 5 nF, 128 steps)
+- 7 capacitor relays: 22, 47, 100, 220, 470, 1000, 2200 pF (0 .. 4.06 nF, 128 steps)
 - with SW: 2 x 128 x 128 = 32768 possible settings
 
 The relays are latching: they keep their setting without power.
@@ -179,7 +179,7 @@ short wire); there the tuner finds the best that is possible.
 | ideal measurement | 768 | 100 % | 100 % | 4.6 s |
 | 3 mV ADC noise | 3840 | 100 % | 100 % | 4.6 s |
 | hard: noise, unsteady carrier (3 %), QRP rig with 10 Ohm source resistance, 5 % component tolerance, detector calibration off | 3860 | 99.2 % | 99.0 % | 5.1 s |
-| small QSY (1 to 3 %) after a tune | 2652 | 100 % | 99.9 % | 2.3 s |
+| small QSY (1 to 3 %) after a tune | 2652 | 100 % | 99.8 % | 2.3 s |
 | band changes (20 ↔ 30 m, 40 ↔ 20 m, ...) with the memory filled | 2008 | 100 % | 100 % | 2.2 s (1.8 s after the first round) |
 
 By antenna type (3 mV noise, matchable cases within 0.05 of the best possible):
