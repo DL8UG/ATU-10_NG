@@ -35,6 +35,18 @@ The new firmware, written from scratch:
 `05 30 07 10 15 13 01 04 14 60 05 02`; the last 4 words of the second record
 are spare (`00`).
 
+## Feedback
+
+Problems, questions and reports from use on the air are very welcome. Please
+report them with a detailed description
+
+- as an [issue here on GitHub](https://github.com/DL8UG/ATU-10_NG/issues), or
+- in the groups.io thread [ATU-10 NG firmware](https://groups.io/g/ATU100/topic/atu_10_ng_firmware/121543821).
+
+Please include: the firmware version (shown in the greeting), the antenna and
+feed line, band and frequency, transceiver and power, what the display showed
+(SWR, messages), what you expected instead, and how to make it happen again.
+
 ## License
 
 Beerware, see [LICENSE](LICENSE) (the same as in the top folder).
