@@ -24,6 +24,10 @@ static double g2_of(void) {
       if(now.sw == 0 && now.l == 0 && now.c == 4) return 0.01;
       if(now.sw == 0) return 0.15 + 0.002 * now.l + 0.01 * fabs(now.c - 64.0);
       return 0.9;
+   case 2:   // the network changes nothing: SWR 3.0 everywhere
+      return 0.25;
+   case 3:   // the same at SWR 1.10
+      return (0.1 / 2.1) * (0.1 / 2.1);
    default:  // best match at L 40, C 40, side 1
       d2 = (now.l - 40.0) * (now.l - 40.0) + (now.c - 40.0) * (now.c - 40.0) + (now.sw ? 0 : 900);
       return 0.01 + 0.99 * d2 / (d2 + 50);
@@ -124,5 +128,17 @@ int main(void) {
    CHECK(grid_end_seen);                   // target 0: the grid ran too
    CHECK(tune_best.l == 40 && tune_best.c == 40 && tune_best.sw == 1);
    cfg[CFG_TARGET] = 5;
+
+   // nothing is better than bypass: NO MATCH if bypass is above SWR 1.20,
+   // else it is simply good as it is
+   model = 2;
+   r = tune_run(&from, 0);
+   CHECK_EQ(r, TUNE_NO_MATCH);
+   CHECK(tune_best.l == 0 && tune_best.c == 0 && tune_best.sw == 0);
+   CHECK(now.l == 0 && now.c == 0 && now.sw == 0);
+   model = 3;
+   r = tune_run(&from, 0);
+   CHECK_EQ(r, TUNE_OK);
+   CHECK(now.l == 0 && now.c == 0 && now.sw == 0);
    return check_done("test_tune");
 }

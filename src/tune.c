@@ -58,6 +58,7 @@
 #ifndef QUICK_MARGIN
 #define QUICK_MARGIN   5             // quick retune kept if at most 0.05 worse than last time
 #endif
+#define NO_MATCH_SWR   120           // bypass wins above this SWR: NO MATCH (below: good as it is)
 #define WAIT_START     1000          // x 10 ms: wait for a carrier at the start
 #define WAIT_LOST      300           // x 10 ms: carrier lost during the search
 #define UNSTABLE_MAX   3             // an unsteady measurement is accepted the 3rd time
@@ -551,7 +552,7 @@ results:
    if(!better(&rv[i], &vb)) {
       p.l = p.c = p.sw = 0;
       finish(&p, vb.g);
-      return vb.g >= G2_ONE ? TUNE_NO_MATCH : TUNE_OK;
+      return tune_swr > NO_MATCH_SWR ? TUNE_NO_MATCH : TUNE_OK;
    }
    finish(&res[i], rv[i].g);
    remember();
