@@ -79,6 +79,36 @@ int main(void) {
    tune_best = (relays_t){16, 6, 0};
    remember();
    CHECK(tune_mem[1].l == 16 && tune_mem_seq[1] == 7);
+   // many tunes on two bands while the other slots stay as they are: the
+   // numbers must not drift more than half the circle apart, else the
+   // newest is misjudged and a band used a moment ago is pushed out
+   for(int i = 0; i < MEM_SLOTS; i++) {                           // none near another
+      tune_mem[i] = (relays_t){(uint8_t)(5 + 10 * i), (uint8_t)(5 + 10 * i), (uint8_t)(i & 1)};
+      tune_mem_seq[i] = (uint8_t)i;                               // slot 0 the oldest
+   }
+   for(int k = 0; k < 600; k++) {                                 // slots 10 and 11
+      tune_best = k & 1 ? (relays_t){105, 105, 0} : (relays_t){115, 115, 1};
+      remember();
+   }
+   {
+      int n_old = 0;
+      uint8_t newest = tune_mem_seq[10];                          // the last tune (k = 599)
+      CHECK(tune_mem[10].c == 105 && tune_mem[11].c == 115);
+      for(int i = 0; i < MEM_SLOTS; i++) {                        // all within 127 of the newest
+         uint8_t age = (uint8_t)(newest - tune_mem_seq[i]);
+         CHECK(age < 128);
+         n_old += age > 1;
+      }
+      CHECK_EQ(n_old, 10);
+   }
+   tune_best = (relays_t){60, 100, 1};                             // a new band: slot 0 goes
+   remember();
+   CHECK(tune_mem[0].l == 60 && tune_mem[0].c == 100);
+   CHECK(tune_mem[10].c == 105 && tune_mem[11].c == 115);
+   tune_best = (relays_t){70, 100, 1};                             // another one: slot 1 goes
+   remember();
+   CHECK(tune_mem[1].l == 70 && tune_mem[1].c == 100);
+   CHECK(tune_mem[0].l == 60 && tune_mem[10].c == 105 && tune_mem[11].c == 115);
 
    // the final comparison measures bypass, also when the budget ends the
    // search before the grid reached it (quick search effort, memory full

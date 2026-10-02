@@ -390,20 +390,35 @@ static uint8_t near(uint8_t a, uint8_t b) {   // within 2 steps or 1/8
    return d <= 2 || d <= (uint8_t)(mx >> 3);
 }
 
+#define MEM_USED(i)   (tune_mem[i].l || tune_mem[i].c)
+#define MEM_RENUMBER  100            // oldest this far behind the newest: number again
+
 // puts the result into the memory: replaces an entry at about the same
 // place, else takes a free slot, else the oldest one
 static void remember(void) {
-   uint8_t i, j, newest = 0, age, oldest = 0;
+   uint8_t i, j, k, newest = 0, age, oldest = 0, gap, widest = 0;
+   uint8_t rank[MEM_SLOTS];
    if(tune_swr > MEM_MAX_SWR || (tune_best.l == 0 && tune_best.c == 0)) return;
-   for(j = 0, i = 0; j < tune_mem_n; j++) {  // newest sequence number of the used slots
-      if(!tune_mem[j].l && !tune_mem[j].c) continue;
-      if(!i++ || (uint8_t)(tune_mem_seq[j] - newest) < 128) newest = tune_mem_seq[j];
+   // newest sequence number of the used slots: the one followed by the
+   // widest free stretch on the circle 0..255 (also right when the numbers
+   // have drifted more than half the circle apart)
+   for(i = 0; i < tune_mem_n; i++) {
+      if(!MEM_USED(i)) continue;
+      gap = 255;                             // to the next number ahead
+      for(j = 0; j < tune_mem_n; j++) {
+         age = (uint8_t)(tune_mem_seq[j] - tune_mem_seq[i]);
+         if(MEM_USED(j) && age && age < gap) gap = age;
+      }
+      if(gap > widest) {
+         widest = gap;
+         newest = tune_mem_seq[i];
+      }
    }
    for(i = 0; i < tune_mem_n; i++)
       if(tune_mem[i].sw == tune_best.sw && near(tune_mem[i].l, tune_best.l) && near(tune_mem[i].c, tune_best.c))
          break;
    if(i == tune_mem_n)                       // an empty slot (damaged in the EEPROM)?
-      for(i = 0; i < tune_mem_n && (tune_mem[i].l || tune_mem[i].c); i++) continue;
+      for(i = 0; i < tune_mem_n && MEM_USED(i); i++) continue;
    if(i == tune_mem_n) {
       if(tune_mem_n < MEM_SLOTS) tune_mem_n++;
       else
@@ -414,8 +429,27 @@ static void remember(void) {
    }
    tune_mem[i] = tune_best;
    tune_mem_swr[i] = (uint8_t)(tune_swr - 100 > 255 ? 255 : tune_swr - 100);
-   tune_mem_seq[i] = (uint8_t)(newest + 1);
+   newest++;
+   tune_mem_seq[i] = newest;
    tune_mem_dirty |= (uint16_t)(1u << i);
+   // tunes on one band push its number on while unused slots keep theirs:
+   // when the oldest falls far behind, all are numbered again in the same
+   // order, newest down to newest - 11 (written once in about 90 tunes)
+   for(j = 0, oldest = 0; j < tune_mem_n; j++)
+      if(MEM_USED(j) && (uint8_t)(newest - tune_mem_seq[j]) > oldest) oldest = (uint8_t)(newest - tune_mem_seq[j]);
+   if(oldest < MEM_RENUMBER) return;
+   for(j = 0; j < tune_mem_n; j++) {         // rank by age: used slots newer (ties: lower index)
+      age = (uint8_t)(newest - tune_mem_seq[j]);
+      for(k = 0, gap = 0; k < tune_mem_n; k++)
+         if(MEM_USED(k) && ((uint8_t)(newest - tune_mem_seq[k]) < age
+                            || ((uint8_t)(newest - tune_mem_seq[k]) == age && k < j))) gap++;
+      rank[j] = gap;
+   }
+   for(j = 0; j < tune_mem_n; j++)
+      if(MEM_USED(j)) {
+         tune_mem_seq[j] = (uint8_t)(newest - rank[j]);
+         tune_mem_dirty |= (uint16_t)(1u << j);
+      }
 }
 
 // grid point i, j (side sw) next to candidate a, diagonals included
