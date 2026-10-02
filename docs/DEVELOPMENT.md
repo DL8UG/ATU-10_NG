@@ -1,5 +1,16 @@
 # Development
 
+## Contents
+
+- [Layout](#layout)
+- [Toolchain](#toolchain)
+- [Tests](#tests)
+- [Checks in every build](#checks-in-every-build)
+- [Source overview](#source-overview)
+- [Simulator](#simulator)
+- [License](#license)
+- [Release](#release)
+
 ## Layout
 
 Each release has its own folder under `Firmware/` with the complete source,

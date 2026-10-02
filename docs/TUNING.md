@@ -3,6 +3,15 @@
 This page explains how the ATU-10 NG firmware finds the best relay setting,
 and how well it does that in the simulator.
 
+## Contents
+
+- [In short](#in-short)
+- [The network](#the-network)
+- [What the tuner can measure](#what-the-tuner-can-measure)
+- [Why tuning is hard](#why-tuning-is-hard)
+- [The search](#the-search)
+- [Results in the simulator](#results-in-the-simulator)
+
 ## In short
 
 - The tuner can set 32768 combinations of coils and capacitors. It cannot try

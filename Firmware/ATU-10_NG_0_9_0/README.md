@@ -7,6 +7,15 @@ Hex file: `ATU-10_NG_0_9_0.hex` (also in `../ATU-10_NG_0_9_0.zip`), and on
 the [GitHub release v0.9.0](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.0).
 Flashing, operation and settings: see the [main README](../../README.md).
 
+## Contents
+
+- [Content](#content)
+- [Changes since 0.1.0 (development version)](#changes-since-010-development-version)
+- [Cells of this version](#cells-of-this-version)
+- [Feedback](#feedback)
+- [License](#license)
+- [Build](#build)
+
 ## Content
 
 The new firmware, written from scratch:
