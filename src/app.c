@@ -81,7 +81,8 @@ static void show_power(uint16_t p10) {        // 0.1 W
 static void show_swr(uint16_t swr) {          // SWR x 100, 0 = none
    if(swr == shown_swr || msg_on) return;
    shown_swr = swr;
-   disp_big(LINE2, 60, num(swr, 2, 4));
+   if(swr) disp_big(LINE2, 60, num(swr, 2, 4));
+   else disp_big(LINE2, 60, "-.--");           // none measured yet
 }
 
 // a message in place of the SWR line for 'ms'
@@ -147,6 +148,7 @@ static void do_tune(void) {
    msg_on = 0;
    disp_big(LINE2, 0, "         ");            // a message may still be there
    disp_big(LINE2, 0, "TUNE");                 // the SWR so far follows at the right
+   shown_swr = 0xFFFF;                         // blanked: draw it even if unchanged
    disp_flush();
    // in bypass the relays hold no tune result (the memory has it)
    r = tune_run(&rel, !st.bypass && st.last_swr ? (uint16_t)(100 + st.last_swr) : 0);
@@ -154,7 +156,10 @@ static void do_tune(void) {
       // Stopped without a change (no carrier, or stopped before anything
       // better was found, e.g. by the long press that goes on to power
       // off): everything stays as it was, the bypass too, and nothing
-      // is written to the EEPROM
+      // is written to the EEPROM. Stopped by the user or for too much
+      // power: the present SWR is accepted, else auto tune would start the
+      // same tune again 3 s later
+      if(r != TUNE_NO_CARRIER && swr_last) swr_ref = swr_last;
    }
    else {
       // a result ends the bypass
@@ -174,6 +179,7 @@ static void do_tune(void) {
    if(r == TUNE_NO_CARRIER) message("NO POWER", 2000);
    else if(r == TUNE_NO_MATCH) message("NO MATCH", 2000);
    else if(r == TUNE_ABORTED) message("STOP", 1000);
+   else if(r == TUNE_OVERLOAD) message("OVERLOAD", 2000);
    disp_refresh();                             // RF may have garbled the picture
    EXT_KEY_OUT = 1;
    LED_GREEN = 1;

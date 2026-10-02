@@ -15,6 +15,7 @@
 #include "../src/nvm.h"
 #include "../src/tune.h"
 #include "../src/cells.h"
+#include "../src/display.h"
 
 // ---- registers (tests/host/xc.h)
 struct LATAbits_t LATAbits; struct LATBbits_t LATBbits; struct LATCbits_t LATCbits;
@@ -36,7 +37,7 @@ static uint32_t end_at;
 static jmp_buf done;
 static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
-enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE };
+enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD };
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
 static int display_ok = 1, display_inited, oled_inits, oled_ok_writes, key_falls, key_prev = 1;
@@ -100,6 +101,7 @@ static void check_line2(void) {
    const uint8_t *fb = disp_fb();
    int dirty = 0;
    if(!OLED_PWR) return;             // switched off meanwhile: nothing shown
+   if(mode == M_OVERLOAD) return;    // OVERLOAD stays while the carrier is too strong
    for(int y = 18; y < 32; y++)
       for(int x = 0; x < 115; x++) {
          int gap = (x >= 36 && x <= 41) || (x >= 54 && x <= 59) || (x >= 108);
@@ -176,7 +178,13 @@ void meas_take(meas_t *m, uint8_t n) {
    last_clr = wall;                  // meas_take clears the watchdog
    m->pf = rf_on ? (mode == M_CELLS_MAX ? 12000000 : mode == M_LOWPWR ? 970000 : 5000000) : 0;
    g = d2 / (d2 + 60);
+   if(mode == M_STOPAUTO) g = 0.25;                       // SWR 3.00 at every setting
    m->g2 = (uint32_t)(G2_ONE * (g2_floor + (1 - g2_floor) * g));
+   if(mode == M_OVERLOAD && rf_on) {                      // 30 W: the forward detector
+      m->pf = 19000000;                                   // clips at every setting
+      m->overflow = 1;
+      m->g2 = (uint32_t)(G2_ONE * g);
+   }
    m->pr = (uint32_t)((double)m->pf * m->g2 / G2_ONE);
    m->stable = 1;
    m->spread = 2;
@@ -225,6 +233,17 @@ static int tunes_seen(void) {        // a tune switched the relays since the las
 }
 
 static void checkpoint_variant(uint32_t t);
+
+// the SWR value on the display reads s: drawing s there changes nothing
+static int swr_shows(const char *s) {
+   uint8_t before[512];
+   int same;
+   memcpy(before, disp_fb(), sizeof before);
+   disp_big(LINE2, 60, s);
+   same = !memcmp(before, disp_fb(), sizeof before);
+   memcpy((uint8_t *)disp_fb(), before, sizeof before);
+   return same;
+}
 
 static void checkpoint(uint32_t t) {
    if(mode) { checkpoint_variant(t); return; }
@@ -373,6 +392,12 @@ static void checkpoint_variant(uint32_t t) {
       CHECK(rel.l == 0 && rel.c == 0 && rel.sw == 0);
       CHECK(LATDbits.LATD2);
    }
+   if(mode == M_STOPAUTO && t == 5000)                      // no carrier yet: no SWR value
+      CHECK(swr_shows("-.--"));
+   if(mode == M_STOPAUTO && t == 12400) {                   // auto tune at SWR 3.00 everywhere:
+      CHECK(!LATDbits.LATD2);                                // after the grid the progress shows
+      CHECK(swr_shows("3.00"));                              // 3.00 again (blanked at the start)
+   }
    if(t == 40000 && mode == M_BLIP)                         // carrier since 10 s: tuned, so
       CHECK(key_falls >= 1);                                 // not stuck in the setup menu
    if(t == 6 * MIN - 1) {
@@ -396,6 +421,17 @@ static void checkpoint_variant(uint32_t t) {
          break;
       case M_EXTTUNE:
          break;
+      case M_STOPAUTO:                                       // stopped by a short press: not
+         CHECK_EQ(key_falls, 1);                             // started again at the same SWR
+         CHECK(rel.l == 0 && rel.c == 0 && rel.sw == 0);
+         break;
+      case M_OVERLOAD:                                       // too much power: the tune stops
+         printf("overload: %d tunes, %d relay steps\n", key_falls, relay_calls);
+         CHECK_EQ(key_falls, 1);                             // after 64 clipped settings and
+         CHECK(relay_calls <= 70);                           // does not start again
+         CHECK(rel.l == 0 && rel.c == 0 && rel.sw == 0);
+         CHECK(!st.bypass);
+         break;
       case M_LOWPWR:                                         // 0.97 W, Cell 4 = 1.0 W: the
          CHECK_EQ(key_falls, 0);                             // tune would not see a carrier,
          break;                                              // so no auto tune either
@@ -415,7 +451,8 @@ static int run_variant(void) {
    st.last_swr = 5;
    if(mode == M_UNMATCH) g2_floor = 1.0 / 9;                 // best possible SWR 2.0
    if(mode == M_NOMATCH) g2_floor = 0.99995;                 // SWR 9.99 everywhere
-   if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH || mode == M_LOWPWR || mode == M_EXTTUNE) {   // start in bypass, so that
+   if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH || mode == M_LOWPWR || mode == M_EXTTUNE
+      || mode == M_STOPAUTO || mode == M_OVERLOAD) {         // start in bypass, so that
       st.r.l = st.r.c = 0;                                   // the carrier causes an auto tune
       st.last_swr = 0;
    }
@@ -447,6 +484,10 @@ static int run_variant(void) {
       press[0].from = 20000; press[0].to = 20600;
       n_press = 1;
    }
+   if(mode == M_STOPAUTO) {                                   // short press during the auto tune
+      press[0].from = 12500; press[0].to = 12600;
+      n_press = 1;
+   }
    relay_calls = 0;
    end_at = 6 * MIN;
    if(!setjmp(done)) app_main();
@@ -457,7 +498,8 @@ static int run_variant(void) {
                      : mode == M_BLIP ? "test_app blip" : mode == M_UNMATCH ? "test_app swr2"
                      : mode == M_NOMATCH ? "test_app nomatch" : mode == M_EXTDARK ? "test_app ext-dark"
                      : mode == M_NOPOWER ? "test_app nopower" : mode == M_LOWPWR ? "test_app lowpwr"
-                     : "test_app ext-tune");
+                     : mode == M_EXTTUNE ? "test_app ext-tune" : mode == M_STOPAUTO ? "test_app stop-auto"
+                     : "test_app overload");
 }
 
 int main(int argc, char **argv) {
