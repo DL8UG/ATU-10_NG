@@ -75,17 +75,24 @@ void disp_clear(void) {
 }
 
 // sets the 8 pixel column (bit 0 at y) at x to the bits of b
+// marks only bytes that change: drawing the same again sends nothing
 static void put8(uint8_t x, uint8_t y, uint8_t b, uint8_t h) {
-   uint8_t p = y >> 3, s = y & 7, mask = (uint8_t)((1u << h) - 1);
+   uint8_t p = y >> 3, s = y & 7, mask = (uint8_t)((1u << h) - 1), n;
    uint16_t m = (uint16_t)mask << s, v = (uint16_t)(b & mask) << s;
    if(x >= W) return;
    if(p < PAGES) {
-      fb[p][x] = (uint8_t)((fb[p][x] & ~m) | v);
-      mark(p, x, x);
+      n = (uint8_t)((fb[p][x] & ~m) | v);
+      if(n != fb[p][x]) {
+         fb[p][x] = n;
+         mark(p, x, x);
+      }
    }
    if(s && p + 1 < PAGES) {
-      fb[p + 1][x] = (uint8_t)((fb[p + 1][x] & ~(m >> 8)) | v >> 8);
-      mark((uint8_t)(p + 1), x, x);
+      n = (uint8_t)((fb[p + 1][x] & ~(m >> 8)) | v >> 8);
+      if(n != fb[p + 1][x]) {
+         fb[p + 1][x] = n;
+         mark((uint8_t)(p + 1), x, x);
+      }
    }
 }
 
