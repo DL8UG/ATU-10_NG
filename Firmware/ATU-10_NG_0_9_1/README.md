@@ -32,7 +32,7 @@ The new firmware, written from scratch:
 ## Changes since 0.9.0
 
 - greeting on two pages: "ATU-10 / HARDWARE BY N7DDC", then the version
-  "NG 0.9.1 / FIRMWARE BY DL8UG" (3 seconds in all, as before)
+  "NG 0.9.1 / FIRMWARE BY DL8UG", 2 seconds each (before: one page, 3 seconds)
 - power off: the display is cleared and POWER OFF (or LOW BATT) stands alone
   in its middle
 - NO MATCH also when the network cannot improve the antenna and the SWR in

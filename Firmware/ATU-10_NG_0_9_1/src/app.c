@@ -207,19 +207,19 @@ static void bypass_toggle(uint8_t on) {
 #define CENTRE_SMALL(s) ((128 - 6 * (sizeof(s) - 1) + 1) / 2)
 #define GREET_FW "NG " FW_VERSION
 
-// two pages of 1.5 s: the hardware, then the firmware and its version
+// two pages of 2 s: the hardware, then the firmware and its version
 static void greeting(void) {
    disp_clear();
    disp_big(LINE1, CENTRE_BIG("ATU-10"), "ATU-10");
    disp_small(3, CENTRE_SMALL("HARDWARE BY N7DDC"), "HARDWARE BY N7DDC");
    disp_flush();
    LED_GREEN = 0;
-   delay_ms(1500);
+   delay_ms(2000);
    disp_clear();
    disp_big(LINE1, CENTRE_BIG(GREET_FW), GREET_FW);
    disp_small(3, CENTRE_SMALL("FIRMWARE BY DL8UG"), "FIRMWARE BY DL8UG");
    disp_flush();
-   delay_ms(1500);
+   delay_ms(2000);
    LED_GREEN = 1;
 }
 
