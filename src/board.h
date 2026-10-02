@@ -1,5 +1,6 @@
 // ATU-10 board: pin map and low level hardware set-up.
 // This is the only place that knows which pin does what.
+// Pin assignment of the ATU-10 hardware by David Fainitski, N7DDC.
 
 #ifndef BOARD_H
 #define BOARD_H

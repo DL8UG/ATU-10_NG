@@ -31,7 +31,8 @@ make test       # unit tests, Cells tools, editor logic, and the main
                 # power off / on, setup menu, external interface, low battery)
 make simcompare # simulator: ideal / noise / hard scenario
 make simretune  # simulator: QSY after a tune
-make docs       # charts and display pictures in docs/
+make docs       # charts, display and setup menu pictures in docs/
+                # (rendered with the firmware's display and menu code)
 ```
 
 `make clean` deletes `build/` only, the hex file stays.
@@ -74,6 +75,13 @@ firmware's `tune.c` and `meas_math.c`. Options: see the comment at the top of
 
 For development only, `make build/sim_ref REF_DIR=...` builds another tuning
 algorithm against the same model for comparison.
+
+## License
+
+Public domain ([Unlicense](../LICENSE)). Parts that follow N7DDC's ATU-10
+firmware (also public domain) say so at the top of their file: pin
+assignment (`board.h`), relay pulse sequence (`relays.c`), display
+initialization (`oled.c`), font (`font5x8.h`).
 
 ## Release
 

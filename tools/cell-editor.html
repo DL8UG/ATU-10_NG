@@ -44,6 +44,9 @@
   button:disabled { opacity: 0.45; cursor: default; }
   .msg { margin: 0; }
   .note { color: var(--muted); font-size: 0.85rem; }
+  footer { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--line);
+           color: var(--muted); font-size: 0.85rem; }
+  a { color: var(--accent); }
   @media (max-width: 640px) {
     td.hex, th.hex { display: none; }
     .help { display: block; }
@@ -78,8 +81,13 @@
 
   <p class="note">The settings ("Cells") are 12 BCD coded bytes at address 0xEEE0 of the hex file
     (records <code>:10EEE000</code> and <code>:10EEF000</code>). The editor changes only these
-    bytes and the record checksums. Values set later in the tuner's setup menu take
-    precedence until the hex file's Cells change.</p>
+    bytes and the record checksums. Values saved in the tuner's setup menu take
+    precedence until a hex file with other Cells is flashed, or HEX VALUES is chosen
+    in the menu. <a href="https://github.com/DL8UG/ATU-10_NG/blob/main/docs/SETTINGS.md">All about the settings</a></p>
+
+  <footer>ATU-10 NG Cell Editor by DL8UG ·
+    <a href="https://github.com/DL8UG/ATU-10_NG">github.com/DL8UG/ATU-10_NG</a> ·
+    public domain (Unlicense)</footer>
 </main>
 
 <script id="cells-core">
