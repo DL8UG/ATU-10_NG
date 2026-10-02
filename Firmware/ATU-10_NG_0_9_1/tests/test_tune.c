@@ -107,5 +107,22 @@ int main(void) {
    CHECK(!grid_end_seen);                  // the budget did end in the grid
    CHECK_EQ(r, TUNE_OK);
    CHECK(tune_best.l == 0 && tune_best.c == 4 && tune_best.sw == 0);
+
+   // quick retune at a remembered setting that measures as well as when
+   // it was found: done without the grid - but not with Cell 11 = 0
+   // (always the full search)
+   model = 0;
+   tune_mem[0] = (relays_t){40, 40, 1};
+   tune_mem_swr[0] = 22;                   // SWR 1.22, what the load gives there
+   grid_end_seen = 0;
+   r = tune_run(&from, 0);
+   CHECK_EQ(r, TUNE_OK);
+   CHECK(!grid_end_seen);                  // target 1.05: the quick retune is enough
+   cfg[CFG_TARGET] = 0;
+   r = tune_run(&from, 0);
+   CHECK_EQ(r, TUNE_OK);
+   CHECK(grid_end_seen);                   // target 0: the grid ran too
+   CHECK(tune_best.l == 40 && tune_best.c == 40 && tune_best.sw == 1);
+   cfg[CFG_TARGET] = 5;
    return check_done("test_tune");
 }
