@@ -278,6 +278,7 @@ static void watch(void) {
    meas_t m;
    uint16_t p10, swr, delta;
    uint32_t now = tick_ms();
+   uint8_t enough;
    meas_take(&m, 4);
    if(m.overflow && !msg_on) message("OVERLOAD", 2000);
    p10 = pwr_x10(m.pf);
@@ -288,13 +289,16 @@ static void watch(void) {
       t_peak = now;
    }
    swr = swr_x100(m.g2);
-   if(p10 >= cfg[CFG_MIN_PWR]) swr_last = swr;
+   // enough power for tuning: the same comparison as in tune_run (not the
+   // rounded p10), else auto tune starts tunes that never see a carrier
+   enough = m.pf >= (uint32_t)cfg[CFG_MIN_PWR] * 100000;
+   if(enough) swr_last = swr;
 
    // auto tune: enough power, SWR above 1.20 and changed by more than
    // Cell 6 since the last tune (not again right after a tune, and not
    // again and again when the antenna cannot be matched better)
    delta = (uint16_t)(cfg[CFG_AUTO_DELTA] - 10) * 10;
-   if(cfg[CFG_AUTO] && !st.bypass && p10 >= cfg[CFG_MIN_PWR] && pnet_uw(&m) <= (uint32_t)cfg[CFG_MAX_PWR] * 1000000
+   if(cfg[CFG_AUTO] && !st.bypass && enough && pnet_uw(&m) <= (uint32_t)cfg[CFG_MAX_PWR] * 1000000
       && m.stable && swr > 120 && since(t_tuned) >= AUTO_HOLD
       && (swr > swr_ref + delta || swr + delta < swr_ref)) {
       if(++auto_cnt >= AUTO_STEADY) auto_tune = 1;   // main loop starts it

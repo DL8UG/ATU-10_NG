@@ -36,7 +36,7 @@ static uint32_t end_at;
 static jmp_buf done;
 static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
-enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER };
+enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR };
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
 static int display_ok = 1, display_inited, oled_inits, oled_ok_writes, key_falls, key_prev = 1;
@@ -148,7 +148,7 @@ void meas_take(meas_t *m, uint8_t n) {
    double g;
    memset(m, 0, sizeof *m);
    last_clr = wall;                  // meas_take clears the watchdog
-   m->pf = rf_on ? (mode == M_CELLS_MAX ? 12000000 : 5000000) : 0;
+   m->pf = rf_on ? (mode == M_CELLS_MAX ? 12000000 : mode == M_LOWPWR ? 970000 : 5000000) : 0;
    g = d2 / (d2 + 60);
    m->g2 = (uint32_t)(G2_ONE * (g2_floor + (1 - g2_floor) * g));
    m->pr = (uint32_t)((double)m->pf * m->g2 / G2_ONE);
@@ -357,6 +357,9 @@ static void checkpoint_variant(uint32_t t) {
          break;
       case M_EXTDARK:
          break;
+      case M_LOWPWR:                                         // 0.97 W, Cell 4 = 1.0 W: the
+         CHECK_EQ(key_falls, 0);                             // tune would not see a carrier,
+         break;                                              // so no auto tune either
       case M_UNMATCH:                                        // best possible SWR 2.0, default
       case M_NOMATCH:                                        // threshold / nothing matches:
          printf("%s: %d tunes in 5 min\n", mode == M_UNMATCH ? "SWR 2 load" : "no match",
@@ -373,7 +376,7 @@ static int run_variant(void) {
    st.last_swr = 5;
    if(mode == M_UNMATCH) g2_floor = 1.0 / 9;                 // best possible SWR 2.0
    if(mode == M_NOMATCH) g2_floor = 0.99995;                 // SWR 9.99 everywhere
-   if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH) {   // start in bypass, so that
+   if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH || mode == M_LOWPWR) {   // start in bypass, so that
       st.r.l = st.r.c = 0;                                   // the carrier causes an auto tune
       st.last_swr = 0;
    }
@@ -414,7 +417,7 @@ static int run_variant(void) {
                      mode == M_CELLS_MIN ? "test_app cells-min" : mode == M_CELLS_MAX ? "test_app cells-max"
                      : mode == M_BLIP ? "test_app blip" : mode == M_UNMATCH ? "test_app swr2"
                      : mode == M_NOMATCH ? "test_app nomatch" : mode == M_EXTDARK ? "test_app ext-dark"
-                     : "test_app nopower");
+                     : mode == M_NOPOWER ? "test_app nopower" : "test_app lowpwr");
 }
 
 int main(int argc, char **argv) {
