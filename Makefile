@@ -1,9 +1,9 @@
 # ATU-10 NG firmware, built with Microchip XC8
-#   make          -> ATU-10_NG_0_9_1.hex (copy it onto the tuner's USB drive)
+#   make          -> ATU-10_NG_0_9_2.hex (copy it onto the tuner's USB drive)
 #   make test     -> host unit tests
 #   make clean    (keeps the committed hex file)
 
-VERSION = 0_9_1
+VERSION = 0_9_2
 TARGET  = ATU-10_NG_$(VERSION)
 
 XC8    ?= $(firstword $(wildcard /opt/microchip/xc8/*/bin/xc8-cc) xc8-cc)
