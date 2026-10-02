@@ -9,6 +9,7 @@
 extern uint16_t vbat_mv;                      // last battery voltage
 
 void meas_init(void);
+void meas_off(void);                          // ADC and reference off (sleep); meas_init again
 uint16_t meas_battery(void);                  // measures and returns vbat_mv
 // Full measurement: F1 R1 R2 F2, each the average of n samples (n <= 64)
 void meas_take(meas_t *m, uint8_t n);

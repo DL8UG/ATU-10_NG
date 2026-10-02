@@ -265,6 +265,7 @@ static void power_off(void) {
    PIE0bits.TMR0IE = 0;
    IOCBNbits.IOCBN5 = 1;                       // wake on the button going low
    PIE0bits.IOCIE = 1;
+   meas_off();
    for(;;) {
       delay_ms(100);
       IOCBFbits.IOCBF5 = 0;
@@ -280,6 +281,7 @@ static void power_off(void) {
    PIE0bits.TMR0IE = 1;
    INTCONbits.GIE = 1;
    WDT_ON();
+   meas_init();
    meas_battery();
 }
 

@@ -43,6 +43,7 @@ static int display_lit;              // the display shows something (switched on
 static int display_ok = 1, display_inited, oled_inits, oled_ok_writes, key_falls, key_prev = 1;
 static uint32_t disp_us, io_frac;     // time the main program spends on display I/O
 static double g2_floor;              // best possible reflection of the load
+static int adc_on = 1;               // ADC and reference (meas_init / meas_off)
 
 typedef struct { uint32_t from, to; } span_t;
 static span_t press[40] = {         // button held (ms); the setup menu presses are added in main()
@@ -150,6 +151,7 @@ void fake_ms(uint32_t ms) {
 
 void fake_sleep(void) {
    sleeps++;
+   CHECK(!adc_on);                   // no reference current while switched off
    // the last picture before sleeping (the framebuffer keeps it): POWER OFF
    // (button held at 86 min) and LOW BATT (100 min) alone in the middle
    if(!mode && ((wall >= 86 * MIN && wall < 87 * MIN) || (wall >= 100 * MIN && wall < 101 * MIN))) {
@@ -164,7 +166,8 @@ relays_t rel;
 uint16_t vbat_mv = 4000;
 void board_init(void) { INTCONbits.GIE = 1; PIE0bits.TMR0IE = 1; }
 void delay_ms(uint16_t ms) { while(ms--) fake_clrwdt(); }
-void meas_init(void) {}
+void meas_init(void) { adc_on = 1; }
+void meas_off(void) { adc_on = 0; }
 uint16_t meas_battery(void) { return vbat_mv; }
 void relays_set(uint8_t l, uint8_t c, uint8_t sw) {
    rel.l = l; rel.c = c; rel.sw = sw;

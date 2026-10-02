@@ -26,6 +26,12 @@ void meas_init(void) {
    ref_now = 0xFF;
 }
 
+void meas_off(void) {
+   ADCON0bits.ADON = 0;
+   FVRCONbits.FVREN = 0;         // the reference draws current also in sleep
+   ref_now = 0xFF;
+}
+
 static void adc_ref(uint8_t ref) {
    if(ref == ref_now) return;
    ref_now = ref;
