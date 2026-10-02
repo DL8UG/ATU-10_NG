@@ -32,7 +32,22 @@ The new firmware, written from scratch:
 
 ## Changes since 0.9.1
 
-- (in progress)
+- auto tune: after a tune that changed nothing (STOP, NO POWER, OVERLOAD)
+  the same tune is not started again at the same SWR (before, a STOP was
+  followed by a new tune 3 seconds later while you kept transmitting)
+- tuning with short carriers, e.g. the CW key pressed for a second with
+  pauses of more than about 5 seconds: the next tune within a minute goes
+  on with the interrupted search instead of starting again, and auto tune
+  starts it with the next carrier while the SWR is above 1.2 (before, the
+  tuner kept the half-finished result)
+- too much power: when the detector is above its measuring range (about
+  14 W forward power at an empty battery, 22 W at a full one) at 64 relay
+  settings in a row, the tune stops with OVERLOAD and the relays stay as
+  they were (before the search went on through all its relay steps under
+  that power)
+- display: during a tune the SWR found so far is shown also when it is the
+  same as before the tune
+- display: SWR "-.--" until the first measurement (before "0.00")
 
 ## Changes since 0.9.0
 
