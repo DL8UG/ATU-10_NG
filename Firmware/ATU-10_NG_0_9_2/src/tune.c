@@ -62,6 +62,9 @@
 #define WAIT_START     1000          // x 10 ms: wait for a carrier at the start
 #define WAIT_LOST      300           // x 10 ms: carrier lost during the search
 #define UNSTABLE_MAX   3             // an unsteady measurement is accepted the 3rd time
+#ifndef OVF_RUN_MAX
+#define OVF_RUN_MAX    64            // settings in a row with a clipped detector: too much power
+#endif
 
 // grid and candidates per search effort (Cell 12), relay step budget
 #ifndef GRID1
@@ -110,7 +113,7 @@ typedef struct {
    uint8_t sp;                       // noise estimate, relative, 1/256
 } val_t;
 
-enum { M_OK, M_ABORT, M_NO_CARRIER, M_BUDGET };
+enum { M_OK, M_ABORT, M_NO_CARRIER, M_BUDGET, M_OVERLOAD };
 
 #ifdef TUNE_STATS      // simulator: relay steps per phase
 long tune_stats[6];
@@ -132,6 +135,7 @@ static uint8_t cache_sp[CACHE_SIZE];
 static uint16_t cache_used;
 
 static uint8_t carrier_seen;
+static uint8_t ovf_run;                       // settings in a row with a clipped detector
 static uint16_t steps, budget;
 static uint32_t min_uw, max_uw;
 static relays_t best;                         // best setting measured so far
@@ -172,7 +176,11 @@ static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
       if(hal_abort()) return M_ABORT;
       hal_sample(&m, n);
       if(m.overflow) {               // detector above the ADC range: a QRP rig delivers
-         m.g2 = G2_ONE;              // more at a strong mismatch, count it as useless
+         // more at a strong mismatch, count it as useless. Clipped again and
+         // again: the transmitter itself is too strong, stop switching relays
+         // (QRP rigs up to 15 W in the simulator: at most 45 in a row)
+         if(++ovf_run >= OVF_RUN_MAX) return M_OVERLOAD;
+         m.g2 = G2_ONE;
          m.spread = 0;
          break;
       }
@@ -182,6 +190,7 @@ static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
          continue;
       }
       carrier_seen = 1;
+      ovf_run = 0;
       if(m.stable || ++unstable >= UNSTABLE_MAX) break;
    }
    v->g = m.g2;
@@ -418,6 +427,7 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
    do cache_key[i] = 0; while(++i);          // all 256
    cache_used = 0;
    carrier_seen = 0;
+   ovf_run = 0;
    fine = 0;
    steps = 0;
    min_uw = (uint32_t)cfg[CFG_MIN_PWR] * 100000;
@@ -560,5 +570,5 @@ results:
 
 stop:   // aborted or carrier gone: best setting so far
    finish(&best, best_g);
-   return r == M_ABORT ? TUNE_ABORTED : TUNE_NO_CARRIER;
+   return r == M_ABORT ? TUNE_ABORTED : r == M_OVERLOAD ? TUNE_OVERLOAD : TUNE_NO_CARRIER;
 }
