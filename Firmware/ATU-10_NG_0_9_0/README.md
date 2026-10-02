@@ -3,7 +3,9 @@
 Status: **tested on the device** (first tests by DL8UG: tuning, bypass,
 display, settings work).
 
-Hex file: `ATU-10_NG_0_9_0.hex` (also in `../ATU-10_NG_0_9_0.zip`).
+Hex file: `ATU-10_NG_0_9_0.hex` (also in `../ATU-10_NG_0_9_0.zip`), and on
+the [GitHub release v0.9.0](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.0)
+(pre-release).
 Flashing, operation and settings: see the [main README](../../README.md).
 
 ## Content

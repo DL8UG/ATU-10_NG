@@ -26,8 +26,10 @@ stable tuner – not the fastest tune.
 
 ## Download
 
-Version 0.9.0 (not yet published): [`Firmware/ATU-10_NG_0_9_0.zip`](Firmware/ATU-10_NG_0_9_0.zip)
-contains the hex file `ATU-10_NG_0_9_0.hex` and the license.
+**Version 0.9.0** (pre-release): on the
+[release page](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.0), or
+here in the repository: [`Firmware/ATU-10_NG_0_9_0.zip`](Firmware/ATU-10_NG_0_9_0.zip)
+with the hex file `ATU-10_NG_0_9_0.hex` and the license.
 
 ## Flashing
 
@@ -39,28 +41,89 @@ contains the hex file `ATU-10_NG_0_9_0.hex` and the license.
 Any other firmware hex file for the ATU-10 can be flashed the same way at any
 time – this firmware never blocks the way back.
 
+## First steps
+
+1. Connect the transceiver to the tuner's input and the antenna to its output.
+2. Set the transceiver to 2 to 5 W and send a steady carrier (CW key down,
+   FM or AM).
+3. Press the tuner's button for about ¼ s (long press). The display shows
+   TUNE and the best SWR found so far; after a few seconds the relays stop
+   clicking and the SWR reached is shown.
+4. Stop sending. The tuner keeps the setting – also when switched off – and
+   remembers it for the next time on this band.
+
 ## Operation
 
-| Button | Action |
+### Button
+
+| Press | Action |
 |---|---|
 | short press | bypass on / off (back to the tuned setting) |
 | long press (¼ s) | tune – send a carrier of 1 to 15 W |
 | very long press (2½ s) | switch off; to switch on, hold the button for about 1½ s |
-| any press while the display is dark | display on |
+| short or long press while the display is dark | display on (nothing else happens) |
+| held while switching on, through the greeting | setup menu (see [Settings](#settings)) |
 
-Tuning needs a steady carrier (CW, FM or AM, 1 to 15 W; 2 to 5 W gives the
-most exact readings). A short press during tuning stops it; the tuner keeps
-the best setting found so far.
+### Tuning
 
-The display shows the power (with a peak hold) and the SWR, or BYP while in
-bypass. Messages: TUNE, NO POWER (no carrier), NO MATCH (nothing better than
-bypass), STOP, OVERLOAD (too much power), LOW BATT.
+Tuning needs a steady carrier of 1 to 15 W (settings 4 and 5); 2 to 5 W give
+the most exact readings. While tuning, the display shows TUNE and the best SWR
+found so far, and the green LED is on. A first tune usually takes 3 to 6
+seconds, a tune on a band used before about 2 seconds.
 
-The tuner tunes again by itself (auto tune) when the SWR has changed by more
-than 0.3 and is above 1.2 – this can be switched off.
+- If no carrier comes within about 15 seconds after the long press, or the
+  carrier stops for about 5 seconds during the tune, the tuner shows
+  NO POWER. If it had already found something better, it keeps that,
+  otherwise everything stays as it was.
+- A short press during tuning stops it; the tuner keeps the best setting
+  found so far (STOP).
+- If no setting is better than the direct connection, the tuner switches to
+  bypass (NO MATCH).
 
-External interface: a short pulse on the start line switches the bypass on, a
-long one starts a tune; the key line is held low while tuning.
+**Auto tune:** while you transmit, the tuner tunes again by itself when the
+SWR is above 1.2 and has changed by more than 0.3 since the last tune
+(settings 6 and 7). It does not do that in bypass, and not within 3 seconds
+after a tune.
+
+### Display
+
+| Shown | Meaning |
+|---|---|
+| PWR = 5.0 W | transmit power, with a short peak hold (setting 10) |
+| SWR = 1.05 | SWR, measured while transmitting (the last value stays) |
+| BYP | instead of SWR: bypass is on |
+| battery symbol | battery charge, 3.0 V empty .. 4.2 V full |
+| TUNE | tuning in progress |
+| BYPASS / TUNED | after a short press: bypass on / back to the tuned setting |
+| NO POWER | no carrier for tuning |
+| NO MATCH | nothing better than bypass found, bypass is on |
+| STOP | tuning stopped by a button press |
+| OVERLOAD | too much power for the measurement |
+| LOW BATT | battery below 3.4 V: the tuner switches off; also shown at a restart after a voltage drop |
+| WDT RST, STACK RST | the firmware restarted itself after a fault (please report it) |
+| POWER OFF | switching off |
+
+### LEDs
+
+Every 3 seconds a LED blinks briefly and shows the battery: **green** above
+3.7 V, **green and red** (yellow) from 3.6 to 3.7 V, **red** below 3.6 V.
+While tuning the green LED is on.
+
+### Switching off by itself
+
+Without activity (no transmitting, no button) the display goes dark after 5
+minutes and the tuner switches off after 30 minutes (settings 1 and 2, 0 =
+never). Transmitting or a button press switches the display on again. The
+relays keep their setting while the tuner is off.
+
+### External interface
+
+For a transceiver that controls the tuner through the start and key lines:
+
+| Start line pulled low | Action |
+|---|---|
+| 20 to 90 ms | bypass on (also while the display is dark) |
+| 200 ms or longer, key line free | tune; the tuner holds the key line low while tuning |
 
 ## Settings
 
@@ -129,8 +192,16 @@ display then shows the best that was possible). Search effort 3 (setting 12)
 tries harder.
 
 **Tuning takes long.** A first tune usually takes 3 to 6 seconds (rarely up to
-15), a tune on a band used before about 2 seconds. Search effort 1 is quicker but finds the best match
-less often.
+15), a tune on a band used before about 2 seconds. Search effort 1 (setting
+12) is quicker but finds the best match less often.
+
+**The tuner tunes again and again.** Auto tune reacts to a changing SWR. If
+that is not wanted (e.g. with SSB on a critical antenna), switch it off
+(setting 7) or raise the threshold (setting 6).
+
+**Which settings are in effect?** See [Settings: which values are in
+effect](docs/SETTINGS.md#which-values-are-in-effect). Choosing HEX VALUES in
+the setup menu brings back the values of the hex file.
 
 **The display stays dark.** Press the button once. If the display still does
 not come on, switch the tuner off and on again.
@@ -140,14 +211,15 @@ not come on, switch the tuner off and on again.
 | Date | Version | Status | Content |
 |---|---|---|---|
 | 2026-10-02 | 0.1.0 | development | complete new firmware: search, memory of 12 tunes, setup menu, Cells editor; simulator and PC tests |
-| 2026-10-02 | 0.9.0 | tested on the device | first device tests passed; review fixes, display clean-up after tuning |
+| 2026-10-02 | 0.9.0 | tested on the device, pre-release | first device tests passed; review fixes, display clean-up after tuning |
 
 More: [Settings in detail](docs/SETTINGS.md) · [How tuning works](docs/TUNING.md) · [Development](docs/DEVELOPMENT.md)
 
 ## Feedback
 
-Reports from use on the air are very welcome – please describe the antenna,
-band, power and what the display showed.
+Reports from use on the air are very welcome – please open an
+[issue](https://github.com/DL8UG/ATU-10_NG/issues) and describe the antenna,
+band, power, the firmware version and what the display showed.
 
 ## License
 

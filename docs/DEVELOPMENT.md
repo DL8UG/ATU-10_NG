@@ -8,19 +8,31 @@ license. A released folder is never changed again; the next version starts as
 a copy in a new folder.
 
 ```
-Firmware/ATU-10_NG_0_9_0/
-  Makefile           build, checks, tests, simulator, charts
-  src/               firmware
-  tests/             unit tests on the PC
-  tools/             normalize_hex.py, cells.py, sim/ (simulator)
-tools/cell-editor.html   Cells editor for users
-docs/                    this documentation and its charts
+LICENSE                  Beerware
+README.md                for users
+docs/                    this documentation, charts and pictures
+tools/cell-editor.html   Cells editor for users (one offline HTML file)
+Firmware/
+  ATU-10_NG_0_9_0.zip    hex file + LICENSE
+  ATU-10_NG_0_9_0/
+    ATU-10_NG_0_9_0.hex  the firmware
+    README.md, LICENSE
+    Makefile             build, checks, tests, simulator, charts
+    src/                 firmware
+    tests/               tests on the PC; tests/host/xc.h stands in for the
+                         compiler's register header in test_app.c
+    tools/               normalize_hex.py, cells.py, sim/ (simulator)
+  ATU-10_NG_0_1_0/       first development version (kept as it is)
 ```
 
 ## Toolchain
 
-- Microchip XC8 (v4.00), free mode, C99, `-O2`
-- the PIC16F1xxxx Device Family Pack (`~/.local/share/microchip/packs/PIC16F1xxxx_DFP/`)
+- Microchip XC8 (v4.00), free mode, C99, `-O2` – from microchip.com (on Arch
+  Linux also in the AUR); the Makefile finds it under `/opt/microchip/xc8/`
+- the PIC16F1xxxx Device Family Pack from
+  <https://packs.download.microchip.com>, unpacked to
+  `~/.local/share/microchip/packs/PIC16F1xxxx_DFP/<version>/` (XC8 v3 and later
+  ship without it)
 - gcc, python3 and node for the tests and the simulator
 
 ```sh
@@ -37,6 +49,25 @@ make docs       # charts, display and setup menu pictures in docs/
 ```
 
 `make clean` deletes `build/` only, the hex file stays.
+
+## Tests
+
+`make test` builds and runs everything on the PC:
+
+| Test | What it checks |
+|---|---|
+| `test_cells` | BCD decoding of the Cells, invalid values, the Cells checksum |
+| `test_meas` | integer power / Pr / Pf / SWR against the floating point formulas |
+| `test_antennas` | plausibility of the simulator's antenna models |
+| `test_nvm` | EEPROM ring of the relay state, memory slots, damaged data |
+| `test_display` | screen layout (also as pictures), display restart and its pauses |
+| `test_settings` | menu values in the EEPROM, the rule hex Cells vs menu values |
+| `test_tune` | memory slots, bypass always in the final comparison |
+| `test_app` | the whole main program with simulated registers and time: 105 minutes of transmitting, timers, tuning, bypass, power off / on, setup menu, external interface, low battery, a missing display; variants 1-9 for start after brown-out / watchdog reset, Cells at minimum / maximum, unmatchable loads, NO POWER |
+| `test_tools.sh` | `cells.py` and the logic of `cell-editor.html` (run in node): identical files |
+
+Most bugs found in the reviews and on the device have a test that fails with
+the code before the fix.
 
 ## Checks in every build
 
@@ -91,3 +122,11 @@ initialization (`oled.c`), font (`font5x8.h`).
 2. `make && make test`, simulator runs
 3. zip with the hex file and LICENSE, README and LICENSE in the folder, top
    level README (download link, timeline)
+4. commit, push, then a GitHub release with the tag `vX.Y.Z` and the hex
+   file, the zip and LICENSE attached, e.g.
+
+   ```sh
+   gh release create v0.9.0 Firmware/ATU-10_NG_0_9_0/ATU-10_NG_0_9_0.hex \
+      Firmware/ATU-10_NG_0_9_0.zip Firmware/ATU-10_NG_0_9_0/LICENSE \
+      --title "ATU-10 NG 0.9.0" --notes-file notes.md --prerelease
+   ```
