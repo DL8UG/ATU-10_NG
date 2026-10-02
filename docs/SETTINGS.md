@@ -11,6 +11,21 @@ There are three ways, for the same 12 settings:
 2. [the Cell editor in the browser](#2-cell-editor-in-the-browser) – changes the hex file, with explanations
 3. [directly in the hex file](#3-directly-in-the-hex-file) – with any text editor
 
+## Contents
+
+- [The 12 settings](#the-12-settings)
+- [1. Setup menu on the tuner](#1-setup-menu-on-the-tuner)
+  - [Opening the menu](#opening-the-menu)
+  - [Changing a setting](#changing-a-setting)
+  - [The last three pages: SAVE, HEX VALUES, EXIT](#the-last-three-pages-save-hex-values-exit)
+  - [Which values are in effect?](#which-values-are-in-effect)
+- [2. Cell editor in the browser](#2-cell-editor-in-the-browser)
+- [3. Directly in the hex file](#3-directly-in-the-hex-file)
+  - [Where the settings are](#where-the-settings-are)
+  - [How a line is built](#how-a-line-is-built)
+  - [The values are written as decimal digits (BCD)](#the-values-are-written-as-decimal-digits-bcd)
+  - [The checksum at the end of each line](#the-checksum-at-the-end-of-each-line)
+
 ## The 12 settings
 
 | # | Setting | Meaning | Range | Default | Values in the menu |

@@ -8,6 +8,26 @@ stable tuner – not the fastest tune.
 
 **Status: 0.9.0, tested on the device.** See the [timeline](#development-status) below.
 
+## Contents
+
+- [What it does](#what-it-does)
+- [Download](#download)
+- [Flashing](#flashing)
+- [First steps](#first-steps)
+- [Operation](#operation)
+  - [Button](#button)
+  - [Tuning](#tuning)
+  - [Display](#display)
+  - [LEDs](#leds)
+  - [Switching off by itself](#switching-off-by-itself)
+  - [External interface](#external-interface)
+- [Settings](#settings)
+- [Questions](#questions)
+- [Development status](#development-status)
+- [Feedback](#feedback)
+- [License](#license)
+- [Credits](#credits)
+
 ## What it does
 
 - **Finds the best match, not the first one.** The tuner looks at the whole
