@@ -24,6 +24,7 @@ void i2c_init(void) {}
 #define OLED_H
 
 #include "../src/display.c"
+#include "../src/version.h"
 
 static int px(int x, int y) { return fb[y / 8][x] >> (y % 8) & 1; }
 
@@ -49,7 +50,7 @@ int main(void) {
    // greeting
    disp_clear();
    disp_big(LINE1, 28, "ATU-10");
-   disp_small(2, 31, "FW NG 0.1.0");
+   disp_small(2, 31, "FW NG " FW_VERSION);
    disp_small(3, 13, "DESIGNED BY DL8UG");
    dump("greeting");
    // main screen
