@@ -35,9 +35,16 @@ static uint32_t wall;                // ms since power-up
 static uint32_t end_at;
 static jmp_buf done;
 static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
+static int mode;                     // 0: the main run, else a start-up / Cells variant
+enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP };
+static uint32_t last_clr, wdt_worst;
+static int display_ok = 1, oled_inits, oled_ok_writes, key_falls, key_prev = 1;
+static double g2_floor;              // best possible reflection of the load
 
 typedef struct { uint32_t from, to; } span_t;
 static span_t press[40] = {         // button held (ms); the setup menu presses are added in main()
+   {30 * MIN, 30 * MIN + 100},       // short, display missing: bypass on
+   {31 * MIN, 31 * MIN + 100},       // short: bypass off
    {80 * MIN, 80 * MIN + 2000},      // wake from power off
    {82 * MIN, 82 * MIN + 100},       // short: bypass on
    {83 * MIN, 83 * MIN + 100},       // short: bypass off
@@ -45,7 +52,7 @@ static span_t press[40] = {         // button held (ms); the setup menu presses 
    {86 * MIN, 86 * MIN + 3000},      // extra long: power off
    {91 * MIN, 91 * MIN + 7000},      // wake and keep holding: setup menu
 };
-static int n_press = 6;
+static int n_press = 8;
 static const span_t carrier[] = {
    {5000, 45 * MIN},                 // 45 min of transmitting: auto tune, no power off
    {84 * MIN + 2000, 85 * MIN},      // the carrier for the tune at 84 min
@@ -63,14 +70,23 @@ static int in_spans(const span_t *s, int n) {
 
 static void checkpoint(uint32_t t);
 
+void fake_clrwdt(void) {
+   last_clr = wall;
+   fake_ms(1);
+}
+
 void fake_ms(uint32_t ms) {
    while(ms--) {
       wall++;
+      if(WDTCON0bits.SEN && wall - last_clr > wdt_worst) wdt_worst = wall - last_clr;
+      if(!LATDbits.LATD2 && key_prev) key_falls++;                     // a tune started
+      key_prev = LATDbits.LATD2;
       PORTBbits.RB5 = !in_spans(press, n_press);                        // low = pressed
-      PORTDbits.RD1 = !in_spans(ext_start, 2);                          // low = start
+      PORTDbits.RD1 = mode ? 1 : !in_spans(ext_start, 2);               // low = start
+      if(!mode) display_ok = !(wall >= 20 * MIN && wall < 40 * MIN);    // display unplugged
       PORTDbits.RD2 = LATDbits.LATD2;                                   // key line as driven
-      rf_on = in_spans(carrier, sizeof carrier / sizeof *carrier);
-      if(wall == 100 * MIN) vbat_mv = 3300;                             // battery empty
+      rf_on = mode ? wall >= 10000 && wall < 5 * MIN : in_spans(carrier, sizeof carrier / sizeof *carrier);
+      if(wall == 100 * MIN && !mode) vbat_mv = 3300;                    // battery empty
       if(INTCONbits.GIE && PIE0bits.TMR0IE) {
          PIR0bits.TMR0IF = 1;
          isr();
@@ -89,21 +105,24 @@ void fake_sleep(void) {
 relays_t rel;
 uint16_t vbat_mv = 4000;
 void board_init(void) { INTCONbits.GIE = 1; PIE0bits.TMR0IE = 1; }
-void delay_ms(uint16_t ms) { fake_ms(ms); }
+void delay_ms(uint16_t ms) { while(ms--) fake_clrwdt(); }
 void meas_init(void) {}
 uint16_t meas_battery(void) { return vbat_mv; }
 void relays_set(uint8_t l, uint8_t c, uint8_t sw) {
    rel.l = l; rel.c = c; rel.sw = sw;
    relay_calls++;
    if(!LATDbits.LATD2) key_low_in_tune = 1;
-   fake_ms(26);
+   delay_ms(26);
 }
 // a load whose best match is L 20, C 30, capacitor at the output
 void meas_take(meas_t *m, uint8_t n) {
    double d2 = (rel.l - 20.0) * (rel.l - 20.0) + (rel.c - 30.0) * (rel.c - 30.0) + (rel.sw ? 400 : 0);
+   double g;
    memset(m, 0, sizeof *m);
-   m->pf = rf_on ? 5000000 : 0;
-   m->g2 = (uint32_t)(G2_ONE * (d2 / (d2 + 60)));
+   last_clr = wall;                  // meas_take clears the watchdog
+   m->pf = rf_on ? (mode == M_CELLS_MAX ? 12000000 : 5000000) : 0;
+   g = d2 / (d2 + 60);
+   m->g2 = (uint32_t)(G2_ONE * (g2_floor + (1 - g2_floor) * g));
    m->pr = (uint32_t)((double)m->pf * m->g2 / G2_ONE);
    m->stable = 1;
    m->spread = 2;
@@ -113,8 +132,12 @@ void hal_relay_set(uint8_t l, uint8_t c, uint8_t sw) { in_tune = 1; relays_set(l
 void hal_sample(meas_t *m, uint8_t n) { meas_take(m, n); }
 void hal_wait_ms(uint8_t ms) { fake_ms(ms); }
 // display hardware
-uint8_t oled_init(void) { return 0; }
-uint8_t oled_write(uint8_t page, uint8_t x, const uint8_t *d, uint8_t n) { (void)page; (void)x; (void)d; (void)n; return 0; }
+uint8_t oled_init(void) { oled_inits++; return !display_ok; }
+uint8_t oled_write(uint8_t page, uint8_t x, const uint8_t *d, uint8_t n) {
+   (void)page; (void)x; (void)d; (void)n;
+   if(display_ok) oled_ok_writes++;
+   return !display_ok;
+}
 void i2c_init(void) {}
 // data EEPROM, erased
 static uint8_t ee[256];
@@ -128,7 +151,10 @@ static int tunes_seen(void) {        // a tune switched the relays since the las
    return t;
 }
 
+static void checkpoint_variant(uint32_t t);
+
 static void checkpoint(uint32_t t) {
+   if(mode) { checkpoint_variant(t); return; }
    if(getenv("TRACE") && t >= 91 * MIN && t <= 91 * MIN + 40000 && t % 500 == 0)
       printf("%6.1f s  btn %d held %3d  oled %d  sleeps %d  relay_ms %d  ticks %u\n", (t - 91 * MIN) / 1000.0,
              !PORTBbits.RB5, btn_held, OLED_PWR, sleeps, cfg[CFG_RELAY_MS], tick_ms());
@@ -146,6 +172,24 @@ static void checkpoint(uint32_t t) {
       CHECK(EXT_KEY_OUT);            // released after the tune
       CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);
       CHECK(st.last_swr > 0);         // the tune result is known (also at SWR 1.00)
+      break;
+   case 20 * MIN:                    // the display is unplugged now
+      oled_inits = 0;
+      break;
+   case 30 * MIN + 2000:             // the button still works without a display
+      CHECK(st.bypass);
+      break;
+   case 31 * MIN + 2000:
+      CHECK(!st.bypass);
+      CHECK(rel.l == 20 && rel.c == 30);
+      break;
+   case 40 * MIN:                    // few restarts of the missing display (back-off)
+      printf("display restarts in 20 min without a display: %d\n", oled_inits);
+      CHECK(oled_inits <= 30);
+      oled_ok_writes = 0;
+      break;
+   case 41 * MIN:                    // plugged in again: it works again
+      CHECK(oled_ok_writes > 0);
       break;
    case 44 * MIN:                    // still transmitting: no power off, display on
       CHECK_EQ(sleeps, 0);
@@ -215,7 +259,77 @@ static void checkpoint(uint32_t t) {
    }
 }
 
-int main(void) {
+// ---- start-up and Cells variants: 6 simulated minutes each
+static void checkpoint_variant(uint32_t t) {
+   if(t == 5000) {                   // after the start
+      CHECK(OLED_PWR);
+      if(mode != M_BLIP) CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);   // restored from the EEPROM
+      if(mode == M_BOR) CHECK_EQ(relay_calls, 0);           // no pulses after a brown-out
+      if(mode == M_WDT) CHECK_EQ(relay_calls, 1);           // pulsed once to be sure
+   }
+   if(t == 40000 && mode == M_BLIP)                         // carrier since 10 s: tuned, so
+      CHECK(key_falls >= 1);                                 // not stuck in the setup menu
+   if(t == 6 * MIN - 1) {
+      CHECK_EQ(sleeps, 0);
+      switch(mode) {
+      case M_CELLS_MIN:                                      // auto tune off: no tune
+         CHECK_EQ(key_falls, 0);
+         CHECK(OLED_PWR);                                    // display off never
+         break;
+      case M_CELLS_MAX:                                      // unmatchable load (SWR 2), auto
+         printf("Cells max: %d tunes in 5 min\n", key_falls);
+         CHECK(key_falls <= 1);                              // tune threshold 8.9: no endless
+         break;                                              // retuning
+      case M_BLIP:                                           // short press at the end of the
+         CHECK(key_falls >= 1);                              // greeting: no setup menu, auto
+         break;                                              // tune works
+      }
+   }
+}
+
+static int run_variant(void) {
+   memset(ee, 0xFF, sizeof ee);
+   st.r.l = 20; st.r.c = 30; st.r.sw = 0;                    // a saved tune result
+   st.last_swr = 5;
+   if(mode == M_BLIP) {                                      // blip: start in bypass, so that
+      st.r.l = st.r.c = 0;                                   // the carrier causes an auto tune
+      st.last_swr = 0;
+   }
+   state_save();
+   PORTBbits.RB5 = 1;
+   LATDbits.LATD2 = 1;
+   PCON0bits.nPOR = mode != M_BOR && mode != M_WDT ? 0 : 1;
+   PCON0bits.nBOR = mode == M_BOR ? 0 : 1;
+   PCON0bits.nRWDT = mode == M_WDT ? 0 : 1;
+   if(mode == M_CELLS_MIN) {
+      static const uint8_t c[12] = {0x00, 0x00, 0x02, 0x01, 0x01, 0x11, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01};
+      memcpy((void *)Cells, c, 12);
+   }
+   if(mode == M_CELLS_MAX) {
+      static const uint8_t c[12] = {0x99, 0x99, 0x30, 0x99, 0x99, 0x99, 0x01, 0x99, 0x99, 0x99, 0x99, 0x03};
+      memcpy((void *)Cells, c, 12);
+      g2_floor = 1.0 / 9;                                    // best possible SWR 2.0
+   }
+   if(mode == M_BLIP) {                                       // ends 0.4 s after the greeting
+      press[0].from = 2800; press[0].to = 3600;
+      n_press = 1;
+   }
+   else n_press = 0;
+   relay_calls = 0;
+   end_at = 6 * MIN;
+   if(!setjmp(done)) app_main();
+   printf("watchdog: longest time without clearing %u ms\n", wdt_worst);
+   CHECK(wdt_worst < 7000);
+   return check_done(mode == M_BOR ? "test_app bor" : mode == M_WDT ? "test_app wdt" :
+                     mode == M_CELLS_MIN ? "test_app cells-min" : mode == M_CELLS_MAX ? "test_app cells-max"
+                     : "test_app blip");
+}
+
+int main(int argc, char **argv) {
+   if(argc > 1) {
+      mode = atoi(argv[1]);
+      return run_variant();
+   }
    memset(ee, 0xFF, sizeof ee);
    PORTBbits.RB5 = 1;
    PCON0bits.nPOR = 0;               // a normal power-up
@@ -244,5 +358,7 @@ int main(void) {
       CHECK_EQ(n, 1);
    }
    printf("relay steps %d over the run\n", relay_calls);
+   printf("watchdog: longest time without clearing %u ms\n", wdt_worst);
+   CHECK(wdt_worst < 7000);
    return check_done("test_app");
 }

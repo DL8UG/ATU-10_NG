@@ -28,7 +28,8 @@ extern uint8_t PCON0_reg;
 
 void fake_ms(uint32_t ms);           // let simulated time pass
 void fake_sleep(void);
-#define CLRWDT()        fake_ms(1)   // one pass of a loop takes about 1 ms
+void fake_clrwdt(void);              // watchdog cleared, about 1 ms passes
+#define CLRWDT()        fake_clrwdt()
 #define NOP()
 #define SLEEP()         fake_sleep()
 #define __delay_ms(x)   fake_ms(x)

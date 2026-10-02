@@ -3,6 +3,7 @@
 #include "oled.h"
 #include "i2c_soft.h"
 #include "font5x8.h"
+#include "timer.h"
 
 #define W      128
 #define PAGES  4
@@ -10,6 +11,8 @@
 static uint8_t fb[PAGES][W];         // bit 0 = top pixel of a page
 static uint8_t dirty_lo[PAGES], dirty_hi[PAGES];   // changed columns, lo > hi: none
 static uint8_t on, faults, restart;
+static uint8_t backoff;              // restarts without success in a row
+static uint32_t t_restart;
 
 static void mark(uint8_t page, uint8_t x0, uint8_t x1) {
    if(x0 < dirty_lo[page]) dirty_lo[page] = x0;
@@ -146,7 +149,7 @@ static void send_page(uint8_t p) {
       if(++faults >= 5) restart = 1;       // done by disp_service (hardware stack)
       else i2c_init();
    }
-   else faults = 0;
+   else faults = backoff = 0;
 }
 
 void disp_service(void) {
@@ -154,10 +157,16 @@ void disp_service(void) {
    uint8_t n;
    if(!on) return;
    if(restart) {
+      // a display that does not answer is powered down and up again; if
+      // that does not help, the next try waits longer (2 s .. 64 s), so a
+      // missing display does not slow down the tuner
+      if(tick_ms() - t_restart < (uint32_t)2000 << backoff) return;
       restart = 0;
+      if(backoff < 5) backoff++;
       disp_power(0);
       delay_ms(300);
       disp_power(1);
+      t_restart = tick_ms();
       return;
    }
    for(n = 0; n < PAGES; n++) {       // the next page with changes
