@@ -11,7 +11,7 @@ CPU     = 16LF18877
 # Device Family Pack from https://packs.download.microchip.com (XC8 v3+ ships without it)
 DFP    ?= $(lastword $(wildcard $(HOME)/.local/share/microchip/packs/PIC16F1xxxx_DFP/*))
 SRC     = $(addprefix src/, app.c board.c buttons.c cells.c config.c display.c i2c_soft.c \
-             meas.c meas_math.c nvm.c oled.c relays.c settings.c setup.c timer.c tune.c)
+             meas.c meas_math.c nvm.c oled.c relays.c settings.c setup.c text.c timer.c tune.c)
 HDR     = $(wildcard src/*.h)
 # must match the #pragma config values in src/config.c
 CONFIG  = 2904,3CA1,072D,3003,0003
@@ -42,14 +42,14 @@ clean:
 # ---- host unit tests (gcc)
 HOSTCC   = gcc
 HOSTFLAGS = -O2 -std=c99 -Wall -Wextra -D_DEFAULT_SOURCE -Isrc
-TESTS    = cells meas antennas nvm display settings
+TESTS    = cells meas antennas nvm display settings tune
 
 build/test_%: tests/test_%.c tests/check.h $(HDR) $(wildcard src/*.c tools/sim/*)
 	mkdir -p build
 	$(HOSTCC) $(HOSTFLAGS) -Itools/sim -o $@ $< -lm
 
 # the main program with simulated hardware and time (tests/host/xc.h)
-APP_HOST = $(addprefix src/, timer.c buttons.c cells.c settings.c nvm.c tune.c meas_math.c display.c setup.c)
+APP_HOST = $(addprefix src/, timer.c buttons.c cells.c settings.c nvm.c tune.c meas_math.c display.c setup.c text.c)
 build/test_app: tests/test_app.c tests/host/xc.h $(HDR) $(wildcard src/*.c)
 	mkdir -p build
 	$(HOSTCC) $(HOSTFLAGS) -Wno-unused-parameter -Itests/host -Dmain=app_main -c src/app.c -o build/app_host.o
@@ -57,7 +57,7 @@ build/test_app: tests/test_app.c tests/host/xc.h $(HDR) $(wildcard src/*.c)
 
 test: $(addprefix build/test_, $(TESTS)) build/test_app $(TARGET).hex
 	@for t in $(TESTS) app; do build/test_$$t || exit 1; done
-	@for v in 1 2 3 4 5 6 7; do build/test_app $$v || exit 1; done
+	@for v in 1 2 3 4 5 6 7 8 9; do build/test_app $$v || exit 1; done
 	sh tests/test_tools.sh $(TARGET).hex
 
 # ---- PC simulator of the tuning algorithm (tools/sim, see sim.c)

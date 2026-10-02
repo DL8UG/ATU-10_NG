@@ -36,8 +36,9 @@ static uint32_t end_at;
 static jmp_buf done;
 static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
-enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH };
+enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER };
 static uint32_t last_clr, wdt_worst;
+static int display_lit;              // the display shows something (switched on)
 static int display_ok = 1, display_inited, oled_inits, oled_ok_writes, key_falls, key_prev = 1;
 static uint32_t disp_us, io_frac;     // time the main program spends on display I/O
 static double g2_floor;              // best possible reflection of the load
@@ -83,13 +84,16 @@ void fake_ms(uint32_t ms) {
       if(!LATDbits.LATD2 && key_prev) key_falls++;                     // a tune started
       key_prev = LATDbits.LATD2;
       PORTBbits.RB5 = !in_spans(press, n_press);                        // low = pressed
-      PORTDbits.RD1 = mode ? 1 : !in_spans(ext_start, 2);               // low = start
+      if(mode == M_EXTDARK) PORTDbits.RD1 = !(wall >= 3 * MIN && wall < 3 * MIN + 50);   // short pulse
+      else PORTDbits.RD1 = mode ? 1 : !in_spans(ext_start, 2);          // low = start
       if(!mode) {                                                        // display unplugged
          display_ok = !(wall >= 20 * MIN && wall < 40 * MIN);
-         if(!display_ok) display_inited = 0;    // a plugged-in display is dark until initialized
+         if(!display_ok) display_inited = display_lit = 0;   // dark until initialized and on
       }
       PORTDbits.RD2 = LATDbits.LATD2;                                   // key line as driven
-      rf_on = mode ? wall >= 10000 && wall < 5 * MIN : in_spans(carrier, sizeof carrier / sizeof *carrier);
+      if(mode == M_EXTDARK) rf_on = 0;
+      else if(mode == M_NOPOWER) rf_on = wall >= 60000 && wall < 2 * MIN;   // after the NO POWER
+      else rf_on = mode ? wall >= 10000 && wall < 5 * MIN : in_spans(carrier, sizeof carrier / sizeof *carrier);
       if(wall == 100 * MIN && !mode) vbat_mv = 3300;                    // battery empty
       if(INTCONbits.GIE && PIE0bits.TMR0IE) {
          PIR0bits.TMR0IF = 1;
@@ -143,6 +147,7 @@ static void io_cost(uint32_t us) {
    if(io_frac >= 1000) { fake_ms(io_frac / 1000); io_frac %= 1000; }
 }
 uint8_t oled_present(void) { io_cost(200); return display_ok; }
+uint8_t oled_on(void) { io_cost(500); if(display_ok && display_inited) display_lit = 1; return !display_ok; }
 uint8_t oled_init(void) {
    oled_inits++;
    if(!display_ok) {                 // 10 tries with 100 ms in between
@@ -218,7 +223,7 @@ static void checkpoint(uint32_t t) {
       break;
    case 40 * MIN + 3000:             // plugged in again: initialized and drawn within 3 s
       CHECK(oled_inits >= 1);
-      CHECK(display_inited);
+      CHECK(display_inited && display_lit);
       CHECK(oled_ok_writes > 0);
       break;
    case 44 * MIN:                    // still transmitting: no power off, display on
@@ -291,11 +296,25 @@ static void checkpoint(uint32_t t) {
 
 // ---- start-up and Cells variants: 6 simulated minutes each
 static void checkpoint_variant(uint32_t t) {
+   if(getenv("TRACE") && t % 1000 == 0 && t <= 46000)
+      printf("%5u ms  last_swr %d  rel %d/%d/%d  key %d  falls %d  held %d\n", t, st.last_swr,
+             rel.l, rel.c, rel.sw, LATDbits.LATD2, key_falls, btn_held);
    if(t == 5000) {                   // after the start
       CHECK(OLED_PWR);
       if(mode < M_BLIP) CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);   // restored from the EEPROM
       if(mode == M_BOR) CHECK_EQ(relay_calls, 0);           // no pulses after a brown-out
       if(mode == M_WDT) CHECK_EQ(relay_calls, 1);           // pulsed once to be sure
+   }
+   if(mode == M_EXTDARK && t == 3 * MIN - 1000)             // display off after 1 min (Cell 1)
+      CHECK(!OLED_PWR);
+   if(mode == M_EXTDARK && t == 3 * MIN + 2000) {           // the transceiver's short pulse
+      CHECK(st.bypass);                                      // switched the bypass on although
+      CHECK(rel.l == 0 && rel.c == 0);                       // the display was dark
+   }
+   if(mode == M_NOPOWER && t == 45000) {                    // long press without a carrier: NO
+      CHECK_EQ(key_falls, 1);                                // POWER, everything as before
+      CHECK(rel.l == 20 && rel.c == 30);
+      CHECK_EQ(st.last_swr, 5);
    }
    if(t == 40000 && mode == M_BLIP)                         // carrier since 10 s: tuned, so
       CHECK(key_falls >= 1);                                 // not stuck in the setup menu
@@ -313,6 +332,11 @@ static void checkpoint_variant(uint32_t t) {
       case M_BLIP:                                           // short press at the end of the
          CHECK(key_falls >= 1);                              // greeting: no setup menu, auto
          break;                                              // tune works
+      case M_NOPOWER:                                        // carrier at the tuned setting
+         CHECK_EQ(key_falls, 1);                             // later: no needless auto tune
+         break;
+      case M_EXTDARK:
+         break;
       case M_UNMATCH:                                        // best possible SWR 2.0, default
       case M_NOMATCH:                                        // threshold / nothing matches:
          printf("%s: %d tunes in 5 min\n", mode == M_UNMATCH ? "SWR 2 load" : "no match",
@@ -348,11 +372,19 @@ static int run_variant(void) {
       memcpy((void *)Cells, c, 12);
       g2_floor = 1.0 / 9;                                    // best possible SWR 2.0
    }
+   if(mode == M_EXTDARK) {
+      static const uint8_t c[12] = {0x01, 0x30, 0x07, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02};
+      memcpy((void *)Cells, c, 12);                          // display off after 1 min
+   }
+   n_press = 0;
    if(mode == M_BLIP) {                                       // ends 0.4 s after the greeting
       press[0].from = 2800; press[0].to = 3600;
       n_press = 1;
    }
-   else n_press = 0;
+   if(mode == M_NOPOWER) {                                    // long press, no carrier
+      press[0].from = 20000; press[0].to = 20600;
+      n_press = 1;
+   }
    relay_calls = 0;
    end_at = 6 * MIN;
    if(!setjmp(done)) app_main();
@@ -360,7 +392,9 @@ static int run_variant(void) {
    CHECK(wdt_worst < 7000);
    return check_done(mode == M_BOR ? "test_app bor" : mode == M_WDT ? "test_app wdt" :
                      mode == M_CELLS_MIN ? "test_app cells-min" : mode == M_CELLS_MAX ? "test_app cells-max"
-                     : mode == M_BLIP ? "test_app blip" : mode == M_UNMATCH ? "test_app swr2" : "test_app nomatch");
+                     : mode == M_BLIP ? "test_app blip" : mode == M_UNMATCH ? "test_app swr2"
+                     : mode == M_NOMATCH ? "test_app nomatch" : mode == M_EXTDARK ? "test_app ext-dark"
+                     : "test_app nopower");
 }
 
 int main(int argc, char **argv) {

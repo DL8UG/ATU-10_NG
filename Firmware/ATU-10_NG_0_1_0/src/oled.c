@@ -61,9 +61,12 @@ uint8_t oled_present(void) {
    return !nack;
 }
 
+// Initializes the controller with the display still off. The 4 visible
+// pages come from the framebuffer next; the 4 invisible ones (the
+// controller has 8) are cleared here. oled_on() then shows the picture,
+// so no random RAM content flashes up.
 uint8_t oled_init(void) {
    static const uint8_t zero[16] = {0};
-   static const uint8_t on = 0xAF;
    uint8_t i, p, nack = 1;
    i2c_init();
    for(i = 0; i < 10 && nack; i++) {   // the controller needs a moment
@@ -71,8 +74,12 @@ uint8_t oled_init(void) {
       if(nack) delay_ms(100);
    }
    if(nack) return nack;                // no display: do not send the rest
-   for(p = 0; p < 8; p++)               // the controller has 8 pages
-      for(i = 0; i < 128; i += 16) oled_write(p, (uint8_t)(i - COL_SHIFT), zero, 16);
-   nack |= commands(&on, 1);
+   for(p = 4; p < 8; p++)
+      for(i = 0; i < 128; i += 16) nack |= oled_write(p, (uint8_t)(i - COL_SHIFT), zero, 16);
    return nack;
+}
+
+uint8_t oled_on(void) {
+   static const uint8_t on = 0xAF;
+   return commands(&on, 1);
 }

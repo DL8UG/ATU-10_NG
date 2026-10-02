@@ -57,6 +57,8 @@ void disp_power(uint8_t pwr) {
    t_restart = tick_ms();
    on = 1;
    mark_all();
+   disp_flush();                     // the picture first, then the display on
+   if(!restart && oled_on()) restart = 1;
 }
 
 void disp_clear(void) {
