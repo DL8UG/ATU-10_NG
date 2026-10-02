@@ -189,7 +189,8 @@ void i2c_init(void) {}
 // data EEPROM, erased
 static uint8_t ee[256];
 uint8_t nvm_read(uint8_t a) { return ee[a]; }
-void nvm_write(uint8_t a, uint8_t v) { ee[a] = v; }
+static int ee_writes;                // bytes changed (nvm_write skips equal ones)
+void nvm_write(uint8_t a, uint8_t v) { ee_writes += ee[a] != v; ee[a] = v; }
 
 // ---- what the tuner should have done, checked at these points in time
 static int tunes_seen(void) {        // a tune switched the relays since the last call
@@ -332,8 +333,11 @@ static void checkpoint_variant(uint32_t t) {
       CHECK(st.bypass);                                      // switched the bypass on although
       CHECK(rel.l == 0 && rel.c == 0);                       // the display was dark
    }
+   static int ee_before;
+   if(mode == M_NOPOWER && t == 20000) ee_before = ee_writes;
    if(mode == M_NOPOWER && t == 45000) {                    // long press without a carrier: NO
       CHECK_EQ(key_falls, 1);                                // POWER, everything as before
+      CHECK_EQ(ee_writes - ee_before, 0);                    // and nothing written
       CHECK(rel.l == 20 && rel.c == 30);
       CHECK_EQ(st.last_swr, 5);
    }

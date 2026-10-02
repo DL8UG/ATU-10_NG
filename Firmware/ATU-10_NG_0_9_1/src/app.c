@@ -153,7 +153,8 @@ static void do_tune(void) {
    if(r != TUNE_OK && r != TUNE_NO_MATCH && rel.l == from.l && rel.c == from.c && rel.sw == from.sw) {
       // Stopped without a change (no carrier, or stopped before anything
       // better was found, e.g. by the long press that goes on to power
-      // off): everything stays as it was, the bypass too
+      // off): everything stays as it was, the bypass too, and nothing
+      // is written to the EEPROM
    }
    else {
       // a result ends the bypass
@@ -165,8 +166,8 @@ static void do_tune(void) {
                        ? (uint8_t)(tune_swr - 100 > 255 ? 255 : tune_swr > 101 ? tune_swr - 100 : 1) : 0;
       swr_ref = tune_swr;
       swr_last = tune_swr;
+      save_state();
    }
-   save_state();
    show_swr_label();
    shown_swr = 0xFFFF;
    show_swr(swr_last);
