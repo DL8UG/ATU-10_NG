@@ -34,6 +34,12 @@ static void mark_all(void) {
    }
 }
 
+#ifndef __XC8
+const uint8_t *disp_fb(void) {       // the picture, for the tests on the PC
+   return &fb[0][0];
+}
+#endif
+
 void disp_refresh(void) {
    mark_all();
 }

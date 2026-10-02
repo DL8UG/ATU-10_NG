@@ -53,7 +53,10 @@ static const char *num(uint16_t v, uint8_t dec, uint8_t width) {
 
 // ---------------------------------------------------------------- screen
 
+// The label clears everything left of the value (x 0..59): whatever was
+// there before (TUNE, a message) must not leave pixels in the gaps
 static void show_swr_label(void) {
+   disp_big(LINE2, 0, "     ");
    disp_big(LINE2, 0, st.bypass ? "BYP" : "SWR");
    disp_big(LINE2, 42, "=");
 }

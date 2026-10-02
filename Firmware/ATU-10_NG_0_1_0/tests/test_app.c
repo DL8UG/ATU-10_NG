@@ -71,6 +71,24 @@ static int in_spans(const span_t *s, int n) {
 }
 
 static void checkpoint(uint32_t t);
+static uint32_t check_line2_at;
+const uint8_t *disp_fb(void);
+
+// After a tune (and its message) the lower line shows only the label
+// (x 0..35), "=" (x 42..53) and the value (x 60..107): the gaps must be
+// empty - a left-over "E" of TUNE was seen on the device at x 36..41
+static int line2_checks;
+static void check_line2(void) {
+   const uint8_t *fb = disp_fb();
+   int dirty = 0;
+   for(int y = 18; y < 32; y++)
+      for(int x = 0; x < 115; x++) {
+         int gap = (x >= 36 && x <= 41) || (x >= 54 && x <= 59) || (x >= 108);
+         if(gap && (fb[(y / 8) * 128 + x] >> (y % 8) & 1)) dirty++;
+      }
+   CHECK_EQ(dirty, 0);
+   line2_checks++;
+}
 
 void fake_clrwdt(void) {
    last_clr = wall;
@@ -82,7 +100,9 @@ void fake_ms(uint32_t ms) {
       wall++;
       if(WDTCON0bits.SEN && wall - last_clr > wdt_worst) wdt_worst = wall - last_clr;
       if(!LATDbits.LATD2 && key_prev) key_falls++;                     // a tune started
+      if(LATDbits.LATD2 && !key_prev) check_line2_at = wall + 2500;     // ended: check the picture
       key_prev = LATDbits.LATD2;
+      if(wall == check_line2_at) check_line2();
       PORTBbits.RB5 = !in_spans(press, n_press);                        // low = pressed
       if(mode == M_EXTDARK) PORTDbits.RD1 = !(wall >= 3 * MIN && wall < 3 * MIN + 50);   // short pulse
       else PORTDbits.RD1 = mode ? 1 : !in_spans(ext_start, 2);          // low = start
@@ -429,7 +449,8 @@ int main(int argc, char **argv) {
       for(int i = 0; i < tune_mem_n; i++) n += tune_mem[i].l == 20 && tune_mem[i].c == 30;
       CHECK_EQ(n, 1);
    }
-   printf("relay steps %d over the run\n", relay_calls);
+   printf("relay steps %d over the run, lower line checked after %d tunes\n", relay_calls, line2_checks);
+   CHECK(line2_checks >= 4);
    printf("watchdog: longest time without clearing %u ms\n", wdt_worst);
    CHECK(wdt_worst < 7000);
    return check_done("test_app");
