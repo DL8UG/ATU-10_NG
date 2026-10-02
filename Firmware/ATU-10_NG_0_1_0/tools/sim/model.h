@@ -6,6 +6,7 @@
 #define MODEL_H
 
 #include <complex.h>
+#include <stdio.h>
 
 // ---- network
 extern double freq;                  // Hz
@@ -32,6 +33,7 @@ double model_sample_mv(double p, double scale);     // one detector reading as t
 extern long relay_steps, measurements;
 extern double time_s;                // estimated tuning time
 extern int trace;
+extern FILE *trace_file;             // relay steps for plots (sim --map)
 extern double relay_ms;
 void model_relay_set(int l, int c, int sw);
 

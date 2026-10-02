@@ -21,6 +21,7 @@ double true_a = 1.14, true_b = 0.4;
 long relay_steps, measurements;
 double time_s, relay_ms = 7;
 int trace;
+FILE *trace_file;
 
 static double uniform(void) { return rand() / (RAND_MAX + 1.0); }
 
@@ -70,9 +71,12 @@ void model_relay_set(int l, int c, int sw) {
    r_sw = sw & 1;
    relay_steps++;
    time_s += (3 * relay_ms + 5) / 1000;      // pulses + settling
-   if(trace)
+   if(trace) {
       fprintf(stderr, "%4ld  SW=%d L=%3d C=%3d  SWR %.3f\n", relay_steps, r_sw, r_l, r_c,
               swr_of(gamma_of(r_l, r_c, r_sw)));
+      if(trace_file) fprintf(trace_file, "step\t%d\t%d\t%d\t%.4f\n", r_sw, r_l, r_c,
+                             swr_of(gamma_of(r_l, r_c, r_sw)));
+   }
 }
 
 void model_powers(double *pf, double *pr) {
