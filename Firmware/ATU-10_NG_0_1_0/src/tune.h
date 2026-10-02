@@ -22,15 +22,18 @@ enum {
    TUNE_NO_MATCH,                  // nothing better than bypass: relays in bypass
 };
 
-// Memory of the last good tunes (most recent first). The tuner does not
-// know the frequency; it measures the remembered settings at the start of
-// a tune instead, and the one that fits starts a short local search. The
-// firmware keeps the memory in the data EEPROM (tune_mem_changed).
+// Memory of the last good tunes. The tuner does not know the frequency; it
+// measures the remembered settings at the start of a tune instead, and the
+// best one starts a short local search. Each result goes into its own
+// slot (one near the same place is replaced, else the oldest), so the
+// firmware writes only that slot to the data EEPROM (tune_mem_dirty).
 #define MEM_SLOTS    12
 #define MEM_MAX_SWR  200           // results up to SWR 2.00 are remembered
 extern relays_t tune_mem[MEM_SLOTS];
 extern uint8_t tune_mem_swr[MEM_SLOTS];   // SWR x 100 - 100 reached then (max 255)
-extern uint8_t tune_mem_n, tune_mem_changed;
+extern uint8_t tune_mem_seq[MEM_SLOTS];   // age: higher (mod 256) = newer
+extern uint8_t tune_mem_n;                // slots in use (0..n-1)
+extern uint16_t tune_mem_dirty;           // bit i: slot i changed
 
 // Result of the last tune
 extern relays_t tune_best;

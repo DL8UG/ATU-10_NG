@@ -4,8 +4,8 @@
 // pressed when switching on). Then:
 //   short press  next value of the setting shown
 //   long press   next setting; after the last: SAVE, HEX DEFAULTS, EXIT
-// On SAVE / HEX DEFAULTS / EXIT a short press does it. Without a press for
-// 60 s, or with an extra long press, the menu ends without saving.
+// On SAVE / HEX VALUES / EXIT a short press does it. Without a press for
+// 60 s the menu ends without saving.
 
 #include "board.h"
 #include "timer.h"
@@ -134,7 +134,6 @@ void setup_run(void) {
          continue;
       }
       t = tick_ms();
-      if(ev == EV_XLONG) break;
       if(ev == EV_LONG) {
          page = (uint8_t)((page + 1) % PAGES);
          show(page);

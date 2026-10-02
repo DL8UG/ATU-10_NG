@@ -1,6 +1,9 @@
 // Data EEPROM: relay state and the memory of good tunes survive a reset or
-// a battery change. Uses 0x30..0xDF only (0x00..0x2F: settings block of
-// the setup menu at 0x20, the rest left alone).
+// a battery change. Layout:
+//   0x20..0x2F  settings block of the setup menu (settings.c)
+//   0x30..0x6B  memory of good tunes, 12 slots of 5 bytes
+//   0x70..0xEF  relay state, ring of 16 slots of 8 bytes
+// The rest is not used (older firmware keeps its data at 0x00..0x08).
 
 #ifndef NVM_H
 #define NVM_H
@@ -23,7 +26,7 @@ uint8_t crc8(const uint8_t *p, uint8_t n);
 
 void state_save(void);                        // st -> EEPROM (next ring slot)
 uint8_t state_load(void);                     // 1 = st restored
-void mem_save(void);                          // tune memory, if changed
+void mem_save(void);                          // changed slots of the tune memory
 void mem_load(void);
 
 #endif

@@ -12,6 +12,5 @@ extern volatile uint8_t btn_held, ext_held;
 extern volatile uint8_t btn_released, ext_released;
 
 uint32_t tick_ms(void);                  // read atomically
-uint8_t elapsed(uint32_t since, uint32_t ms);
 
 #endif

@@ -8,11 +8,11 @@ state_t st;
 // The relay state changes with every tune and bypass toggle. To spread the
 // wear (100k write cycles per byte) it goes into the next of 16 slots each
 // time; a sequence number tells which slot is the newest.
-#define RING_ADDR   0x60
+#define RING_ADDR   0x70
 #define RING_SLOTS  16
 #define SLOT_SIZE   8          // seq, l, c|sw<<7, flags, byp l, byp c|sw<<7, last_swr, crc
-#define MEM_ADDR    0x30       // magic, n, 12 x (l, c|sw<<7, swr), crc
-#define MEM_MAGIC   0xA7
+#define MEM_ADDR    0x30       // 12 slots: l, c|sw<<7, swr, seq, crc
+#define MEM_SIZE    5
 
 static uint8_t ring_slot, ring_seq;
 
@@ -113,31 +113,36 @@ uint8_t state_load(void) {
    return 1;
 }
 
+// Each slot has its own CRC, so a result changes only its own 5 bytes
 void mem_save(void) {
-   uint8_t b[2 + 3 * MEM_SLOTS], i;
-   if(!tune_mem_changed) return;
-   tune_mem_changed = 0;
-   b[0] = MEM_MAGIC;
-   b[1] = tune_mem_n;
+   uint8_t b[MEM_SIZE], i, k, a;
    for(i = 0; i < MEM_SLOTS; i++) {
-      b[2 + 3 * i] = tune_mem[i].l;
-      b[3 + 3 * i] = pack_c(&tune_mem[i]);
-      b[4 + 3 * i] = tune_mem_swr[i];
+      if(!(tune_mem_dirty & (1u << i))) continue;
+      b[0] = tune_mem[i].l;
+      b[1] = pack_c(&tune_mem[i]);
+      b[2] = tune_mem_swr[i];
+      b[3] = tune_mem_seq[i];
+      b[4] = crc8(b, MEM_SIZE - 1);
+      a = (uint8_t)(MEM_ADDR + i * MEM_SIZE);
+      for(k = 0; k < MEM_SIZE; k++) nvm_write((uint8_t)(a + k), b[k]);
    }
-   for(i = 0; i < sizeof b; i++) nvm_write((uint8_t)(MEM_ADDR + i), b[i]);
-   nvm_write((uint8_t)(MEM_ADDR + sizeof b), crc8(b, sizeof b));
+   tune_mem_dirty = 0;
 }
 
+// Valid slots are restored; a damaged one in between stays empty
+// (L = C = 0, never used)
 void mem_load(void) {
-   uint8_t b[2 + 3 * MEM_SLOTS], i;
+   uint8_t b[MEM_SIZE], i, k, a;
    tune_mem_n = 0;
-   tune_mem_changed = 0;
-   for(i = 0; i < sizeof b; i++) b[i] = nvm_read((uint8_t)(MEM_ADDR + i));
-   if(b[0] != MEM_MAGIC || b[1] > MEM_SLOTS || crc8(b, sizeof b) != nvm_read((uint8_t)(MEM_ADDR + sizeof b)))
-      return;
+   tune_mem_dirty = 0;
    for(i = 0; i < MEM_SLOTS; i++) {
-      unpack(&tune_mem[i], b[2 + 3 * i], b[3 + 3 * i]);
-      tune_mem_swr[i] = b[4 + 3 * i];
+      a = (uint8_t)(MEM_ADDR + i * MEM_SIZE);
+      for(k = 0; k < MEM_SIZE; k++) b[k] = nvm_read((uint8_t)(a + k));
+      tune_mem[i].l = tune_mem[i].c = tune_mem[i].sw = 0;
+      if(crc8(b, MEM_SIZE - 1) != b[MEM_SIZE - 1] || (b[0] == 0 && (b[1] & 0x7F) == 0)) continue;
+      unpack(&tune_mem[i], b[0], b[1]);
+      tune_mem_swr[i] = b[2];
+      tune_mem_seq[i] = b[3];
+      tune_mem_n = (uint8_t)(i + 1);
    }
-   tune_mem_n = b[1];
 }

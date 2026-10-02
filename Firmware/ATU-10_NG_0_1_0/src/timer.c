@@ -38,8 +38,3 @@ uint32_t tick_ms(void) {
    INTCONbits.GIE = 1;
    return t;
 }
-
-// 1 if at least ms have passed since the tick value 'since' (wrap-safe)
-uint8_t elapsed(uint32_t since, uint32_t ms) {
-   return tick_ms() - since >= ms;
-}

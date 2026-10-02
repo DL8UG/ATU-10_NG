@@ -96,12 +96,3 @@ void meas_take(meas_t *m, uint8_t n) {
    meas_finish(m, f1, r1, r2, f2);
    m->overflow = ovf;
 }
-
-void meas_quick(meas_t *m) {
-   uint16_t f, r;
-   ovf = 0;
-   f = detector(ADC_CH_FWD, 1);
-   r = detector(ADC_CH_REV, 1);
-   meas_finish(m, f, r, r, f);
-   m->overflow = ovf;
-}

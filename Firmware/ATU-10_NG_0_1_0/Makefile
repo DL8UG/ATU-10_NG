@@ -48,8 +48,15 @@ build/test_%: tests/test_%.c tests/check.h $(HDR) $(wildcard src/*.c tools/sim/*
 	mkdir -p build
 	$(HOSTCC) $(HOSTFLAGS) -Itools/sim -o $@ $< -lm
 
-test: $(addprefix build/test_, $(TESTS)) $(TARGET).hex
-	@for t in $(TESTS); do build/test_$$t || exit 1; done
+# the main program with simulated hardware and time (tests/host/xc.h)
+APP_HOST = $(addprefix src/, timer.c buttons.c cells.c settings.c nvm.c tune.c meas_math.c display.c setup.c)
+build/test_app: tests/test_app.c tests/host/xc.h $(HDR) $(wildcard src/*.c)
+	mkdir -p build
+	$(HOSTCC) $(HOSTFLAGS) -Wno-unused-parameter -Itests/host -Dmain=app_main -c src/app.c -o build/app_host.o
+	$(HOSTCC) $(HOSTFLAGS) -Wno-unused-parameter -Itests/host -o $@ tests/test_app.c build/app_host.o $(APP_HOST) -lm
+
+test: $(addprefix build/test_, $(TESTS)) build/test_app $(TARGET).hex
+	@for t in $(TESTS) app; do build/test_$$t || exit 1; done
 	sh tests/test_tools.sh $(TARGET).hex
 
 # ---- PC simulator of the tuning algorithm (tools/sim, see sim.c)

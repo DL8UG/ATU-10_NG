@@ -14,6 +14,5 @@ enum { EV_NONE, EV_SHORT, EV_LONG, EV_XLONG, EV_EXT_SHORT, EV_EXT_LONG };
 uint8_t buttons_event(void);         // next event, EV_NONE if none
 void buttons_unget(uint8_t ev);      // hand an event back for later
 void buttons_clear(void);            // forget everything (after a power-up)
-uint8_t button_held(void);           // press time so far, 10 ms
 
 #endif

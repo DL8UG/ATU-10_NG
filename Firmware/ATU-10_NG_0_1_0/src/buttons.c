@@ -11,10 +11,6 @@
 
 static uint8_t long_sent, xlong_sent, ext_long_sent, pending;
 
-uint8_t button_held(void) {
-   return btn_held;                 // one byte: read atomically
-}
-
 void buttons_unget(uint8_t ev) {
    pending = ev;
 }

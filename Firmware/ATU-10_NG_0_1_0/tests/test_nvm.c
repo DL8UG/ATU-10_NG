@@ -10,8 +10,9 @@ void nvm_write(uint8_t a, uint8_t v) { if(ee[a] != v) { ee[a] = v; writes[a]++; 
 
 #include "../src/tune.h"
 relays_t tune_mem[MEM_SLOTS];
-uint8_t tune_mem_swr[MEM_SLOTS];
-uint8_t tune_mem_n, tune_mem_changed;
+uint8_t tune_mem_swr[MEM_SLOTS], tune_mem_seq[MEM_SLOTS];
+uint8_t tune_mem_n;
+uint16_t tune_mem_dirty;
 
 #include "../src/nvm.c"
 
@@ -37,36 +38,47 @@ int main(void) {
       CHECK_EQ(st.byp.sw, 1);
       CHECK_EQ(st.last_swr, (uint8_t)i);
    }
-   for(i = 0x60; i < 0xE0; i++) if(writes[i] > maxw) maxw = writes[i];
+   for(i = 0x70; i < 0xF0; i++) if(writes[i] > maxw) maxw = writes[i];
    printf("1000 saves: at most %ld writes per byte\n", maxw);
    CHECK(maxw <= 1000 / 16 + 2);
    // a corrupted newest slot: the one before is used
    state_save();                                 // seq n, values of i = 999
    st.r.l = 42; state_save();
-   ee[0x60 + ring_slot * 8 + 1] ^= 0x10;         // damage the newest
+   ee[0x70 + ring_slot * 8 + 1] ^= 0x10;         // damage the newest
    CHECK(state_load());
    CHECK_EQ(st.r.l, 999 % 128);
-   // nothing outside 0x30..0xDF is touched
+   // nothing outside 0x30..0xEF is touched
    for(i = 0; i < 0x30; i++) CHECK_EQ(writes[i], 0);
-   for(i = 0xE0; i < 256; i++) CHECK_EQ(writes[i], 0);
+   for(i = 0xF0; i < 256; i++) CHECK_EQ(writes[i], 0);
    // tune memory round trip
    tune_mem_n = 3;
-   for(i = 0; i < MEM_SLOTS; i++) {
+   for(i = 0; i < 3; i++) {
       tune_mem[i].l = (uint8_t)(10 + i); tune_mem[i].c = (uint8_t)(100 + i); tune_mem[i].sw = (uint8_t)(i & 1);
       tune_mem_swr[i] = (uint8_t)(i * 3);
+      tune_mem_seq[i] = (uint8_t)(250 + i * 4);    // across the wrap
    }
-   tune_mem_changed = 1;
+   tune_mem_dirty = 0x7;
    mem_save();
-   CHECK_EQ(tune_mem_changed, 0);
+   CHECK_EQ(tune_mem_dirty, 0);
    memset(tune_mem, 0, sizeof tune_mem);
    mem_load();
    CHECK_EQ(tune_mem_n, 3);
    CHECK_EQ(tune_mem[2].l, 12);
    CHECK_EQ(tune_mem[2].c, 102);
    CHECK_EQ(tune_mem[1].sw, 1);
-   CHECK_EQ(tune_mem_swr[11], 33);
-   ee[0x35] ^= 1;                                // corrupted: empty memory
+   CHECK_EQ(tune_mem_swr[2], 6);
+   CHECK_EQ(tune_mem_seq[2], 2);
+   // one slot changed: only its 5 bytes are written
+   memset(writes, 0, sizeof writes);
+   tune_mem[1].l = 77;
+   tune_mem_dirty = 0x2;
+   mem_save();
+   for(i = 0; i < 256; i++) if(writes[i]) CHECK(i >= 0x35 && i < 0x3A);
+   // a damaged slot in between stays empty, the others are kept
+   ee[0x36] ^= 1;
    mem_load();
-   CHECK_EQ(tune_mem_n, 0);
+   CHECK_EQ(tune_mem_n, 3);
+   CHECK(tune_mem[1].l == 0 && tune_mem[1].c == 0);
+   CHECK_EQ(tune_mem[2].l, 12);
    return check_done("test_nvm");
 }
