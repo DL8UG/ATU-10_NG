@@ -32,6 +32,13 @@ static meas_t peak;            // peak hold for the display
 static uint32_t t_peak;
 static uint16_t swr_last;      // last SWR measured with enough power
 
+// ms since the tick value t. Always read the clock fresh: a timestamp set
+// in between (wake, tune) may be later than a value read before, and the
+// unsigned difference would then be huge.
+static uint32_t since(uint32_t t) {
+   return tick_ms() - t;
+}
+
 // ---------------------------------------------------------------- text
 
 static char buf[8];
@@ -147,9 +154,11 @@ static void do_tune(void) {
    // goes on to power off) leaves the relays as they were if no carrier
    // was there; then the bypass stays.
    if(r == TUNE_OK || r == TUNE_NO_MATCH || rel.l || rel.c || rel.sw) st.bypass = 0;
+   // last_swr: SWR - 1.00 in hundredths, 1..255 (0 = no tune result, so
+   // a perfect 1.00 is kept as 1.01)
    if(!st.bypass)
       st.last_swr = (r == TUNE_OK && (rel.l || rel.c))
-                    ? (uint8_t)(tune_swr - 100 > 255 ? 255 : tune_swr - 100) : 0;
+                    ? (uint8_t)(tune_swr - 100 > 255 ? 255 : tune_swr > 101 ? tune_swr - 100 : 1) : 0;
    save_state();
    swr_ref = tune_swr;
    swr_last = tune_swr;
@@ -297,7 +306,6 @@ static void show(void) {
 
 void main(void) {
    uint8_t ev, bor_only;
-   uint32_t now;
    board_init();
    bor_only = PCON0bits.nPOR && !PCON0bits.nBOR;
    settings_load();
@@ -322,12 +330,10 @@ void main(void) {
    start_screen();
    reset_reason();
    WDT_ON();
-   now = tick_ms();
-   t_batt = t_watch = t_show = t_refresh = now;
+   t_batt = t_watch = t_show = t_refresh = tick_ms();
 
    for(;;) {
       CLRWDT();
-      now = tick_ms();
 
       ev = buttons_event();
       if(ev != EV_NONE && !disp_is_on() && ev != EV_EXT_LONG && ev != EV_XLONG) {
@@ -342,35 +348,35 @@ void main(void) {
          case EV_EXT_LONG:  do_tune(); break;
       }
 
-      if(now - t_watch >= WATCH_MS) {
-         t_watch = now;
+      if(since(t_watch) >= WATCH_MS) {
+         t_watch = tick_ms();
          watch();
       }
       if(auto_tune) {
          auto_tune = 0;
          do_tune();
       }
-      if(now - t_show >= SHOW_MS) {
-         t_show = now;
+      if(since(t_show) >= SHOW_MS) {
+         t_show = tick_ms();
          show();
       }
-      if(now - t_batt >= BATT_MS) {
-         t_batt = now;
+      if(since(t_batt) >= BATT_MS) {
+         t_batt = tick_ms();
          battery_check();
       }
-      if(led_on && now - t_led >= 30) {
+      if(led_on && since(t_led) >= 30) {
          led_on = 0;
          LED_GREEN = 1;
          LED_RED = 1;
       }
-      if(msg_on && t_msg && (int32_t)(now - t_msg) >= 0) message_end();
-      if(now - t_refresh >= REFRESH_MS) {
-         t_refresh = now;
+      if(msg_on && (int32_t)(tick_ms() - t_msg) >= 0) message_end();
+      if(since(t_refresh) >= REFRESH_MS) {
+         t_refresh = tick_ms();
          disp_refresh();
       }
-      if(disp_is_on() && cfg[CFG_DISP_OFF] && now - t_active >= (uint32_t)cfg[CFG_DISP_OFF] * 60000)
+      if(disp_is_on() && cfg[CFG_DISP_OFF] && since(t_active) >= (uint32_t)cfg[CFG_DISP_OFF] * 60000)
          disp_power(0);
-      if(cfg[CFG_POWER_OFF] && now - t_active >= (uint32_t)cfg[CFG_POWER_OFF] * 60000)
+      if(cfg[CFG_POWER_OFF] && since(t_active) >= (uint32_t)cfg[CFG_POWER_OFF] * 60000)
          go_off = 3;
       if(go_off) {
          if(go_off < 3) {
@@ -380,8 +386,7 @@ void main(void) {
          go_off = 0;
          power_off();
          start_screen();
-         now = tick_ms();
-         t_batt = t_watch = t_show = t_refresh = now;
+         t_batt = t_watch = t_show = t_refresh = tick_ms();
       }
       disp_service();
    }

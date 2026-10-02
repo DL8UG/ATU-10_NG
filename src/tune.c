@@ -54,9 +54,6 @@
 #ifndef VALLEY_DIV
 #define VALLEY_DIV     4             // first valley move: 1/4 of the value
 #endif
-#ifndef QUICK_GOOD
-#define QUICK_GOOD     0             // quick retune also kept at this SWR x 100 or better (0 = off)
-#endif
 #ifndef QUICK_MARGIN
 #define QUICK_MARGIN   5             // quick retune kept if at most 0.05 worse than last time
 #endif
@@ -102,7 +99,9 @@ uint32_t tune_g2;
 uint16_t tune_swr;
 relays_t tune_mem[MEM_SLOTS];
 uint8_t tune_mem_swr[MEM_SLOTS];
-uint8_t tune_mem_n, tune_mem_changed;
+uint8_t tune_mem_seq[MEM_SLOTS];
+uint8_t tune_mem_n;
+uint16_t tune_mem_dirty;
 
 typedef struct {
    uint32_t g;                       // g2, Pr / Pf
@@ -374,24 +373,30 @@ static uint8_t near(uint8_t a, uint8_t b) {   // within 2 steps or 1/8
    return d <= 2 || d <= (uint8_t)(mx >> 3);
 }
 
-// puts the result first into the memory; an entry at about the same place
-// is replaced, the oldest one drops out
+// puts the result into the memory: replaces an entry at about the same
+// place, else takes a free slot, else the oldest one
 static void remember(void) {
-   uint8_t i, j, n = tune_mem_n;
+   uint8_t i, j, newest = 0, age, oldest = 0;
    if(tune_swr > MEM_MAX_SWR || (tune_best.l == 0 && tune_best.c == 0)) return;
-   for(i = 0; i < n; i++)
+   for(j = 0; j < tune_mem_n; j++)           // newest sequence number
+      if(j == 0 || (uint8_t)(tune_mem_seq[j] - newest) < 128) newest = tune_mem_seq[j];
+   for(i = 0; i < tune_mem_n; i++)
       if(tune_mem[i].sw == tune_best.sw && near(tune_mem[i].l, tune_best.l) && near(tune_mem[i].c, tune_best.c))
          break;
-   if(i == n && n < MEM_SLOTS) n++;          // nothing to replace: grows
-   if(i == n) i = n - 1;                     // full: the oldest goes
-   for(j = i; j > 0; j--) {
-      tune_mem[j] = tune_mem[j - 1];
-      tune_mem_swr[j] = tune_mem_swr[j - 1];
+   if(i == tune_mem_n)                       // an empty slot (damaged in the EEPROM)?
+      for(i = 0; i < tune_mem_n && (tune_mem[i].l || tune_mem[i].c); i++) continue;
+   if(i == tune_mem_n) {
+      if(tune_mem_n < MEM_SLOTS) tune_mem_n++;
+      else
+         for(j = 0, i = 0; j < MEM_SLOTS; j++) {
+            age = (uint8_t)(newest - tune_mem_seq[j]);
+            if(age >= oldest) { oldest = age; i = j; }
+         }
    }
-   tune_mem[0] = tune_best;
-   tune_mem_swr[0] = (uint8_t)(tune_swr - 100 > 255 ? 255 : tune_swr - 100);
-   tune_mem_n = n;
-   tune_mem_changed = 1;
+   tune_mem[i] = tune_best;
+   tune_mem_swr[i] = (uint8_t)(tune_swr - 100 > 255 ? 255 : tune_swr - 100);
+   tune_mem_seq[i] = (uint8_t)(newest + 1);
+   tune_mem_dirty |= (uint16_t)(1u << i);
 }
 
 uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
@@ -433,12 +438,15 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
    }
 
    // 1. quick retune from the current setting or a remembered one, the
-   //    one that measures best now
+   //    one that measures best now. A check whether a setting "fits"
+   //    (measures about as well as when found) made it slower in the
+   //    simulator without better results: the rule below (kept only if at
+   //    most QUICK_MARGIN worse than when found) already decides.
    ref_swr = last_swr;
    for(i = 0; i < tune_mem_n; i++) {
       val_t vm;
       relays_t *q = &tune_mem[i];
-      if(q->l == p.l && q->c == p.c && q->sw == p.sw) continue;
+      if((q->l == p.l && q->c == p.c && q->sw == p.sw) || (q->l == 0 && q->c == 0)) continue;
       r = probe(q->l, q->c, q->sw, MEAS_N_GRID, &vm);
       if(r == M_BUDGET) break;
       if(r != M_OK) goto stop;
@@ -457,7 +465,7 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
          goto results;
       }
       if(r != M_OK) goto stop;
-      if(target_reached(&v) || swr_x100(v.g) <= ref_swr + QUICK_MARGIN || swr_x100(v.g) <= QUICK_GOOD) {
+      if(target_reached(&v) || swr_x100(v.g) <= ref_swr + QUICK_MARGIN) {
          finish(&p, v.g);
          remember();
          return TUNE_OK;
