@@ -136,7 +136,9 @@ static uint16_t cache_used;
 
 static uint8_t carrier_seen;
 static uint8_t ovf_run;                       // settings in a row with a clipped detector
-static uint16_t steps, budget;
+uint16_t tune_steps;
+uint8_t tune_resume;
+static uint16_t budget;
 static uint32_t min_uw, max_uw;
 static relays_t best;                         // best setting measured so far
 static uint32_t best_g;
@@ -165,10 +167,13 @@ static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
       if(cache_key[s] == key) {
          v->g = cache_g[s] == 0xFFFF ? G2_ONE : (uint32_t)cache_g[s] << 8;
          v->sp = cache_sp[s];
+         // measured earlier; the first setting of a continued search
+         // (nothing measured yet in this tune) is the best one so far
+         if(best_g > G2_ONE) goto seen;
          return M_OK;
       }
-      if(steps >= budget) return M_BUDGET;
-      steps++;
+      if(tune_steps >= budget) return M_BUDGET;
+      tune_steps++;
       COUNT();
    }
    hal_relay_set(l, c, sw);
@@ -202,8 +207,9 @@ static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
       cache_sp[s] = m.spread;
       cache_used++;
    }
-   if(m.g2 < best_g) {
-      best_g = m.g2;
+seen:
+   if(v->g < best_g) {
+      best_g = v->g;
       best.l = l;
       best.c = c;
       best.sw = sw;
@@ -423,13 +429,16 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
    uint8_t gi[CAND_MAX], gj[CAND_MAX];
    uint16_t ref_swr;
 
-   i = 0;
-   do cache_key[i] = 0; while(++i);          // all 256
-   cache_used = 0;
+   if(!tune_resume) {                        // else the interrupted search goes on
+      i = 0;
+      do cache_key[i] = 0; while(++i);       // all 256
+      cache_used = 0;
+      tune_steps = 0;
+   }
+   tune_resume = 0;
    carrier_seen = 0;
    ovf_run = 0;
    fine = 0;
-   steps = 0;
    min_uw = (uint32_t)cfg[CFG_MIN_PWR] * 100000;
    max_uw = (uint32_t)cfg[CFG_MAX_PWR] * 1000000;
    best_g = G2_ONE + 1;
@@ -542,7 +551,7 @@ results:
    // (not always: a single lucky reading would push out a real result)
    for(i = 0; i < n_res && (res[i].l != best.l || res[i].c != best.c || res[i].sw != best.sw); i++)
       continue;
-   if(i == n_res && (n_res == 0 || steps >= budget)) {
+   if(i == n_res && (n_res == 0 || tune_steps >= budget)) {
       v.g = best_g;
       v.sp = 0;
       keep(res, rv, &n_res, &best, &v);

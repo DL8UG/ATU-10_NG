@@ -25,6 +25,7 @@
 #define LOW_BATT_MV 3400
 #define AUTO_STEADY 4          // auto tune after this many measurements in a row
 #define AUTO_HOLD   3000       // ms after a tune without auto tune
+#define RESUME_MS   60000      // a tune within this time continues an interrupted one
 #define SETUP_HOLD  100        // x 10 ms held at the end of the greeting: setup menu
 
 static uint32_t t_batt, t_watch, t_show, t_refresh, t_active, t_led, t_msg, t_tuned;
@@ -33,7 +34,8 @@ static uint16_t swr_ref;       // SWR of the last tune, reference for auto tune
 static uint16_t shown_pwr = 0xFFFF, shown_swr = 0xFFFF;
 static meas_t peak;            // peak hold for the display
 static uint32_t t_peak;
-static uint16_t swr_last;      // last SWR measured with enough power
+static uint16_t swr_last;
+static uint8_t resume;         // the last tune lost its carrier while it still made progress      // last SWR measured with enough power
 
 // ms since the tick value t. Always read the clock fresh: a timestamp set
 // in between (wake, tune) may be later than a value read before, and the
@@ -140,7 +142,8 @@ uint8_t hal_abort(void) {
 }
 
 static void do_tune(void) {
-   uint8_t r;
+   uint8_t r, same;
+   uint16_t steps0;
    relays_t from = rel;
    wake();
    LED_GREEN = 0;
@@ -150,16 +153,19 @@ static void do_tune(void) {
    disp_big(LINE2, 0, "TUNE");                 // the SWR so far follows at the right
    shown_swr = 0xFFFF;                         // blanked: draw it even if unchanged
    disp_flush();
+   tune_resume = resume && since(t_tuned) < RESUME_MS;
+   steps0 = tune_resume ? tune_steps : 0;
    // in bypass the relays hold no tune result (the memory has it)
    r = tune_run(&rel, !st.bypass && st.last_swr ? (uint16_t)(100 + st.last_swr) : 0);
-   if(r != TUNE_OK && r != TUNE_NO_MATCH && rel.l == from.l && rel.c == from.c && rel.sw == from.sw) {
+   same = rel.l == from.l && rel.c == from.c && rel.sw == from.sw;
+   if(r != TUNE_OK && r != TUNE_NO_MATCH && same) {
       // Stopped without a change (no carrier, or stopped before anything
       // better was found, e.g. by the long press that goes on to power
       // off): everything stays as it was, the bypass too, and nothing
-      // is written to the EEPROM. Stopped by the user or for too much
-      // power: the present SWR is accepted, else auto tune would start the
-      // same tune again 3 s later
-      if(r != TUNE_NO_CARRIER && swr_last) swr_ref = swr_last;
+      // is written to the EEPROM. Auto tune does not start the same tune
+      // again at the present SWR: it would end the same way (stopped, too
+      // much power, or too little carrier to find anything better)
+      if(swr_last) swr_ref = swr_last;
    }
    else {
       // a result ends the bypass
@@ -173,6 +179,14 @@ static void do_tune(void) {
       swr_last = tune_swr;
       save_state();
    }
+   // Carrier gone while the search still measured new settings (e.g. a CW
+   // key pressed again and again with longer pauses): the next tune goes
+   // on with this search, and auto tune starts it with the next carrier
+   // (SWR above 1.20). The step budget counts on, so the chain ends; a new
+   // search (not a continued one) starts a chain only if it found
+   // something better.
+   resume = r == TUNE_NO_CARRIER && tune_steps > steps0 && (steps0 || !same);
+   if(resume) swr_ref = 0;
    show_swr_label();
    shown_swr = 0xFFFF;
    show_swr(swr_last);
