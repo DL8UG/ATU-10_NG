@@ -129,7 +129,9 @@ void hal_progress(uint16_t swr) {
 }
 uint8_t hal_abort(void) {
    uint8_t ev = buttons_event();
-   if(ev == EV_XLONG) {                        // power off after the stop
+   // power off, or the transceiver's bypass pulse: after the stop (a tune
+   // request from the transceiver while tuning changes nothing)
+   if(ev == EV_XLONG || ev == EV_EXT_SHORT) {
       buttons_unget(ev);
       return 1;
    }
