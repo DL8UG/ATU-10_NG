@@ -48,6 +48,13 @@ The new firmware, written from scratch:
 - display: during a tune the SWR found so far is shown also when it is the
   same as before the tune
 - display: SWR "-.--" until the first measurement (before "0.00")
+- display: only changed parts are sent (before, e.g. the battery symbol went
+  over I2C every 3 seconds)
+- memory of good tunes: after about 128 tunes on one band its order got
+  mixed up, and a band used a moment ago could be pushed out instead of the
+  oldest one
+- switched off: the ADC and its voltage reference are off (less current
+  from the battery)
 
 ## Changes since 0.9.0
 
@@ -100,5 +107,5 @@ Beerware, see [LICENSE](LICENSE) (the same as in the top folder).
 
 ## Build
 
-See [Development](../../docs/DEVELOPMENT.md). Program memory 42 %, RAM 58 %,
+See [Development](../../docs/DEVELOPMENT.md). Program memory 43 %, RAM 58 %,
 hardware stack 9 of 16 levels.
