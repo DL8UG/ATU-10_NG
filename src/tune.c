@@ -10,7 +10,8 @@
 //  1. quick retune: the current setting and the memory of the last 12 good
 //     results are measured; after a QSY or a band change the optimum is
 //     usually close to one of them - a local search from the best, done
-//     if it is about as good as when that setting was found
+//     if it is about as good as when that setting was found (unless
+//     Cell 11 = 0: then the full search follows, with this as a candidate)
 //  2. coarse grid: g2 on a logarithmic L x C grid for both capacitor
 //     positions finds the valleys anywhere, not only the nearest one
 //  3. local search from the best grid points that lie in different places:
@@ -468,7 +469,8 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
          goto results;
       }
       if(r != M_OK) goto stop;
-      if(target_reached(&v) || swr_x100(v.g) <= ref_swr + QUICK_MARGIN) {
+      // Cell 11 = 0: always the full search, the result is only a candidate
+      if(target_reached(&v) || (cfg[CFG_TARGET] && swr_x100(v.g) <= ref_swr + QUICK_MARGIN)) {
          finish(&p, v.g);
          remember();
          return TUNE_OK;
