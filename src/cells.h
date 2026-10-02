@@ -21,6 +21,7 @@ enum {
    CFG_MIN_PWR,      // 4  minimum power for tuning in 0.1 W
    CFG_MAX_PWR,      // 5  maximum power for tuning in W
    CFG_AUTO_DELTA,   // 6  auto tune if the SWR changed by more than (value - 10) / 10
+                     //    (from 90 on practically never: the SWR cannot change that much)
    CFG_AUTO,         // 7  auto tune 1 = on, 0 = off
    CFG_CAL_B,        // 8  detector calibration b = value / 10
    CFG_CAL_A,        // 9  detector calibration a = 1 + value / 100

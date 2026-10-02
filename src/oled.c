@@ -52,6 +52,15 @@ uint8_t oled_write(uint8_t page, uint8_t x, const uint8_t *d, uint8_t n) {
    return nack;
 }
 
+// 1 if the display acknowledges its address (about 0.2 ms)
+uint8_t oled_present(void) {
+   uint8_t nack;
+   i2c_start();
+   nack = i2c_write(ADDR);
+   i2c_stop();
+   return !nack;
+}
+
 uint8_t oled_init(void) {
    static const uint8_t zero[16] = {0};
    static const uint8_t on = 0xAF;
@@ -61,6 +70,7 @@ uint8_t oled_init(void) {
       nack = commands(init_seq, sizeof init_seq);
       if(nack) delay_ms(100);
    }
+   if(nack) return nack;                // no display: do not send the rest
    for(p = 0; p < 8; p++)               // the controller has 8 pages
       for(i = 0; i < 128; i += 16) oled_write(p, (uint8_t)(i - COL_SHIFT), zero, 16);
    nack |= commands(&on, 1);

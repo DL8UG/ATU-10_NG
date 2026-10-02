@@ -36,9 +36,10 @@ static uint32_t end_at;
 static jmp_buf done;
 static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
-enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP };
+enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH };
 static uint32_t last_clr, wdt_worst;
-static int display_ok = 1, oled_inits, oled_ok_writes, key_falls, key_prev = 1;
+static int display_ok = 1, display_inited, oled_inits, oled_ok_writes, key_falls, key_prev = 1;
+static uint32_t disp_us, io_frac;     // time the main program spends on display I/O
 static double g2_floor;              // best possible reflection of the load
 
 typedef struct { uint32_t from, to; } span_t;
@@ -83,7 +84,10 @@ void fake_ms(uint32_t ms) {
       key_prev = LATDbits.LATD2;
       PORTBbits.RB5 = !in_spans(press, n_press);                        // low = pressed
       PORTDbits.RD1 = mode ? 1 : !in_spans(ext_start, 2);               // low = start
-      if(!mode) display_ok = !(wall >= 20 * MIN && wall < 40 * MIN);    // display unplugged
+      if(!mode) {                                                        // display unplugged
+         display_ok = !(wall >= 20 * MIN && wall < 40 * MIN);
+         if(!display_ok) display_inited = 0;    // a plugged-in display is dark until initialized
+      }
       PORTDbits.RD2 = LATDbits.LATD2;                                   // key line as driven
       rf_on = mode ? wall >= 10000 && wall < 5 * MIN : in_spans(carrier, sizeof carrier / sizeof *carrier);
       if(wall == 100 * MIN && !mode) vbat_mv = 3300;                    // battery empty
@@ -132,10 +136,27 @@ void hal_relay_set(uint8_t l, uint8_t c, uint8_t sw) { in_tune = 1; relays_set(l
 void hal_sample(meas_t *m, uint8_t n) { meas_take(m, n); }
 void hal_wait_ms(uint8_t ms) { fake_ms(ms); }
 // display hardware
-uint8_t oled_init(void) { oled_inits++; return !display_ok; }
+// display I/O takes as long as on the tuner (I2C at about 45 kHz)
+static void io_cost(uint32_t us) {
+   disp_us += us;
+   io_frac += us;
+   if(io_frac >= 1000) { fake_ms(io_frac / 1000); io_frac %= 1000; }
+}
+uint8_t oled_present(void) { io_cost(200); return display_ok; }
+uint8_t oled_init(void) {
+   oled_inits++;
+   if(!display_ok) {                 // 10 tries with 100 ms in between
+      for(int i = 0; i < 10; i++) { io_cost(6000); disp_us += 100000; delay_ms(100); }
+      return 1;
+   }
+   io_cost(6000 + 64 * 24 * 180);    // init sequence, 8 pages cleared
+   display_inited = 1;
+   return 0;
+}
 uint8_t oled_write(uint8_t page, uint8_t x, const uint8_t *d, uint8_t n) {
-   (void)page; (void)x; (void)d; (void)n;
-   if(display_ok) oled_ok_writes++;
+   (void)page; (void)x; (void)d;
+   io_cost((n + 8) * 180u);
+   if(display_ok && display_inited) oled_ok_writes++;
    return !display_ok;
 }
 void i2c_init(void) {}
@@ -175,6 +196,7 @@ static void checkpoint(uint32_t t) {
       break;
    case 20 * MIN:                    // the display is unplugged now
       oled_inits = 0;
+      disp_us = 0;
       break;
    case 30 * MIN + 2000:             // the button still works without a display
       CHECK(st.bypass);
@@ -183,12 +205,20 @@ static void checkpoint(uint32_t t) {
       CHECK(!st.bypass);
       CHECK(rel.l == 20 && rel.c == 30);
       break;
-   case 40 * MIN:                    // few restarts of the missing display (back-off)
-      printf("display restarts in 20 min without a display: %d\n", oled_inits);
-      CHECK(oled_inits <= 30);
+   case 40 * MIN:                    // few restarts of the missing display (back-off),
+      {                              // little time lost to it
+         double busy = (disp_us / 1000.0 + oled_inits * 500.0) / (20.0 * MIN);
+         printf("20 min without a display: %d restarts, %.1f %% of the time on display I/O\n",
+                oled_inits, busy * 100);
+         CHECK(oled_inits <= 30);
+         CHECK(busy < 0.05);
+      }
       oled_ok_writes = 0;
+      oled_inits = 0;
       break;
-   case 41 * MIN:                    // plugged in again: it works again
+   case 40 * MIN + 3000:             // plugged in again: initialized and drawn within 3 s
+      CHECK(oled_inits >= 1);
+      CHECK(display_inited);
       CHECK(oled_ok_writes > 0);
       break;
    case 44 * MIN:                    // still transmitting: no power off, display on
@@ -263,7 +293,7 @@ static void checkpoint(uint32_t t) {
 static void checkpoint_variant(uint32_t t) {
    if(t == 5000) {                   // after the start
       CHECK(OLED_PWR);
-      if(mode != M_BLIP) CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);   // restored from the EEPROM
+      if(mode < M_BLIP) CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);   // restored from the EEPROM
       if(mode == M_BOR) CHECK_EQ(relay_calls, 0);           // no pulses after a brown-out
       if(mode == M_WDT) CHECK_EQ(relay_calls, 1);           // pulsed once to be sure
    }
@@ -276,13 +306,19 @@ static void checkpoint_variant(uint32_t t) {
          CHECK_EQ(key_falls, 0);
          CHECK(OLED_PWR);                                    // display off never
          break;
-      case M_CELLS_MAX:                                      // unmatchable load (SWR 2), auto
+      case M_CELLS_MAX:                                      // Cell 6 = 99 (threshold 8.9):
          printf("Cells max: %d tunes in 5 min\n", key_falls);
-         CHECK(key_falls <= 1);                              // tune threshold 8.9: no endless
-         break;                                              // retuning
+         CHECK_EQ(key_falls, 0);                             // auto tune practically off
+         break;
       case M_BLIP:                                           // short press at the end of the
          CHECK(key_falls >= 1);                              // greeting: no setup menu, auto
          break;                                              // tune works
+      case M_UNMATCH:                                        // best possible SWR 2.0, default
+      case M_NOMATCH:                                        // threshold / nothing matches:
+         printf("%s: %d tunes in 5 min\n", mode == M_UNMATCH ? "SWR 2 load" : "no match",
+                key_falls);
+         CHECK_EQ(key_falls, 1);                             // tuned once, then left alone
+         break;
       }
    }
 }
@@ -291,7 +327,9 @@ static int run_variant(void) {
    memset(ee, 0xFF, sizeof ee);
    st.r.l = 20; st.r.c = 30; st.r.sw = 0;                    // a saved tune result
    st.last_swr = 5;
-   if(mode == M_BLIP) {                                      // blip: start in bypass, so that
+   if(mode == M_UNMATCH) g2_floor = 1.0 / 9;                 // best possible SWR 2.0
+   if(mode == M_NOMATCH) g2_floor = 0.99995;                 // SWR 9.99 everywhere
+   if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH) {   // start in bypass, so that
       st.r.l = st.r.c = 0;                                   // the carrier causes an auto tune
       st.last_swr = 0;
    }
@@ -322,7 +360,7 @@ static int run_variant(void) {
    CHECK(wdt_worst < 7000);
    return check_done(mode == M_BOR ? "test_app bor" : mode == M_WDT ? "test_app wdt" :
                      mode == M_CELLS_MIN ? "test_app cells-min" : mode == M_CELLS_MAX ? "test_app cells-max"
-                     : "test_app blip");
+                     : mode == M_BLIP ? "test_app blip" : mode == M_UNMATCH ? "test_app swr2" : "test_app nomatch");
 }
 
 int main(int argc, char **argv) {

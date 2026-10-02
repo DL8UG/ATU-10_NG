@@ -10,9 +10,16 @@
 
 static uint8_t fb[PAGES][W];         // bit 0 = top pixel of a page
 static uint8_t dirty_lo[PAGES], dirty_hi[PAGES];   // changed columns, lo > hi: none
-static uint8_t on, faults, restart;
+static uint8_t on, faults;
+// Display not answering: restart (power down and up, initialize). The
+// first restart comes at once, the next ones after 2, 4, 8 .. 64 s, so a
+// missing or broken display does not slow down the tuner. Meanwhile a
+// short address ping once a second finds a display that answers again
+// (plugged in, recovered) and restarts it right away.
+static uint8_t restart;              // a restart is pending
+static uint8_t gone;                 // the ping found no display since the last restart
 static uint8_t backoff;              // restarts without success in a row
-static uint32_t t_restart;
+static uint32_t t_restart, t_probe;
 
 static void mark(uint8_t page, uint8_t x0, uint8_t x1) {
    if(x0 < dirty_lo[page]) dirty_lo[page] = x0;
@@ -46,7 +53,8 @@ void disp_power(uint8_t pwr) {
    OLED_PWR = 1;
    delay_ms(200);                    // module supply settles
    faults = 0;
-   oled_init();
+   restart = oled_init();            // no answer: restart pending at once
+   t_restart = tick_ms();
    on = 1;
    mark_all();
 }
@@ -149,7 +157,7 @@ static void send_page(uint8_t p) {
       if(++faults >= 5) restart = 1;       // done by disp_service (hardware stack)
       else i2c_init();
    }
-   else faults = backoff = 0;
+   else faults = backoff = restart = 0;
 }
 
 void disp_service(void) {
@@ -157,16 +165,19 @@ void disp_service(void) {
    uint8_t n;
    if(!on) return;
    if(restart) {
-      // a display that does not answer is powered down and up again; if
-      // that does not help, the next try waits longer (2 s .. 64 s), so a
-      // missing display does not slow down the tuner
-      if(tick_ms() - t_restart < (uint32_t)2000 << backoff) return;
-      restart = 0;
-      if(backoff < 5) backoff++;
+      if(backoff && tick_ms() - t_restart < (uint32_t)2000 << (backoff - 1)) {
+         if(tick_ms() - t_probe < 1000) return;
+         t_probe = tick_ms();
+         // only a display that was gone and is back again cuts the wait
+         // short; one that answers the ping but not the data waits
+         if(!oled_present()) { gone = 1; return; }
+         if(!gone) return;
+      }
+      gone = 0;
+      if(backoff < 6) backoff++;
       disp_power(0);
       delay_ms(300);
-      disp_power(1);
-      t_restart = tick_ms();
+      disp_power(1);                       // sets restart again if it fails
       return;
    }
    for(n = 0; n < PAGES; n++) {       // the next page with changes
@@ -180,6 +191,6 @@ void disp_service(void) {
 
 void disp_flush(void) {
    uint8_t p;
-   if(!on) return;
+   if(!on || restart) return;         // nothing to a display that does not answer
    for(p = 0; p < PAGES; p++) send_page(p);
 }

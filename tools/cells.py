@@ -26,7 +26,7 @@ CELLS = [
     (3, 'Relay pulse', 'ms', 2, 30, 7),
     (4, 'Min. power for tuning', '0.1 W', 1, 99, 10),
     (5, 'Max. power for tuning', 'W', 1, 99, 15),
-    (6, 'Auto tune SWR change', '(value - 10) / 10, 13 = 0.3', 11, 99, 13),
+    (6, 'Auto tune SWR change', '(value - 10) / 10, 13 = 0.3, from 90 on practically never', 11, 99, 13),
     (7, 'Auto tune', '1 = on, 0 = off', 0, 1, 1),
     (8, 'Calibration b', 'value / 10', 0, 99, 4),
     (9, 'Calibration a', '1 + value / 100', 0, 99, 14),
