@@ -36,7 +36,7 @@ static uint32_t end_at;
 static jmp_buf done;
 static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
-enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR };
+enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE };
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
 static int display_ok = 1, display_inited, oled_inits, oled_ok_writes, key_falls, key_prev = 1;
@@ -105,6 +105,7 @@ void fake_ms(uint32_t ms) {
       if(wall == check_line2_at) check_line2();
       PORTBbits.RB5 = !in_spans(press, n_press);                        // low = pressed
       if(mode == M_EXTDARK) PORTDbits.RD1 = !(wall >= 3 * MIN && wall < 3 * MIN + 50);   // short pulse
+      else if(mode == M_EXTTUNE) PORTDbits.RD1 = !(wall >= 11000 && wall < 11050);   // during a tune
       else PORTDbits.RD1 = mode ? 1 : !in_spans(ext_start, 2);          // low = start
       if(!mode) {                                                        // display unplugged
          display_ok = !(wall >= 20 * MIN && wall < 40 * MIN);
@@ -336,6 +337,13 @@ static void checkpoint_variant(uint32_t t) {
       CHECK(rel.l == 20 && rel.c == 30);
       CHECK_EQ(st.last_swr, 5);
    }
+   if(mode == M_EXTTUNE && t == 10999)                      // the auto tune is running when
+      CHECK(!LATDbits.LATD2);                                // the transceiver asks for bypass
+   if(mode == M_EXTTUNE && t == 20000) {                    // the tune stopped, bypass is on
+      CHECK(st.bypass);
+      CHECK(rel.l == 0 && rel.c == 0 && rel.sw == 0);
+      CHECK(LATDbits.LATD2);
+   }
    if(t == 40000 && mode == M_BLIP)                         // carrier since 10 s: tuned, so
       CHECK(key_falls >= 1);                                 // not stuck in the setup menu
    if(t == 6 * MIN - 1) {
@@ -357,6 +365,8 @@ static void checkpoint_variant(uint32_t t) {
          break;
       case M_EXTDARK:
          break;
+      case M_EXTTUNE:
+         break;
       case M_LOWPWR:                                         // 0.97 W, Cell 4 = 1.0 W: the
          CHECK_EQ(key_falls, 0);                             // tune would not see a carrier,
          break;                                              // so no auto tune either
@@ -376,7 +386,7 @@ static int run_variant(void) {
    st.last_swr = 5;
    if(mode == M_UNMATCH) g2_floor = 1.0 / 9;                 // best possible SWR 2.0
    if(mode == M_NOMATCH) g2_floor = 0.99995;                 // SWR 9.99 everywhere
-   if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH || mode == M_LOWPWR) {   // start in bypass, so that
+   if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH || mode == M_LOWPWR || mode == M_EXTTUNE) {   // start in bypass, so that
       st.r.l = st.r.c = 0;                                   // the carrier causes an auto tune
       st.last_swr = 0;
    }
@@ -417,7 +427,8 @@ static int run_variant(void) {
                      mode == M_CELLS_MIN ? "test_app cells-min" : mode == M_CELLS_MAX ? "test_app cells-max"
                      : mode == M_BLIP ? "test_app blip" : mode == M_UNMATCH ? "test_app swr2"
                      : mode == M_NOMATCH ? "test_app nomatch" : mode == M_EXTDARK ? "test_app ext-dark"
-                     : mode == M_NOPOWER ? "test_app nopower" : "test_app lowpwr");
+                     : mode == M_NOPOWER ? "test_app nopower" : mode == M_LOWPWR ? "test_app lowpwr"
+                     : "test_app ext-tune");
 }
 
 int main(int argc, char **argv) {
