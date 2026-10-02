@@ -31,7 +31,22 @@ The new firmware, written from scratch:
 
 ## Changes since 0.9.0
 
-- (in progress)
+- greeting on two pages: "ATU-10 / HARDWARE BY N7DDC", then the version
+  "NG 0.9.1 / FIRMWARE BY DL8UG" (3 seconds in all, as before)
+- power off: the display is cleared and POWER OFF (or LOW BATT) stands alone
+  in its middle
+- NO MATCH also when the network cannot improve the antenna and the SWR in
+  bypass is above 1.2 (before: only at SWR 9.99); at or below 1.2 the
+  antenna is simply left as it is
+- tune target 0 (setting 11, "always the full search") now also applies
+  when a remembered setting is about as good as before
+- auto tune: no endless TUNE / NO POWER cycle when the transmit power is
+  just below the minimum tune power (e.g. 0.97 W at a 1.0 W minimum)
+- the transceiver's bypass pulse during a tune stops the tune and switches
+  bypass on (before it was lost)
+- when the step budget ends the search during the coarse grid (mostly at
+  search effort 1), the best grid point takes part in the final comparison
+- no EEPROM write after a tune that changed nothing (NO POWER, STOP)
 
 ## Changes since 0.1.0 (development version)
 
@@ -65,5 +80,5 @@ Beerware, see [LICENSE](LICENSE) (the same as in the top folder).
 
 ## Build
 
-See [Development](../../docs/DEVELOPMENT.md). Program memory 41 %, RAM 58 %,
+See [Development](../../docs/DEVELOPMENT.md). Program memory 42 %, RAM 58 %,
 hardware stack 9 of 16 levels.
