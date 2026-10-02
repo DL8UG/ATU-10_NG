@@ -9,14 +9,14 @@ Flashing, operation and settings: see the [main README](../../README.md).
 
 ## Contents
 
-- [Content](#content)
+- [Features](#features)
 - [Changes since 0.1.0 (development version)](#changes-since-010-development-version)
 - [Cells of this version](#cells-of-this-version)
 - [Feedback](#feedback)
 - [License](#license)
 - [Build](#build)
 
-## Content
+## Features
 
 The new firmware, written from scratch:
 

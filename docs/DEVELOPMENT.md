@@ -15,14 +15,17 @@
 
 Each release has its own folder under `Firmware/` with the complete source,
 the hex file and the license, and a zip next to it with the hex file and the
-license. A released folder is never changed again; the next version starts as
-a copy in a new folder.
+license. The source and the hex file of a released folder are never changed
+again, nor is its zip; the next version starts as a copy in a new folder.
+Only the folder's README may still be updated (e.g. feedback, contents list).
 
 ```
 LICENSE                  Beerware
 README.md                for users
 docs/                    this documentation, charts and pictures
 tools/cell-editor.html   Cells editor for users (one offline HTML file)
+tools/check_doc_links.py links and Contents lists of the documentation
+.github/workflows/       runs check_doc_links.py on every push
 Firmware/
   ATU-10_NG_0_9_0.zip    hex file + LICENSE
   ATU-10_NG_0_9_0/
@@ -33,7 +36,8 @@ Firmware/
     tests/               tests on the PC; tests/host/xc.h stands in for the
                          compiler's register header in test_app.c
     tools/               normalize_hex.py, cells.py, sim/ (simulator)
-  ATU-10_NG_0_1_0/       first development version (kept as it is)
+  ATU-10_NG_0_1_0/       first development version (kept as it is, README
+                         included, so it has no Contents list)
 ```
 
 ## Toolchain
@@ -79,6 +83,11 @@ make docs       # charts, display and setup menu pictures in docs/
 
 Most bugs found in the reviews and on the device have a test that fails with
 the code before the fix.
+
+The documentation has its own check, `python3 tools/check_doc_links.py` at
+the top of the repository: every local link and anchor must resolve, and
+each Contents list must name all level 2 and 3 headings after it, in order.
+GitHub runs it on every push that changes the documentation.
 
 ## Checks in every build
 
@@ -130,7 +139,7 @@ initialization (`oled.c`), font (`font5x8.h`).
 
 1. new folder `Firmware/ATU-10_NG_x_y_z` as a copy of the last one, version in
    `src/version.h` and `Makefile`
-2. `make && make test`, simulator runs
+2. `make && make test`, simulator runs, `python3 tools/check_doc_links.py`
 3. zip with the hex file and LICENSE, README and LICENSE in the folder, top
    level README (download link, timeline)
 4. commit, push, then a GitHub release with the tag `vX.Y.Z` and the hex
