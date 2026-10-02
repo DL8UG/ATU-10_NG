@@ -2,9 +2,10 @@
 
 ## Layout
 
-Each release has its own folder under `Firmware/` with the complete source and
-the hex file, and a zip with only the hex file next to it. A released folder is
-never changed again; the next version starts as a copy in a new folder.
+Each release has its own folder under `Firmware/` with the complete source,
+the hex file and the license, and a zip next to it with the hex file and the
+license. A released folder is never changed again; the next version starts as
+a copy in a new folder.
 
 ```
 Firmware/ATU-10_NG_0_9_0/
@@ -88,5 +89,5 @@ initialization (`oled.c`), font (`font5x8.h`).
 1. new folder `Firmware/ATU-10_NG_x_y_z` as a copy of the last one, version in
    `src/version.h` and `Makefile`
 2. `make && make test`, simulator runs
-3. zip with the hex file only, README and LICENSE in the folder, top level
-   README (download link, timeline)
+3. zip with the hex file and LICENSE, README and LICENSE in the folder, top
+   level README (download link, timeline)

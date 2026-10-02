@@ -27,7 +27,7 @@ stable tuner – not the fastest tune.
 ## Download
 
 Version 0.9.0 (not yet published): [`Firmware/ATU-10_NG_0_9_0.zip`](Firmware/ATU-10_NG_0_9_0.zip)
-contains the hex file `ATU-10_NG_0_9_0.hex`.
+contains the hex file `ATU-10_NG_0_9_0.hex` and the license.
 
 ## Flashing
 
