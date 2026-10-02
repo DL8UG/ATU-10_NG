@@ -7,9 +7,9 @@
 
 There are three ways, for the same 12 settings:
 
-1. [the setup menu on the tuner](#1-setup-menu-on-the-tuner) – quick, anywhere
-2. [the Cell editor in the browser](#2-cell-editor-in-the-browser) – changes the hex file, with explanations
-3. [directly in the hex file](#3-directly-in-the-hex-file) – with any text editor
+1. the setup menu on the tuner – quick, anywhere
+2. the Cell editor in the browser – changes the hex file, with explanations
+3. directly in the hex file – with any text editor
 
 ## Contents
 
