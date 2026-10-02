@@ -3,6 +3,27 @@
 This page explains how the ATU-10 NG firmware finds the best relay setting,
 and how well it does that in the simulator.
 
+## In short
+
+- The tuner can set 32768 combinations of coils and capacitors. It cannot try
+  them all in a few seconds, and the good ones lie in narrow "valleys".
+- So it first looks at a coarse grid of 50 settings spread over the whole
+  range, then searches carefully from the 3 most promising places, and
+  finally measures the two best results again and compares them with the
+  direct connection (bypass).
+- Each measurement also tells how noisy it is; a setting only counts as
+  better if it is better by more than that noise.
+- The last 12 good results are remembered. Back on a band used before, a
+  short search from the remembered setting is usually enough (about 2 s).
+- In the simulator, with models of many real antennas, the tuner reaches the
+  best possible SWR (within 0.05) in practically every case that can be
+  matched at all.
+
+Terms used below: **SWR** is the standing wave ratio shown on the display
+(1.0 = perfect). **Pf** and **Pr** are the forward and the reflected power;
+Pr / Pf is the share of the power that comes back (0 = perfect, 1 = all of
+it). **Bypass** means L = 0 and C = 0: the antenna is connected directly.
+
 ## The network
 
 The ATU-10 is an L network: a coil bank in series and a capacitor bank in
@@ -36,17 +57,20 @@ search minimizes. Unlike the SWR shown on the display, it does not stop at
 
 ```mermaid
 flowchart LR
-    A[Detector voltages<br/>forward, reverse] --> B[ADC, 3 ranges<br/>1 / 2 mV per step, battery voltage]
+    A[Detector voltages<br/>forward, reverse] --> B[ADC with 3 ranges<br/>up to 1 V, 2 V, battery voltage]
     B --> C[Average of many samples<br/>order F R R F]
     C --> D[Power with the<br/>calibration Cells 8, 9]
     D --> E[Pr / Pf<br/>and the SWR]
     C --> F[Difference of the two halves<br/>= noise of this measurement]
 ```
 
-Each measurement is taken in two halves (forward, reverse, reverse,
-forward). The average cancels a slowly changing carrier. The difference
-between the halves shows how noisy this particular measurement is. The firmware uses that
-to decide whether a setting is really better or only looks better by chance.
+The ADC measures small voltages with a 1.024 V reference (1 mV per step),
+larger ones with 2.048 V (2 mV per step) and the largest against the battery
+voltage. Each measurement is the average of many samples, taken in two halves
+(forward, reverse, reverse, forward). The average cancels a slowly changing
+carrier. The difference between the halves shows how noisy this particular
+measurement is. The firmware uses that to decide whether a setting is really
+better or only looks better by chance.
 
 ## Why tuning is hard
 
