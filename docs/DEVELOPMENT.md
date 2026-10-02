@@ -27,15 +27,17 @@ tools/cell-editor.html   Cells editor for users (one offline HTML file)
 tools/check_doc_links.py links and Contents lists of the documentation
 .github/workflows/       runs check_doc_links.py on every push
 Firmware/
-  ATU-10_NG_0_9_0.zip    hex file + LICENSE
-  ATU-10_NG_0_9_0/
-    ATU-10_NG_0_9_0.hex  the firmware
+  ATU-10_NG_0_9_1.zip    hex file + LICENSE
+  ATU-10_NG_0_9_1/
+    ATU-10_NG_0_9_1.hex  the firmware
     README.md, LICENSE
     Makefile             build, checks, tests, simulator, charts
     src/                 firmware
     tests/               tests on the PC; tests/host/xc.h stands in for the
                          compiler's register header in test_app.c
     tools/               normalize_hex.py, cells.py, sim/ (simulator)
+  ATU-10_NG_0_9_0.zip    the release before
+  ATU-10_NG_0_9_0/       (kept as it is)
   ATU-10_NG_0_1_0/       first development version (kept as it is, README
                          included, so it has no Contents list)
 ```
@@ -51,8 +53,8 @@ Firmware/
 - gcc, python3 and node for the tests and the simulator
 
 ```sh
-cd Firmware/ATU-10_NG_0_9_0
-make            # firmware: ATU-10_NG_0_9_0.hex
+cd Firmware/ATU-10_NG_0_9_1
+make            # firmware: ATU-10_NG_0_9_1.hex
 make test       # unit tests, Cells tools, editor logic, and the main
                 # program on the PC with simulated hardware and time
                 # (tests/test_app.c: transmitting, timers, tune, bypass,
@@ -146,7 +148,7 @@ initialization (`oled.c`), font (`font5x8.h`).
    file, the zip and LICENSE attached, e.g.
 
    ```sh
-   gh release create v0.9.0 Firmware/ATU-10_NG_0_9_0/ATU-10_NG_0_9_0.hex \
-      Firmware/ATU-10_NG_0_9_0.zip Firmware/ATU-10_NG_0_9_0/LICENSE \
-      --title "ATU-10 NG 0.9.0" --notes-file notes.md   # --prerelease for a beta
+   gh release create v0.9.1 Firmware/ATU-10_NG_0_9_1/ATU-10_NG_0_9_1.hex \
+      Firmware/ATU-10_NG_0_9_1.zip Firmware/ATU-10_NG_0_9_1/LICENSE \
+      --title "ATU-10 NG 0.9.1" --notes-file notes.md   # --prerelease for a beta
    ```
