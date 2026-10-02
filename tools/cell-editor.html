@@ -92,7 +92,7 @@ const CELLS = [
   ["Relay pulse", "ms per relay pulse", 2, 30, 7, v => v + " ms"],
   ["Min. tune power", "in 0.1 W", 1, 99, 10, v => (v / 10).toFixed(1) + " W"],
   ["Max. tune power", "in W", 1, 99, 15, v => v + " W"],
-  ["Auto tune: SWR change", "retune if the SWR changed by more than (value - 10) / 10", 11, 99, 13,
+  ["Auto tune: SWR change", "retune if the SWR changed by more than (value - 10) / 10; from 90 on practically never", 11, 99, 13,
      v => "> " + ((v - 10) / 10).toFixed(1)],
   ["Auto tune", "1 = on, 0 = off", 0, 1, 1, v => v ? "on" : "off"],
   ["Calibration b (1 W)", "b = value / 10, 4 for BAT41 detector diodes", 0, 99, 4, v => "b = " + (v / 10).toFixed(1)],
