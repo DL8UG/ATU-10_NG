@@ -78,9 +78,28 @@ const uint8_t *disp_fb(void);
 // (x 0..35), "=" (x 42..53) and the value (x 60..107): the gaps must be
 // empty - a left-over "E" of TUNE was seen on the device at x 36..41
 static int line2_checks;
+// only one big text, in the middle of an otherwise empty display
+static int centred_checks;
+static void check_centred(void) {
+   const uint8_t *fb = disp_fb();
+   int outside = 0, inside = 0, left = 128, right = -1;
+   for(int y = 0; y < 32; y++)
+      for(int x = 0; x < 128; x++) {
+         if(!(fb[(y / 8) * 128 + x] >> (y % 8) & 1)) continue;
+         if(y < 9 || y > 22) outside++;
+         else inside++;
+         if(x < left) left = x;
+         if(x > right) right = x;
+      }
+   CHECK_EQ(outside, 0);
+   CHECK(inside > 100);
+   CHECK(abs(left - (127 - right)) <= 1);              // as far from both edges
+}
+
 static void check_line2(void) {
    const uint8_t *fb = disp_fb();
    int dirty = 0;
+   if(!OLED_PWR) return;             // switched off meanwhile: nothing shown
    for(int y = 18; y < 32; y++)
       for(int x = 0; x < 115; x++) {
          int gap = (x >= 36 && x <= 41) || (x >= 54 && x <= 59) || (x >= 108);
@@ -127,6 +146,12 @@ void fake_ms(uint32_t ms) {
 
 void fake_sleep(void) {
    sleeps++;
+   // the last picture before sleeping (the framebuffer keeps it): POWER OFF
+   // (button held at 86 min) and LOW BATT (100 min) alone in the middle
+   if(!mode && ((wall >= 86 * MIN && wall < 87 * MIN) || (wall >= 100 * MIN && wall < 101 * MIN))) {
+      check_centred();
+      centred_checks++;
+   }
    while(PORTBbits.RB5) fake_ms(10);  // until the button goes down (wake-up interrupt)
 }
 
@@ -468,7 +493,8 @@ int main(int argc, char **argv) {
       CHECK_EQ(n, 1);
    }
    printf("relay steps %d over the run, lower line checked after %d tunes\n", relay_calls, line2_checks);
-   CHECK(line2_checks >= 4);
+   CHECK(line2_checks >= 3);         // not the tune that the power off stops (display off)
+   CHECK_EQ(centred_checks, 2);
    printf("watchdog: longest time without clearing %u ms\n", wdt_worst);
    CHECK(wdt_worst < 7000);
    return check_done("test_app");

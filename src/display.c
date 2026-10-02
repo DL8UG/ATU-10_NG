@@ -103,11 +103,11 @@ static uint8_t dbl(uint8_t n) {
    return r;
 }
 
-// Big text: the 5 x 8 font doubled to 10 x 16, 2 columns gap. Line 2
-// starts 2 pixels lower than page 2 (a gap between the lines); its bottom
-// font row (always empty) falls off the display.
-void disp_big(uint8_t line, uint8_t x, const char *s) {
-   uint8_t y = line ? 18 : 0, i, col, lo, hi;
+// Big text: the 5 x 8 font doubled to 10 x 16, 2 columns gap, from pixel
+// row y. LINE2 starts 2 pixels lower than page 2 (a gap between the
+// lines); its bottom font row (always empty) falls off the display.
+void disp_big(uint8_t y, uint8_t x, const char *s) {
+   uint8_t i, col, lo, hi;
    const uint8_t *g;
    for(; *s; s++, x += 12) {
       g = glyph(*s);
