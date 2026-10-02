@@ -1,3 +1,6 @@
+// The relay pulse sequence follows the ATU-10 firmware by David Fainitski,
+// N7DDC (public domain).
+
 #include "board.h"
 #include "relays.h"
 #include "cells.h"

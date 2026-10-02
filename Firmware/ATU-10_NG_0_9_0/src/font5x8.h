@@ -1,4 +1,6 @@
 // 5x8 font, ASCII 32..127, one byte per column (bit 0 = top row)
+// The font table comes from the ATU-10 firmware by David Fainitski, N7DDC
+// (public domain).
 
 #ifndef FONT5X8_H
 #define FONT5X8_H

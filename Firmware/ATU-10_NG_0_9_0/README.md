@@ -34,6 +34,10 @@ The new firmware, written from scratch:
 `05 30 07 10 15 13 01 04 14 60 05 02`; the last 4 words of the second record
 are spare (`00`).
 
+## License
+
+Public domain (Unlicense), see [LICENSE](../../LICENSE).
+
 ## Build
 
 See [Development](../../docs/DEVELOPMENT.md). Program memory 41 %, RAM 58 %,

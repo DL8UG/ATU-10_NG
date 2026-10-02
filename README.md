@@ -64,6 +64,14 @@ long one starts a tune; the key line is held low while tuning.
 
 ## Settings
 
+> **New: all settings can be changed on the tuner itself** – in the setup
+> menu, without a computer and without flashing. Changing them in the hex
+> file still works, and a browser editor makes that easy.
+>
+> **All details: [Settings](docs/SETTINGS.md)** – the menu step by step, the
+> menu item HEX VALUES, the editor, and the hex file byte by byte with a
+> worked checksum example.
+
 | # | Setting | Default |
 |---|---|---|
 | 1 | Display off after (minutes, 0 = never) | 5 |
@@ -79,23 +87,39 @@ long one starts a tune; the key line is held low while tuning.
 | 11 | Tune target: stop at this SWR (0 = always the full search) | 1.05 |
 | 12 | Search effort: 1 quick, 2 normal, 3 thorough | 2 |
 
-**Menu on the tuner:** keep the button pressed when switching on, until SETUP
-appears. A short press changes the value, a long press goes to the next
-setting. At the end: SAVE, HEX VALUES (back to the values of the hex file) or
-EXIT. Without a press for a minute the menu ends without saving.
+**1. Menu on the tuner:** keep the button pressed when switching on, through
+the greeting, until SETUP appears. A short press changes the value, a long
+press goes to the next setting. After setting 12 come three pages, each
+done with a short press:
 
-**Editor in the browser:** open [`tools/cell-editor.html`](tools/cell-editor.html)
-(download it and open it; it works offline), load the hex file, change the
-values and save. Then flash the file.
+- **SAVE** – keep the values and leave the menu
+- **HEX VALUES** – delete the values saved in the menu; the settings written
+  in the hex file (for a published file: the defaults above) apply again.
+  The tuned relay setting and the memory of tunes stay. Use it to get back to
+  a known state after trying things in the menu.
+- **EXIT** – leave without saving
 
-**In the hex file:** the settings are 12 BCD coded bytes ("Cells") at address
-0xEEE0, in the lines starting with `:10EEE000` (settings 1–8) and `:10EEF000`
-(9–12). Each setting is a pair of bytes: the value and `34`. Example: `07 34`
-= 7 ms relay pulse. After changing a line its checksum (last byte) must be
-corrected; the editor does that for you.
+Without a press for a minute the menu ends without saving.
 
-Values saved in the menu take precedence over the hex file – until you flash
-a hex file with other settings; then those apply.
+![Setup menu: setting 3](docs/menu-relay.png)
+
+**2. Editor in the browser:** download [`tools/cell-editor.html`](tools/cell-editor.html),
+open it (it works offline), load the hex file, change the values, save, then
+flash the file.
+
+![Cell editor](docs/cell-editor.png)
+
+**3. In the hex file:** the settings are 12 BCD coded bytes ("Cells") at
+address 0xEEE0, in the lines starting with `:10EEE000` (settings 1–8) and
+`:10EEF000` (9–12). Each setting is a pair of bytes: the value, written with
+its decimal digits, and `34`. Example: `07 34` = 7 ms relay pulse. After
+changing a line its checksum (last byte) must be corrected – see
+[Settings](docs/SETTINGS.md#3-directly-in-the-hex-file); the editor does that
+for you.
+
+**Which values apply:** values saved in the menu take precedence over the hex
+file – until you flash a hex file with other settings (then those apply) or
+choose HEX VALUES in the menu.
 
 ## Questions
 
@@ -118,7 +142,7 @@ not come on, switch the tuner off and on again.
 | 2026-10-02 | 0.1.0 | development | complete new firmware: search, memory of 12 tunes, setup menu, Cells editor; simulator and PC tests |
 | 2026-10-02 | 0.9.0 | tested on the device | first device tests passed; review fixes, display clean-up after tuning |
 
-Technical details: [How tuning works](docs/TUNING.md) · [Development](docs/DEVELOPMENT.md)
+More: [Settings in detail](docs/SETTINGS.md) · [How tuning works](docs/TUNING.md) · [Development](docs/DEVELOPMENT.md)
 
 ## Feedback
 
@@ -127,5 +151,12 @@ band, power and what the display showed.
 
 ## License
 
-Public domain ([Unlicense](LICENSE)). The ATU-10 hardware is a design by
-David Fainitski, N7DDC.
+Public domain ([Unlicense](LICENSE)): free to use, change and pass on, for
+any purpose, without conditions.
+
+## Credits
+
+The ATU-10 hardware is a design by David Fainitski, N7DDC. The pin
+assignment, the relay pulse sequence, the display initialization and the
+5x8 font follow his ATU-10 firmware, which he also released into the public
+domain. Everything else in this firmware is written anew by DL8UG.

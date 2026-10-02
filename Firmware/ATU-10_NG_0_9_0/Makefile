@@ -118,3 +118,8 @@ docs: build/sim build/test_display
 	build/test_display > /dev/null
 	python3 tools/sim/plot.py screen build/screen_main.pbm $(DOCS)/display-main.png
 	python3 tools/sim/plot.py screen build/screen_greeting.pbm $(DOCS)/display-greeting.png
+	$(HOSTCC) -O2 -std=c99 -D_DEFAULT_SOURCE -Isrc -Itests/host -o build/render_menu tests/render_menu.c \
+	   src/display.c src/text.c src/cells.c
+	build/render_menu
+	for m in setup relay relay2 save hex exit; do \
+	   python3 tools/sim/plot.py screen build/menu_$$m.pbm $(DOCS)/menu-$$m.png; done
