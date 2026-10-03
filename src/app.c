@@ -30,6 +30,7 @@
 #define SWR_SHOW_UW 100000     // SWR shown from 0.1 W (the lowest Cell 4), also below Cell 4
 #define HINT_MS     1000       // a tune without a suitable carrier: the display says why
 #define CARRIER_MS  (WAIT_START * 10UL)   // ... and gives up, as tune_run would
+#define CARRIER_ON_MS 200      // a carrier that comes while waiting: this long, then tune
 #define SETUP_HOLD  100        // x 10 ms held at the end of the greeting: setup menu
 
 static uint32_t t_batt, t_watch, t_show, t_refresh, t_active, t_led, t_msg, t_tuned;
@@ -167,24 +168,33 @@ static void hint(const char *a, const char *b) {
 
 // Waits up to CARRIER_MS for a carrier the tune can use; after HINT_MS
 // without one the display says why, and the power line shows the power
-// meanwhile. TUNE_OK: there is one, else
+// meanwhile. A carrier that is there at once starts the tune at once
+// (auto tune has checked it already); one that comes while waiting must
+// last CARRIER_ON_MS, else a blip or a CW element would start a tune that
+// waits again in tune_run, without a hint. TUNE_OK: there is one, else
 // TUNE_NO_CARRIER or TUNE_ABORTED (button, as during the tune).
 static uint8_t wait_carrier(void) {
    meas_t m;
-   uint8_t p, shown = P_OK, r = TUNE_OK;
-   uint32_t t = tick_ms();
+   uint8_t p, shown = P_OK, waited = 0, r = TUNE_OK;
+   uint32_t t = tick_ms(), t_bad = t;
    for(;;) {
       meas_take(&m, 4);
       p = tune_power(&m);
-      if(p == P_OK) break;
+      if(p != P_OK) {
+         waited = 1;
+         t_bad = tick_ms();
+      }
+      else if(!waited || since(t_bad) >= CARRIER_ON_MS) break;
       show_power(pwr_x10(m.pf));
       disp_flush();
       if(hal_abort()) { r = TUNE_ABORTED; break; }
-      if(since(t) >= CARRIER_MS) { r = TUNE_NO_CARRIER; break; }
-      if(since(t) >= HINT_MS && p != shown) {
-         shown = p;
-         if(p == P_NONE) hint("WAITING", "FOR RF");
-         else hint("POWER", p == P_LOW ? "TOO LOW" : "TOO HIGH");
+      if(p != P_OK) {                          // a carrier on its way: the hint stays
+         if(since(t) >= CARRIER_MS) { r = TUNE_NO_CARRIER; break; }
+         if(since(t) >= HINT_MS && p != shown) {
+            shown = p;
+            if(p == P_NONE) hint("WAITING", "FOR RF");
+            else hint("POWER", p == P_LOW ? "TOO LOW" : "TOO HIGH");
+         }
       }
       delay_ms(10);
    }
