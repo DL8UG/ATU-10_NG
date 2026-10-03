@@ -38,7 +38,8 @@ static jmp_buf done;
 static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
 enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
-       M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY };
+       M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP };
+#define M_RESUME(m) ((m) >= M_RESUME_OFF && (m) <= M_RESUME_EMPTY)
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
 static int display_ok = 1, display_inited, oled_inits, oled_ok_writes, key_falls, key_prev = 1;
@@ -142,7 +143,7 @@ void fake_ms(uint32_t ms) {
       else if(mode == M_NOPOWER) rf_on = wall >= 60000 && wall < 2 * MIN;   // after the NO POWER
       else if(mode == M_PULSE || mode == M_PULSE_SLOW)                  // CW key: 1 s down, 7 s
          rf_on = wall >= 10000 && (wall - 10000) % (mode == M_PULSE ? 8000 : 71000) < 1000;   // (70 s) up
-      else if(mode >= M_RESUME_OFF) {                                   // one 1 s carrier, then
+      else if(M_RESUME(mode)) {                                   // one 1 s carrier, then
          rf_on = wall >= 10000 && wall < 11000;                         // (OFF) a tune after power
          if(mode == M_RESUME_OFF) rf_on |= wall >= 52000;               // off, (QSY) a carrier on
          if(mode == M_RESUME_QSY) rf_on |= wall >= 20000;               // another band, (EMPTY)
@@ -153,6 +154,9 @@ void fake_ms(uint32_t ms) {
       if(wall == 100 * MIN && !mode) vbat_mv = 3300;                    // battery empty
       if(mode == M_RESUME_OFF) vbat_mv = wall >= 15000 && wall < 25000 ? 3300 : 4000;   // LOW BATT
       if(mode == M_RESUME_QSY && wall == 15000) { opt_l = 3; opt_c = 90; }            // other band
+      if(mode == M_BATT_DIP)       // low for one reading (every 3 s), for two, then for good
+         vbat_mv = (wall >= 20000 && wall < 22000) || (wall >= 40000 && wall < 46000) || wall >= 60000
+                   ? 3300 : 4000;
       if(INTCONbits.GIE && PIE0bits.TMR0IE) {
          PIR0bits.TMR0IF = 1;
          isr();
@@ -421,10 +425,14 @@ static void checkpoint_variant(uint32_t t) {
       CHECK(!LATDbits.LATD2);                                // after the grid the progress shows
       CHECK(swr_shows("3.00"));                              // 3.00 again (blanked at the start)
    }
+   if(mode == M_BATT_DIP && t == 59000)                     // single low readings: still on
+      CHECK_EQ(sleeps, 0);
+   if(mode == M_BATT_DIP && t == 75000)                     // low for 9 s: LOW BATT, off
+      CHECK_EQ(sleeps, 1);
    if(t == 40000 && mode == M_BLIP)                         // carrier since 10 s: tuned, so
       CHECK(key_falls >= 1);                                 // not stuck in the setup menu
    if(t == 6 * MIN - 1) {
-      CHECK_EQ(sleeps, mode == M_RESUME_OFF);
+      CHECK_EQ(sleeps, mode == M_RESUME_OFF || mode == M_BATT_DIP);
       switch(mode) {
       case M_CELLS_MIN:                                      // auto tune off: no tune
          CHECK_EQ(key_falls, 0);
@@ -498,7 +506,7 @@ static int run_variant(void) {
    if(mode == M_UNMATCH) g2_floor = 1.0 / 9;                 // best possible SWR 2.0
    if(mode == M_NOMATCH) g2_floor = 0.99995;                 // SWR 9.99 everywhere
    if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH || mode == M_LOWPWR || mode == M_EXTTUNE
-      || mode == M_STOPAUTO || mode == M_OVERLOAD || mode == M_PULSE || mode == M_PULSE_SLOW || mode >= M_RESUME_OFF) {   // start in bypass, so that
+      || mode == M_STOPAUTO || mode == M_OVERLOAD || mode == M_PULSE || mode == M_PULSE_SLOW || M_RESUME(mode)) {   // start in bypass, so that
       st.r.l = st.r.c = 0;                                   // the carrier causes an auto tune
       st.last_swr = 0;
    }
@@ -552,7 +560,8 @@ static int run_variant(void) {
                      : mode == M_EXTTUNE ? "test_app ext-tune" : mode == M_STOPAUTO ? "test_app stop-auto"
                      : mode == M_OVERLOAD ? "test_app overload" : mode == M_PULSE ? "test_app pulse"
                      : mode == M_PULSE_SLOW ? "test_app pulse-slow" : mode == M_RESUME_OFF ? "test_app resume-off"
-                     : mode == M_RESUME_QSY ? "test_app resume-qsy" : "test_app resume-empty");
+                     : mode == M_RESUME_QSY ? "test_app resume-qsy" : mode == M_RESUME_EMPTY ? "test_app resume-empty"
+                     : "test_app batt-dip");
 }
 
 int main(int argc, char **argv) {

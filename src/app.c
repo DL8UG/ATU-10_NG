@@ -23,13 +23,14 @@
 #define SHOW_MS     150        // display update of power and SWR
 #define REFRESH_MS  30000      // send the whole picture again
 #define LOW_BATT_MV 3400
+#define LOW_BATT_N  3          // readings in a row below it: switch off (6 s, one dip does not)
 #define AUTO_STEADY 4          // auto tune after this many measurements in a row
 #define AUTO_HOLD   3000       // ms after a tune without auto tune
 #define RESUME_MS   60000      // a tune within this time continues an interrupted one
 #define SETUP_HOLD  100        // x 10 ms held at the end of the greeting: setup menu
 
 static uint32_t t_batt, t_watch, t_show, t_refresh, t_active, t_led, t_msg, t_tuned;
-static uint8_t led_on, msg_on, auto_cnt, auto_tune, go_off;
+static uint8_t led_on, msg_on, auto_cnt, auto_tune, go_off, low_cnt;
 static uint16_t swr_ref;       // SWR of the last tune, reference for auto tune
 static uint16_t shown_pwr = 0xFFFF, shown_swr = 0xFFFF;
 static meas_t peak;            // peak hold for the display
@@ -292,7 +293,11 @@ static void battery_check(void) {
    else LED_RED = 0;
    led_on = 1;
    t_led = tick_ms();
-   if(vbat_mv < LOW_BATT_MV) go_off = 2;         // main loop switches off
+   if(vbat_mv >= LOW_BATT_MV) low_cnt = 0;
+   else if(++low_cnt >= LOW_BATT_N) {          // main loop switches off
+      low_cnt = 0;
+      go_off = 2;
+   }
 }
 
 // Why the PIC was reset, shown for 2 s; nothing after a normal power-up
