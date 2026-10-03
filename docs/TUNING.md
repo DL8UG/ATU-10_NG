@@ -138,7 +138,12 @@ settings), a tune stops after a fixed number of relay steps at the latest,
 and a button press stops it at once, leaving the best setting found so far.
 If the carrier goes away for longer than the tune waits (about 5 seconds),
 the next tune within a minute goes on with the same search: the cache and
-the step count are kept, so a chain of such tunes ends like one tune. A
+the step count are kept, so a chain of such tunes ends like one tune. It
+goes on only if the relays still hold the best setting so far and that
+measures about as before (neither the reflected nor the delivered power
+differs by more than a factor of 2); else, e.g. after a change of band, a
+new search starts. A tune that measured nothing new ends the chain, and so
+does switching off. A
 detector above its range at 64 settings in a row stops the tune
 (OVERLOAD): a QRP rig delivers more at a strong mismatch, so single
 clipped readings only count as bad settings.
@@ -152,7 +157,7 @@ Two Cells change the search:
 
 ## Results in the simulator
 
-The simulator (`Firmware/ATU-10_NG_0_9_2/tools/sim`) runs the firmware's
+The simulator (`Firmware/ATU-10_NG_0_9_3/tools/sim`) runs the firmware's
 search and measurement code on a PC against a model of the network, the
 bridge, the detectors and the ADC, connected to models of real antennas
 (wire antennas as lossy open lines, feed lines, baluns and ununs with their
