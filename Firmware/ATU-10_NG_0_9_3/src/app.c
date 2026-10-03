@@ -34,8 +34,8 @@ static uint16_t swr_ref;       // SWR of the last tune, reference for auto tune
 static uint16_t shown_pwr = 0xFFFF, shown_swr = 0xFFFF;
 static meas_t peak;            // peak hold for the display
 static uint32_t t_peak;
-static uint16_t swr_last;
-static uint8_t resume;         // the last tune lost its carrier while it still made progress      // last SWR measured with enough power
+static uint16_t swr_last;      // last SWR measured with enough power
+static uint8_t resume;         // the last tune can be continued (tune_resumable)
 
 // ms since the tick value t. Always read the clock fresh: a timestamp set
 // in between (wake, tune) may be later than a value read before, and the
@@ -143,7 +143,6 @@ uint8_t hal_abort(void) {
 
 static void do_tune(void) {
    uint8_t r, same;
-   uint16_t steps0;
    relays_t from = rel;
    wake();
    LED_GREEN = 0;
@@ -154,7 +153,6 @@ static void do_tune(void) {
    shown_swr = 0xFFFF;                         // blanked: draw it even if unchanged
    disp_flush();
    tune_resume = resume && since(t_tuned) < RESUME_MS;
-   steps0 = tune_resume ? tune_steps : 0;
    // in bypass the relays hold no tune result (the memory has it)
    r = tune_run(&rel, !st.bypass && st.last_swr ? (uint16_t)(100 + st.last_swr) : 0);
    same = rel.l == from.l && rel.c == from.c && rel.sw == from.sw;
@@ -179,13 +177,11 @@ static void do_tune(void) {
       swr_last = tune_swr;
       save_state();
    }
-   // Carrier gone while the search still measured new settings (e.g. a CW
-   // key pressed again and again with longer pauses): the next tune goes
-   // on with this search, and auto tune starts it with the next carrier
-   // (SWR above 1.20). The step budget counts on, so the chain ends; a new
-   // search (not a continued one) starts a chain only if it found
-   // something better.
-   resume = r == TUNE_NO_CARRIER && tune_steps > steps0 && (steps0 || !same);
+   // Carrier gone while the search still measured new settings: the next
+   // tune within RESUME_MS goes on with this search, and auto tune starts
+   // it with the next carrier (SWR above 1.20). The step budget counts on,
+   // so the chain ends.
+   resume = tune_resumable;
    if(resume) swr_ref = 0;
    show_swr_label();
    shown_swr = 0xFFFF;
@@ -257,6 +253,8 @@ static void start_screen(void) {
 // display again (start_screen) - one hardware stack level less.
 static void power_off(void) {
    uint8_t n;
+   resume = 0;                                 // the clock stands still while sleeping:
+                                               // RESUME_MS would go on after waking
    disp_power(0);
    LED_RED = 1;
    LED_GREEN = 1;
