@@ -29,7 +29,7 @@
 #define RESUME_MS   60000      // a tune within this time continues an interrupted one
 #define SWR_SHOW_UW 100000     // SWR shown from 0.1 W (the lowest Cell 4), also below Cell 4
 #define HINT_MS     1000       // a tune without a suitable carrier: the display says why
-#define CARRIER_MS  10000      // ... and gives up (as WAIT_START in tune.c)
+#define CARRIER_MS  (WAIT_START * 10UL)   // ... and gives up, as tune_run would
 #define SETUP_HOLD  100        // x 10 ms held at the end of the greeting: setup menu
 
 static uint32_t t_batt, t_watch, t_show, t_refresh, t_active, t_led, t_msg, t_tuned;
@@ -146,13 +146,13 @@ uint8_t hal_abort(void) {
    return ev == EV_SHORT || ev == EV_LONG;
 }
 
-// Carrier power for tuning, the same comparison as in tune_run: P_OK or
-// why not (P_NONE below SWR_SHOW_UW, P_LOW below Cell 4, P_HIGH above Cell 5)
+// Carrier power for tuning, the same limits as in tune_run: P_OK or why
+// not (P_NONE below SWR_SHOW_UW, P_LOW below Cell 4, P_HIGH above Cell 5)
 enum { P_OK, P_NONE, P_LOW, P_HIGH };
 static uint8_t tune_power(const meas_t *m) {
    if(m->pf < SWR_SHOW_UW) return P_NONE;
-   if(m->pf < (uint32_t)cfg[CFG_MIN_PWR] * 100000) return P_LOW;
-   if(pnet_uw(m) > (uint32_t)cfg[CFG_MAX_PWR] * 1000000) return P_HIGH;
+   if(m->pf < TUNE_MIN_UW) return P_LOW;
+   if(pnet_uw(m) > TUNE_MAX_UW) return P_HIGH;
    return P_OK;
 }
 

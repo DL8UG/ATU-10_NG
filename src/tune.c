@@ -60,7 +60,6 @@
 #endif
 #define SAME_LOAD_ABS  (G2_ONE / 128)  // continued search: tolerance near g2 0 and 1 (SWR 1.2)
 #define NO_MATCH_SWR   120           // bypass wins above this SWR: NO MATCH (below: good as it is)
-#define WAIT_START     1000          // x 10 ms: wait for a carrier at the start
 #define WAIT_LOST      300           // x 10 ms: carrier lost during the search
 #define UNSTABLE_MAX   3             // an unsteady measurement is accepted the 3rd time
 #ifndef OVF_RUN_MAX
@@ -467,8 +466,8 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
    carrier_seen = 0;
    ovf_run = 0;
    fine = 0;
-   min_uw = (uint32_t)cfg[CFG_MIN_PWR] * 100000;
-   max_uw = (uint32_t)cfg[CFG_MAX_PWR] * 1000000;
+   min_uw = TUNE_MIN_UW;
+   max_uw = TUNE_MAX_UW;
 
    switch(cfg[CFG_SEARCH]) {
       case 1:  grid = grid1; ng = sizeof grid1; k = K1; budget = BUDGET1; break;
