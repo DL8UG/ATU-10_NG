@@ -128,12 +128,13 @@ void disp_big(uint8_t y, uint8_t x, const char *s) {
    }
 }
 
-void disp_small(uint8_t row, uint8_t x, const char *s) {
+// Small text: the 5 x 8 font, 1 column gap, from pixel row y
+void disp_small(uint8_t y, uint8_t x, const char *s) {
    uint8_t i;
    const uint8_t *g;
    for(; *s; s++, x += 6) {
       g = glyph(*s);
-      for(i = 0; i < 6; i++) put8((uint8_t)(x + i), (uint8_t)(row * 8), i < 5 ? g[i] : 0, 8);
+      for(i = 0; i < 6; i++) put8((uint8_t)(x + i), y, i < 5 ? g[i] : 0, 8);
    }
 }
 

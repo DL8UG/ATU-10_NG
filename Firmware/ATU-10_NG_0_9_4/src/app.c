@@ -28,6 +28,8 @@
 #define AUTO_HOLD   3000       // ms after a tune without auto tune
 #define RESUME_MS   60000      // a tune within this time continues an interrupted one
 #define SWR_SHOW_UW 100000     // SWR shown from 0.1 W (the lowest Cell 4), also below Cell 4
+#define HINT_MS     1000       // a tune without a suitable carrier: the display says why
+#define CARRIER_MS  10000      // ... and gives up (as WAIT_START in tune.c)
 #define SETUP_HOLD  100        // x 10 ms held at the end of the greeting: setup menu
 
 static uint32_t t_batt, t_watch, t_show, t_refresh, t_active, t_led, t_msg, t_tuned;
@@ -144,6 +146,52 @@ uint8_t hal_abort(void) {
    return ev == EV_SHORT || ev == EV_LONG;
 }
 
+// Carrier power for tuning, the same comparison as in tune_run: P_OK or
+// why not (P_NONE below SWR_SHOW_UW, P_LOW below Cell 4, P_HIGH above Cell 5)
+enum { P_OK, P_NONE, P_LOW, P_HIGH };
+static uint8_t tune_power(const meas_t *m) {
+   if(m->pf < SWR_SHOW_UW) return P_NONE;
+   if(m->pf < (uint32_t)cfg[CFG_MIN_PWR] * 100000) return P_LOW;
+   if(pnet_uw(m) > (uint32_t)cfg[CFG_MAX_PWR] * 1000000) return P_HIGH;
+   return P_OK;
+}
+
+// two small lines right of TUNE, where the SWR so far follows
+static void hint(const char *a, const char *b) {
+   disp_small(LINE2 - 1, 60, "        ");
+   disp_small(LINE2 + 7, 60, "        ");
+   disp_small(LINE2 - 1, 60, a);
+   disp_small(LINE2 + 7, 60, b);
+   disp_flush();
+}
+
+// Waits up to CARRIER_MS for a carrier the tune can use; after HINT_MS
+// without one the display says why, and the power line shows the power
+// meanwhile. TUNE_OK: there is one, else
+// TUNE_NO_CARRIER or TUNE_ABORTED (button, as during the tune).
+static uint8_t wait_carrier(void) {
+   meas_t m;
+   uint8_t p, shown = P_OK, r = TUNE_OK;
+   uint32_t t = tick_ms();
+   for(;;) {
+      meas_take(&m, 4);
+      p = tune_power(&m);
+      if(p == P_OK) break;
+      show_power(pwr_x10(m.pf));
+      disp_flush();
+      if(hal_abort()) { r = TUNE_ABORTED; break; }
+      if(since(t) >= CARRIER_MS) { r = TUNE_NO_CARRIER; break; }
+      if(since(t) >= HINT_MS && p != shown) {
+         shown = p;
+         if(p == P_NONE) hint("WAITING", "FOR RF");
+         else hint("POWER", p == P_LOW ? "TOO LOW" : "TOO HIGH");
+      }
+      delay_ms(10);
+   }
+   if(shown != P_OK) hint("", "");
+   return r;
+}
+
 static void do_tune(void) {
    uint8_t r, same;
    relays_t from = rel;
@@ -155,9 +203,18 @@ static void do_tune(void) {
    disp_big(LINE2, 0, "TUNE");                 // the SWR so far follows at the right
    shown_swr = 0xFFFF;                         // blanked: draw it even if unchanged
    disp_flush();
-   tune_resume = resume && since(t_tuned) < RESUME_MS;
-   // in bypass the relays hold no tune result (the memory has it)
-   r = tune_run(&rel, !st.bypass && st.last_swr ? (uint16_t)(100 + st.last_swr) : 0);
+   r = wait_carrier();
+   if(r == TUNE_OK) {
+      tune_resume = resume && since(t_tuned) < RESUME_MS;
+      // in bypass the relays hold no tune result (the memory has it)
+      r = tune_run(&rel, !st.bypass && st.last_swr ? (uint16_t)(100 + st.last_swr) : 0);
+      // Carrier gone while the search still measured new settings: the
+      // next tune within RESUME_MS goes on with this search, and auto tune
+      // starts it with the next carrier (SWR above 1.20). The step budget
+      // counts on, so the chain ends.
+      resume = tune_resumable;
+   }
+   else resume = 0;                            // nothing measured: as a tune without a carrier
    same = rel.l == from.l && rel.c == from.c && rel.sw == from.sw;
    if(r != TUNE_OK && r != TUNE_NO_MATCH && same) {
       // Stopped without a change (no carrier, or stopped before anything
@@ -180,12 +237,7 @@ static void do_tune(void) {
       swr_last = swr_disp = tune_swr;
       save_state();
    }
-   // Carrier gone while the search still measured new settings: the next
-   // tune within RESUME_MS goes on with this search, and auto tune starts
-   // it with the next carrier (SWR above 1.20). The step budget counts on,
-   // so the chain ends.
-   resume = tune_resumable;
-   if(resume) swr_ref = 0;
+   if(resume) swr_ref = 0;                     // auto tune goes on with the search
    show_swr_label();
    shown_swr = 0xFFFF;
    show_swr(swr_disp);
@@ -230,13 +282,13 @@ static void bypass_toggle(uint8_t on) {
 static void greeting(void) {
    disp_clear();
    disp_big(LINE1, CENTRE_BIG("ATU-10"), "ATU-10");
-   disp_small(3, CENTRE_SMALL("HARDWARE BY N7DDC"), "HARDWARE BY N7DDC");
+   disp_small(24, CENTRE_SMALL("HARDWARE BY N7DDC"), "HARDWARE BY N7DDC");
    disp_flush();
    LED_GREEN = 0;
    delay_ms(2000);
    disp_clear();
    disp_big(LINE1, CENTRE_BIG(GREET_FW), GREET_FW);
-   disp_small(3, CENTRE_SMALL("FIRMWARE BY DL8UG"), "FIRMWARE BY DL8UG");
+   disp_small(24, CENTRE_SMALL("FIRMWARE BY DL8UG"), "FIRMWARE BY DL8UG");
    disp_flush();
    delay_ms(2000);
    LED_GREEN = 1;
@@ -319,7 +371,7 @@ static void watch(void) {
    meas_t m;
    uint16_t p10, swr, delta;
    uint32_t now = tick_ms();
-   uint8_t enough;
+   uint8_t pw;
    meas_take(&m, 4);
    if(m.overflow && !msg_on) message("OVERLOAD", 2000);
    p10 = pwr_x10(m.pf);
@@ -330,18 +382,17 @@ static void watch(void) {
       t_peak = now;
    }
    swr = swr_x100(m.g2);
-   // enough power for tuning: the same comparison as in tune_run (not the
-   // rounded p10), else auto tune starts tunes that never see a carrier
-   enough = m.pf >= (uint32_t)cfg[CFG_MIN_PWR] * 100000;
-   if(enough) swr_last = swr;
-   if(m.pf >= SWR_SHOW_UW) swr_disp = swr;
+   // power compared as in tune_run (not the rounded p10), else auto tune
+   // starts tunes that never see a carrier
+   pw = tune_power(&m);
+   if(pw == P_OK || pw == P_HIGH) swr_last = swr;
+   if(pw != P_NONE) swr_disp = swr;
 
-   // auto tune: enough power, SWR above 1.20 and changed by more than
+   // auto tune: power for tuning, SWR above 1.20 and changed by more than
    // Cell 6 since the last tune (not again right after a tune, and not
    // again and again when the antenna cannot be matched better)
    delta = (uint16_t)(cfg[CFG_AUTO_DELTA] - 10) * 10;
-   if(cfg[CFG_AUTO] && !st.bypass && enough && pnet_uw(&m) <= (uint32_t)cfg[CFG_MAX_PWR] * 1000000
-      && m.stable && swr > 120 && since(t_tuned) >= AUTO_HOLD
+   if(cfg[CFG_AUTO] && !st.bypass && pw == P_OK && m.stable && swr > 120 && since(t_tuned) >= AUTO_HOLD
       && (swr > swr_ref + delta || swr + delta < swr_ref)) {
       if(++auto_cnt >= AUTO_STEADY) auto_tune = 1;   // main loop starts it
    }

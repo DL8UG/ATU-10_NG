@@ -57,7 +57,7 @@ build/test_app: tests/test_app.c tests/host/xc.h $(HDR) $(wildcard src/*.c)
 
 test: $(addprefix build/test_, $(TESTS)) build/test_app $(TARGET).hex
 	@for t in $(TESTS) app; do build/test_$$t || exit 1; done
-	@for v in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19; do build/test_app $$v || exit 1; done
+	@for v in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do build/test_app $$v || exit 1; done
 	sh tests/test_tools.sh $(TARGET).hex
 
 # ---- PC simulator of the tuning algorithm (tools/sim, see sim.c)
