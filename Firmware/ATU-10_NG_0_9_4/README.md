@@ -8,6 +8,7 @@ Flashing, operation and settings: see the [main README](../../README.md).
 ## Contents
 
 - [Features](#features)
+- [Changes since 0.9.3](#changes-since-093)
 - [Changes since 0.9.2](#changes-since-092)
 - [Changes since 0.9.1](#changes-since-091)
 - [Changes since 0.9.0](#changes-since-090)
@@ -30,6 +31,23 @@ The new firmware, written from scratch:
 - watchdog, brown-out reset, reset reason on the display
 - display drawn from a framebuffer, only changed parts are sent; a display
   that does not answer is restarted with growing pauses
+
+## Changes since 0.9.3
+
+- TUNE without a suitable carrier: after 1 second the display says why,
+  in two small lines right of TUNE: WAITING FOR RF (no carrier), POWER TOO
+  LOW (below Cell 4) or POWER TOO HIGH (above Cell 5); the power line
+  shows the power meanwhile. After 10 seconds the tune gives up with NO
+  POWER, TOO LOW or TOO HIGH. A carrier that comes while waiting starts
+  the tune after 0.2 seconds, so a short blip does not (before, only TUNE
+  was shown for up to 10 seconds, then NO POWER)
+- SWR display: the SWR is shown from 0.1 W on, also below the minimum
+  tune power of Cell 4 (before, with less than 1.0 W at the default
+  setting it showed "-.--" or an old value); auto tune still starts only
+  above Cell 4
+- LOW BATT: the tuner switches off after three low battery readings
+  (below 3.40 V) in a row, 6 seconds; readings between 3.40 and 3.45 V do
+  not end the row (before, a single low reading switched it off)
 
 ## Changes since 0.9.2
 
