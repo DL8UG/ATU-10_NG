@@ -15,7 +15,7 @@ jobs:
     outputs:
       list: ${{ steps.find.outputs.list }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: find
         run: echo "list=$(ls -d Firmware/ATU-10_NG_*/ | xargs -n1 basename | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
 
@@ -30,7 +30,7 @@ jobs:
       run:
         working-directory: Firmware/${{ matrix.folder }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # released folders are frozen and have no test-host target: their
       # "make test" with the hex file marked as up to date (-o) is the same
       - run: |
