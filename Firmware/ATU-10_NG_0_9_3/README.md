@@ -8,6 +8,7 @@ Flashing, operation and settings: see the [main README](../../README.md).
 ## Contents
 
 - [Features](#features)
+- [Changes since 0.9.2](#changes-since-092)
 - [Changes since 0.9.1](#changes-since-091)
 - [Changes since 0.9.0](#changes-since-090)
 - [Changes since 0.1.0 (development version)](#changes-since-010-development-version)
@@ -29,6 +30,22 @@ The new firmware, written from scratch:
 - watchdog, brown-out reset, reset reason on the display
 - display drawn from a framebuffer, only changed parts are sent; a display
   that does not answer is restarted with growing pauses
+
+## Changes since 0.9.2
+
+- tuning with short carriers: a tune that goes on with an interrupted
+  search first measures the present setting again; when it measures
+  clearly different than before (other band, other antenna) or bypass was
+  switched on meanwhile, a new search starts (before, the search went on
+  with the measurements of the old band, or took bypass as its best
+  setting so far)
+- tuning with short carriers: switching off ends the interrupted search
+  (before, after the automatic power off or LOW BATT the next tune could
+  still go on with it, as the minute only counts while switched on)
+- tuning with short carriers: a tune that measured nothing new, e.g. with
+  carriers too short for one measurement, ends the chain (before, every
+  such carrier started another tune, with the key line to the transceiver
+  low for up to 10 seconds each time)
 
 ## Changes since 0.9.1
 
