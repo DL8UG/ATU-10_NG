@@ -275,6 +275,23 @@ feed line, band and frequency, transceiver and power, what the display showed
 long as you keep the license notice. If we meet some day, and you think this
 stuff is worth it, you can buy me a beer in return.
 
+> [!NOTE]
+> **To the manufacturers of ATU-10 tuners**
+>
+> If you build and sell ATU-10 tuners: you are very welcome to use this
+> firmware – that is what it is for. It is free and meant to serve the whole
+> amateur radio community.
+>
+> If it helps your product, I would be glad if you gave a little back to that
+> community. Please get in touch: I would love to receive a small number of
+> ATU-10 tuners for a youth project of our local or regional amateur radio
+> club, so that young people can build antennas, tune them and get on the air.
+>
+> Contact: DL8UG – open a [GitHub issue](https://github.com/DL8UG/ATU-10_NG/issues),
+> or find my contact details on [QRZ.com](https://www.qrz.com/db/DL8UG).
+>
+> **致 ATU-10 天调的生产厂家：** 如果您生产和销售 ATU-10 天调，欢迎使用本固件——这正是它的用途。它是免费的，旨在服务整个业余无线电爱好者群体。如果它对您的产品有所帮助，我很希望您能为这个群体回馈一点：请与我联系。我希望获得少量 ATU-10 天调，捐赠给我们本地或地区业余无线电协会的青少年项目，让年轻人亲手架设天线、调谐天线，并开始上机通联。联系方式：DL8UG——请在 GitHub 上提交 issue，或通过 QRZ.com 查找我的联系方式。
+
 ## Credits
 
 The ATU-10 hardware is a design by David Fainitski, N7DDC. The pin
