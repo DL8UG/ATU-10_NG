@@ -39,12 +39,18 @@ extern uint8_t tune_mem_seq[MEM_SLOTS];   // age: higher (mod 256) = newer
 extern uint8_t tune_mem_n;                // slots in use (0..n-1)
 extern uint16_t tune_mem_dirty;           // bit i: slot i changed
 
-// Search state over tunes: a tune whose carrier went away can be continued
-// by the next one (tune_resume = 1 before tune_run): the settings measured
-// so far are not measured again and the step budget counts on, so a chain
-// of continued tunes ends like one tune
-extern uint16_t tune_steps;        // relay settings measured by the search so far
+// Search state over tunes: a tune whose carrier went away while it still
+// measured new settings can be continued by the next one (tune_resume = 1
+// before tune_run): the settings measured so far are not measured again
+// and the step budget counts on, so a chain of continued tunes ends like
+// one tune. The continued tune first measures the setting the relays hold
+// again; if that differs from before (other band, other antenna), it
+// starts a new search instead.
 extern uint8_t tune_resume;        // 1: the next tune_run continues the last search
+extern uint8_t tune_resumable;     // set by tune_run: the next tune may continue this
+                                   // search (carrier gone after new settings were
+                                   // measured, and the search is a continued one or
+                                   // found something better than 'from')
 
 // Result of the last tune
 extern relays_t tune_best;

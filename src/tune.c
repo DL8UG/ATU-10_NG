@@ -136,8 +136,9 @@ static uint16_t cache_used;
 
 static uint8_t carrier_seen;
 static uint8_t ovf_run;                       // settings in a row with a clipped detector
-uint16_t tune_steps;
+static uint16_t steps;                        // relay settings measured by the search so far
 uint8_t tune_resume;
+uint8_t tune_resumable;
 static uint16_t budget;
 static uint32_t min_uw, max_uw;
 static relays_t best;                         // best setting measured so far
@@ -158,7 +159,8 @@ static uint8_t slot_of(uint16_t key) {
 // g2 of a setting. Switches the relays and takes one valid measurement:
 // waits for a carrier in the allowed power range, repeats an unsteady one
 // up to UNSTABLE_MAX times. Each setting is measured once per tune
-// (cached); n = MEAS_N_VERIFY measures again with more averaging.
+// (cached) and counts as a step once it is measured; n = MEAS_N_VERIFY
+// measures again with more averaging (no step).
 static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
    meas_t m;
    uint16_t key = key_of(l, c, sw), wait = 0;
@@ -172,9 +174,7 @@ static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
          if(best_g > G2_ONE) goto seen;
          return M_OK;
       }
-      if(tune_steps >= budget) return M_BUDGET;
-      tune_steps++;
-      COUNT();
+      if(steps >= budget) return M_BUDGET;
    }
    hal_relay_set(l, c, sw);
    for(;;) {
@@ -201,6 +201,8 @@ static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
    v->g = m.g2;
    v->sp = m.spread;
    if(n == MEAS_N_VERIFY) return M_OK;
+   steps++;
+   COUNT();
    if(cache_used < CACHE_SIZE - 1) {
       cache_key[s] = key;
       cache_g[s] = m.g2 >= G2_ONE ? 0xFFFF : (uint16_t)(m.g2 >> 8);
@@ -461,15 +463,9 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
    relays_t cand[CAND_MAX], res[2], p;
    val_t cv[CAND_MAX], rv[2], v, vb;
    uint8_t gi[CAND_MAX], gj[CAND_MAX];
-   uint16_t ref_swr;
+   uint16_t ref_swr, steps0, key;
 
-   if(!tune_resume) {                        // else the interrupted search goes on
-      i = 0;
-      do cache_key[i] = 0; while(++i);       // all 256
-      cache_used = 0;
-      tune_steps = 0;
-   }
-   tune_resume = 0;
+   tune_resumable = 0;
    carrier_seen = 0;
    ovf_run = 0;
    fine = 0;
@@ -484,9 +480,33 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
       default: grid = grid2; ng = sizeof grid2; k = K2; budget = BUDGET2; break;
    }
 
+   // A continued search: the load may have changed since (other band,
+   // other antenna), so the setting the relays hold is measured again (no
+   // step). The search goes on only if it measures as before, else (or
+   // when that setting is not in the cache) a new search starts.
+   p = *from;
+   key = key_of(p.l, p.c, p.sw);             // 'from' may be the relay setting itself,
+   steps0 = 0;                               // which the search changes
+   if(tune_resume) {
+      tune_resume = 0;
+      i = slot_of(key);
+      if(cache_key[i] == key) {
+         vb.g = cache_g[i] == 0xFFFF ? G2_ONE : (uint32_t)cache_g[i] << 8;
+         vb.sp = cache_sp[i];
+         r = probe(p.l, p.c, p.sw, MEAS_N_VERIFY, &v);
+         if(r != M_OK) goto stop;            // nothing new: the next tune starts afresh
+         if(!better(&v, &vb) && !better(&vb, &v)) steps0 = steps;
+      }
+   }
+   if(!steps0) {                             // a new search
+      i = 0;
+      do cache_key[i] = 0; while(++i);       // all 256
+      cache_used = 0;
+      steps = 0;
+   }
+
    // the setting the relays hold now
    PHASE(0);
-   p = *from;
    r = probe(p.l, p.c, p.sw, MEAS_N_FINE, &v);
    if(r != M_OK) goto stop;
    if(target_reached(&v)) {
@@ -585,7 +605,7 @@ results:
    // (not always: a single lucky reading would push out a real result)
    for(i = 0; i < n_res && (res[i].l != best.l || res[i].c != best.c || res[i].sw != best.sw); i++)
       continue;
-   if(i == n_res && (n_res == 0 || tune_steps >= budget)) {
+   if(i == n_res && (n_res == 0 || steps >= budget)) {
       v.g = best_g;
       v.sp = 0;
       keep(res, rv, &n_res, &best, &v);
@@ -612,6 +632,11 @@ results:
    return TUNE_OK;
 
 stop:   // aborted or carrier gone: best setting so far
+   // Carrier gone while the search still measured new settings (e.g. a CW
+   // key pressed again and again with longer pauses): the next tune may go
+   // on with it. A new search (not a continued one) starts a chain only if
+   // it found something better.
+   tune_resumable = r == M_NO_CARRIER && steps > steps0 && (steps0 || key_of(best.l, best.c, best.sw) != key);
    finish(&best, best_g);
    return r == M_ABORT ? TUNE_ABORTED : r == M_OVERLOAD ? TUNE_OVERLOAD : TUNE_NO_CARRIER;
 }

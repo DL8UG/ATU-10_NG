@@ -37,13 +37,17 @@ static uint32_t end_at;
 static jmp_buf done;
 static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
-enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW };
+enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
+       M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY };
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
 static int display_ok = 1, display_inited, oled_inits, oled_ok_writes, key_falls, key_prev = 1;
 static uint32_t disp_us, io_frac;     // time the main program spends on display I/O
 static double g2_floor;              // best possible reflection of the load
 static int adc_on = 1;               // ADC and reference (meas_init / meas_off)
+static double opt_l = 20, opt_c = 30;   // best match of the load (capacitor at the output)
+static uint8_t seen1[2][128][128];   // M_RESUME_OFF: settings switched by the 1st / 2nd tune
+static int n_first, n_again;
 
 typedef struct { uint32_t from, to; } span_t;
 static span_t press[40] = {         // button held (ms); the setup menu presses are added in main()
@@ -138,8 +142,17 @@ void fake_ms(uint32_t ms) {
       else if(mode == M_NOPOWER) rf_on = wall >= 60000 && wall < 2 * MIN;   // after the NO POWER
       else if(mode == M_PULSE || mode == M_PULSE_SLOW)                  // CW key: 1 s down, 7 s
          rf_on = wall >= 10000 && (wall - 10000) % (mode == M_PULSE ? 8000 : 71000) < 1000;   // (70 s) up
+      else if(mode >= M_RESUME_OFF) {                                   // one 1 s carrier, then
+         rf_on = wall >= 10000 && wall < 11000;                         // (OFF) a tune after power
+         if(mode == M_RESUME_OFF) rf_on |= wall >= 52000;               // off, (QSY) a carrier on
+         if(mode == M_RESUME_QSY) rf_on |= wall >= 20000;               // another band, (EMPTY)
+         if(mode == M_RESUME_EMPTY)                                     // 0.25 s carriers every 15 s
+            rf_on |= wall >= 25000 && (wall - 25000) % 15000 < 250;
+      }
       else rf_on = mode ? wall >= 10000 && wall < 5 * MIN : in_spans(carrier, sizeof carrier / sizeof *carrier);
       if(wall == 100 * MIN && !mode) vbat_mv = 3300;                    // battery empty
+      if(mode == M_RESUME_OFF) vbat_mv = wall >= 15000 && wall < 25000 ? 3300 : 4000;   // LOW BATT
+      if(mode == M_RESUME_QSY && wall == 15000) { opt_l = 3; opt_c = 90; }            // other band
       if(INTCONbits.GIE && PIE0bits.TMR0IE) {
          PIR0bits.TMR0IF = 1;
          isr();
@@ -173,11 +186,16 @@ void relays_set(uint8_t l, uint8_t c, uint8_t sw) {
    rel.l = l; rel.c = c; rel.sw = sw;
    relay_calls++;
    if(!LATDbits.LATD2) key_low_in_tune = 1;
+   if(mode == M_RESUME_OFF && !LATDbits.LATD2) {
+      uint8_t *m = &seen1[sw & 1][l & 127][c & 127];
+      if(key_falls == 1 && !*m) { *m = 1; n_first++; }
+      if(key_falls == 2 && *m == 1) { *m = 2; n_again++; }
+   }
    delay_ms(26);
 }
 // a load whose best match is L 20, C 30, capacitor at the output
 void meas_take(meas_t *m, uint8_t n) {
-   double d2 = (rel.l - 20.0) * (rel.l - 20.0) + (rel.c - 30.0) * (rel.c - 30.0) + (rel.sw ? 400 : 0);
+   double d2 = (rel.l - opt_l) * (rel.l - opt_l) + (rel.c - opt_c) * (rel.c - opt_c) + (rel.sw ? 400 : 0);
    double g;
    memset(m, 0, sizeof *m);
    last_clr = wall;                  // meas_take clears the watchdog
@@ -406,7 +424,7 @@ static void checkpoint_variant(uint32_t t) {
    if(t == 40000 && mode == M_BLIP)                         // carrier since 10 s: tuned, so
       CHECK(key_falls >= 1);                                 // not stuck in the setup menu
    if(t == 6 * MIN - 1) {
-      CHECK_EQ(sleeps, 0);
+      CHECK_EQ(sleeps, mode == M_RESUME_OFF);
       switch(mode) {
       case M_CELLS_MIN:                                      // auto tune off: no tune
          CHECK_EQ(key_falls, 0);
@@ -446,6 +464,20 @@ static void checkpoint_variant(uint32_t t) {
          printf("1 s carriers, 70 s pauses: %d tunes\n", key_falls);  // search each time,
          CHECK(key_falls <= 3);                              // which ends the chain once it
          break;                                              // finds nothing better
+      case M_RESUME_OFF:                                     // the 1 s carrier left a search to
+         printf("tune after power off: %d of %d settings measured again\n", n_again, n_first);
+         CHECK_EQ(key_falls, 2);                             // continue, but the clock stood still
+         CHECK(n_again * 2 >= n_first);                      // while switched off: a new search
+         CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);
+         break;
+      case M_RESUME_QSY:                                     // the load changed within the 60 s:
+         printf("other band within 60 s: %d tunes, L %d C %d sw %d\n", key_falls, rel.l, rel.c, rel.sw);
+         CHECK(rel.l == 3 && rel.c == 90 && rel.sw == 0);    // a new search, not the old one's
+         break;                                              // measurements
+      case M_RESUME_EMPTY:                                   // carriers too short to measure a
+         printf("0.25 s carriers: %d tunes\n", key_falls);   // setting: the chain ends, no tune
+         CHECK(key_falls <= 3);                              // (key line low) on every carrier
+         break;
       case M_LOWPWR:                                         // 0.97 W, Cell 4 = 1.0 W: the
          CHECK_EQ(key_falls, 0);                             // tune would not see a carrier,
          break;                                              // so no auto tune either
@@ -466,7 +498,7 @@ static int run_variant(void) {
    if(mode == M_UNMATCH) g2_floor = 1.0 / 9;                 // best possible SWR 2.0
    if(mode == M_NOMATCH) g2_floor = 0.99995;                 // SWR 9.99 everywhere
    if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH || mode == M_LOWPWR || mode == M_EXTTUNE
-      || mode == M_STOPAUTO || mode == M_OVERLOAD || mode == M_PULSE || mode == M_PULSE_SLOW) {   // start in bypass, so that
+      || mode == M_STOPAUTO || mode == M_OVERLOAD || mode == M_PULSE || mode == M_PULSE_SLOW || mode >= M_RESUME_OFF) {   // start in bypass, so that
       st.r.l = st.r.c = 0;                                   // the carrier causes an auto tune
       st.last_swr = 0;
    }
@@ -502,6 +534,11 @@ static int run_variant(void) {
       press[0].from = 12500; press[0].to = 12600;
       n_press = 1;
    }
+   if(mode == M_RESUME_OFF) {                                 // wake, then a long press: tune
+      press[0].from = 40000; press[0].to = 42000;
+      press[1].from = 50000; press[1].to = 50500;
+      n_press = 2;
+   }
    relay_calls = 0;
    end_at = 6 * MIN;
    if(!setjmp(done)) app_main();
@@ -514,7 +551,8 @@ static int run_variant(void) {
                      : mode == M_NOPOWER ? "test_app nopower" : mode == M_LOWPWR ? "test_app lowpwr"
                      : mode == M_EXTTUNE ? "test_app ext-tune" : mode == M_STOPAUTO ? "test_app stop-auto"
                      : mode == M_OVERLOAD ? "test_app overload" : mode == M_PULSE ? "test_app pulse"
-                     : "test_app pulse-slow");
+                     : mode == M_PULSE_SLOW ? "test_app pulse-slow" : mode == M_RESUME_OFF ? "test_app resume-off"
+                     : mode == M_RESUME_QSY ? "test_app resume-qsy" : "test_app resume-empty");
 }
 
 int main(int argc, char **argv) {
