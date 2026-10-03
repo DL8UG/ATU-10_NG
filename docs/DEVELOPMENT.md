@@ -25,19 +25,20 @@ README.md                for users
 docs/                    this documentation, charts and pictures
 tools/cell-editor.html   Cells editor for users (one offline HTML file)
 tools/check_doc_links.py links and Contents lists of the documentation
-.github/workflows/       runs check_doc_links.py on every push
+.github/workflows/       on every push: check_doc_links.py, and the host
+                         tests of every version folder
 Firmware/
-  ATU-10_NG_0_9_3.zip    hex file + LICENSE
-  ATU-10_NG_0_9_3/
-    ATU-10_NG_0_9_3.hex  the firmware
+  ATU-10_NG_0_9_4.zip    hex file + LICENSE
+  ATU-10_NG_0_9_4/
+    ATU-10_NG_0_9_4.hex  the firmware
     README.md, LICENSE
     Makefile             build, checks, tests, simulator, charts
     src/                 firmware
     tests/               tests on the PC; tests/host/xc.h stands in for the
                          compiler's register header in test_app.c
     tools/               normalize_hex.py, cells.py, sim/ (simulator)
-  ATU-10_NG_0_9_2.zip    the releases before
-  ATU-10_NG_0_9_2/       (kept as they are)
+  ATU-10_NG_0_9_3.zip    the releases before
+  ATU-10_NG_0_9_3/       (kept as they are)
   ATU-10_NG_0_9_0.zip
   ATU-10_NG_0_9_0/
   ATU-10_NG_0_1_0/       first development version (kept as it is, README
@@ -55,12 +56,13 @@ Firmware/
 - gcc, python3 and node for the tests and the simulator
 
 ```sh
-cd Firmware/ATU-10_NG_0_9_3
-make            # firmware: ATU-10_NG_0_9_3.hex
+cd Firmware/ATU-10_NG_0_9_4
+make            # firmware: ATU-10_NG_0_9_4.hex
 make test       # unit tests, Cells tools, editor logic, and the main
                 # program on the PC with simulated hardware and time
                 # (tests/test_app.c: transmitting, timers, tune, bypass,
                 # power off / on, setup menu, external interface, low battery)
+make test-host  # the same without XC8, on the committed hex file
 make simcompare # simulator: ideal / noise / hard scenario
 make simretune  # simulator: QSY after a tune
 make docs       # charts, display and setup menu pictures in docs/
@@ -82,7 +84,7 @@ make docs       # charts, display and setup menu pictures in docs/
 | `test_display` | screen layout (also as pictures), display restart and its pauses |
 | `test_settings` | menu values in the EEPROM, the rule hex Cells vs menu values |
 | `test_tune` | memory slots, bypass always in the final comparison |
-| `test_app` | the whole main program with simulated registers and time: 105 minutes of transmitting, timers, tuning, bypass, power off / on, setup menu, external interface, low battery, a missing display; variants 1-9 for start after brown-out / watchdog reset, Cells at minimum / maximum, unmatchable loads, NO POWER |
+| `test_app` | the whole main program with simulated registers and time: 105 minutes of transmitting, timers, tuning, bypass, power off / on, setup menu, external interface, low battery, a missing display; variants 1-25 for start after brown-out / watchdog reset, Cells at minimum / maximum, unmatchable loads, NO POWER, short carriers (CW key), overload, interrupted searches, battery dips, the hints while TUNE waits |
 | `test_tools.sh` | `cells.py` and the logic of `cell-editor.html` (run in node): identical files |
 
 Most bugs found in the reviews and on the device have a test that fails with
@@ -157,7 +159,7 @@ initialization (`oled.c`), font (`font5x8.h`).
    file, the zip and LICENSE attached, e.g.
 
    ```sh
-   gh release create v0.9.3 Firmware/ATU-10_NG_0_9_3/ATU-10_NG_0_9_3.hex \
-      Firmware/ATU-10_NG_0_9_3.zip Firmware/ATU-10_NG_0_9_3/LICENSE \
-      --title "ATU-10 NG 0.9.3" --notes-file notes.md   # --prerelease for a beta
+   gh release create v0.9.4 Firmware/ATU-10_NG_0_9_4/ATU-10_NG_0_9_4.hex \
+      Firmware/ATU-10_NG_0_9_4.zip Firmware/ATU-10_NG_0_9_4/LICENSE \
+      --title "ATU-10 NG 0.9.4" --notes-file notes.md   # --prerelease for a beta
    ```

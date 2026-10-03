@@ -157,7 +157,7 @@ Two Cells change the search:
 
 ## Results in the simulator
 
-The simulator (`Firmware/ATU-10_NG_0_9_3/tools/sim`) runs the firmware's
+The simulator (`Firmware/ATU-10_NG_0_9_4/tools/sim`) runs the firmware's
 search and measurement code on a PC against a model of the network, the
 bridge, the detectors and the ADC, connected to models of real antennas
 (wire antennas as lossy open lines, feed lines, baluns and ununs with their
