@@ -43,9 +43,9 @@ extern uint16_t tune_mem_dirty;           // bit i: slot i changed
 // measured new settings can be continued by the next one (tune_resume = 1
 // before tune_run): the settings measured so far are not measured again
 // and the step budget counts on, so a chain of continued tunes ends like
-// one tune. The continued tune first measures the setting the relays hold
-// again; if that differs from before (other band, other antenna), it
-// starts a new search instead.
+// one tune. A new search starts instead when the relays no longer hold
+// the best setting so far (bypass switched meanwhile) or when that
+// setting measures clearly different now (other band, other antenna).
 extern uint8_t tune_resume;        // 1: the next tune_run continues the last search
 extern uint8_t tune_resumable;     // set by tune_run: the next tune may continue this
                                    // search (carrier gone after new settings were
