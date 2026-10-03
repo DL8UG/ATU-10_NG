@@ -12,6 +12,7 @@ volatile uint8_t Cells[16] = {
 
 static relays_t now;                 // relays as set
 static int bypass_verified, probes, model, grid_end_seen;
+static int cut = -1, verify_cut, off;   // carrier gone from probe 'cut' on / at the final comparison
 void hal_relay_set(uint8_t l, uint8_t c, uint8_t sw) {
    now.l = l; now.c = c; now.sw = sw; probes++;
    if(l == 64 && c == 64 && sw == 1) grid_end_seen = 1;   // last point of grid 1
@@ -28,6 +29,9 @@ static double g2_of(void) {
       return 0.25;
    case 3:   // the same at SWR 1.10
       return (0.1 / 2.1) * (0.1 / 2.1);
+   case 4:   // as the default, but SWR 1.03 at the best match
+      d2 = (now.l - 40.0) * (now.l - 40.0) + (now.c - 40.0) * (now.c - 40.0) + (now.sw ? 0 : 900);
+      return 0.00024 + 0.99 * d2 / (d2 + 50);
    default:  // best match at L 40, C 40, side 1
       d2 = (now.l - 40.0) * (now.l - 40.0) + (now.c - 40.0) * (now.c - 40.0) + (now.sw ? 0 : 900);
       return 0.01 + 0.99 * d2 / (d2 + 50);
@@ -36,7 +40,8 @@ static double g2_of(void) {
 void hal_sample(meas_t *m, uint8_t n) {
    double g = g2_of();
    memset(m, 0, sizeof *m);
-   m->pf = 5000000;
+   if((cut >= 0 && probes >= cut) || (verify_cut && n == MEAS_N_VERIFY)) off = 1;
+   m->pf = off ? 0 : 5000000;
    m->g2 = (uint32_t)(G2_ONE * (g < 1 ? g : 1));
    m->pr = (uint32_t)((double)m->pf * m->g2 / G2_ONE);
    m->stable = 1;
@@ -170,5 +175,81 @@ int main(void) {
    r = tune_run(&from, 0);
    CHECK_EQ(r, TUNE_OK);
    CHECK(now.l == 0 && now.c == 0 && now.sw == 0);
+
+   // A continued search (a tune whose carrier went away goes on with the
+   // next one). Near a perfect match the rounding of the cached values is
+   // no "other load": the search goes on.
+   model = 4;
+   cfg[CFG_SEARCH] = 1;
+   cfg[CFG_TARGET] = 0;                    // no early end: the whole search
+   tune_mem_n = 0;
+   from = (relays_t){0, 0, 0};
+   verify_cut = 1;                         // carrier gone at the final comparison
+   r = tune_run(&from, 0);
+   verify_cut = off = 0;
+   CHECK_EQ(r, TUNE_NO_CARRIER);
+   CHECK(tune_resumable);
+   CHECK(now.l == 40 && now.c == 40 && now.sw == 1);   // best so far: SWR 1.03
+   from = now;
+   tune_resume = 1;
+   probes = 0;
+   r = tune_run(&from, 0);
+   printf("continued at SWR 1.03: %d relay steps\n", probes);
+   CHECK_EQ(r, TUNE_OK);
+   CHECK(probes < 20);                     // not a new search (about 150)
+   CHECK(now.l == 40 && now.c == 40 && now.sw == 1);
+
+   // the best setting so far is not in the cache (it was found when the
+   // cache was full: the budget of search effort 2 and 3 is larger than
+   // the 255 entries): the search goes on all the same
+   model = 0;
+   from = (relays_t){0, 0, 0};
+   probes = 0;
+   cut = 40;
+   r = tune_run(&from, 0);
+   off = 0;
+   CHECK_EQ(r, TUNE_NO_CARRIER);
+   CHECK(tune_resumable);
+   {
+      uint16_t s1 = steps, key = key_of(now.l, now.c, now.sw);
+      uint8_t slot = slot_of(key);
+      CHECK_EQ(cache_key[slot], key);
+      cache_key[slot] = 0;                 // as if not stored
+      from = now;
+      tune_resume = 1;
+      probes = 0;
+      cut = 5;
+      r = tune_run(&from, 0);
+      cut = -1;
+      off = 0;
+      CHECK_EQ(r, TUNE_NO_CARRIER);
+      CHECK(steps > s1);                   // counted on
+   }
+
+   // bypass switched on meanwhile: the relays no longer hold the best
+   // setting so far, a new search starts (bypass is no better start for
+   // the old one)
+   cfg[CFG_SEARCH] = 1;
+   from = (relays_t){0, 0, 0};
+   probes = 0;
+   cut = 40;
+   r = tune_run(&from, 0);
+   off = 0;
+   CHECK_EQ(r, TUNE_NO_CARRIER);
+   CHECK(tune_resumable);
+   CHECK(!(now.l == 0 && now.c == 0 && now.sw == 0));
+   {
+      uint16_t s1 = steps;
+      from = (relays_t){0, 0, 0};          // bypass
+      tune_resume = 1;
+      probes = 0;
+      cut = 5;
+      r = tune_run(&from, 0);
+      cut = -1;
+      off = 0;
+      CHECK_EQ(r, TUNE_NO_CARRIER);
+      CHECK(steps < s1);                   // counted from 0 again
+   }
+   cfg[CFG_TARGET] = 5;
    return check_done("test_tune");
 }
