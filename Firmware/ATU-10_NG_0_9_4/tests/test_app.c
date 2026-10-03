@@ -38,7 +38,7 @@ static jmp_buf done;
 static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
 enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
-       M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT, M_BATT_OFF, M_HINT_BLIP, M_HINT_END, M_HINT_CW };
+       M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT, M_BATT_OFF, M_HINT_BLIP, M_HINT_END, M_HINT_CW, M_BATT_HOVER };
 #define M_RESUME(m) ((m) >= M_RESUME_OFF && (m) <= M_RESUME_EMPTY)
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
@@ -161,6 +161,8 @@ void fake_ms(uint32_t ms) {
       if(mode == M_BATT_OFF)       // low for two readings, switched off by the button, woken
          vbat_mv = (wall >= 41000 && wall < 50000) || (wall >= 68000 && wall < 71000)   // (60 s),
                    ? 3300 : 4000;                               // then low for one reading
+      if(mode == M_BATT_HOVER && wall >= 18000)   // readings around the threshold: 3.42, 3.39 V, ...
+         vbat_mv = (wall / 3000) % 2 ? 3390 : 3420;
       if(INTCONbits.GIE && PIE0bits.TMR0IE) {
          PIR0bits.TMR0IF = 1;
          isr();
@@ -480,12 +482,17 @@ static void checkpoint_variant(uint32_t t) {
       CHECK(small_shows(17, 60, "POWER") && small_shows(25, 60, "TOO LOW"));    // hint stays
    if(mode == M_HINT_CW && t == 17500)
       CHECK(LATDbits.LATD2 && text_shows(1, LINE2, 0, "TOO LOW"));
+   if(mode == M_BATT_HOVER && t == 33000)                   // two low readings so far
+      CHECK_EQ(sleeps, 0);
+   if(mode == M_BATT_HOVER && t == 40000)                   // the third: 3.42 V in between
+      CHECK_EQ(sleeps, 1);                                   // did not end the row
    if(mode == M_BATT_OFF && t == 75000)                     // a single low reading after waking:
       CHECK_EQ(sleeps, 1);                                   // the count before the power off is gone
    if(t == 40000 && mode == M_BLIP)                         // carrier since 10 s: tuned, so
       CHECK(key_falls >= 1);                                 // not stuck in the setup menu
    if(t == 6 * MIN - 1) {
-      CHECK_EQ(sleeps, mode == M_RESUME_OFF || mode == M_BATT_DIP || mode == M_BATT_OFF);
+      CHECK_EQ(sleeps, mode == M_RESUME_OFF || mode == M_BATT_DIP || mode == M_BATT_OFF
+               || mode == M_BATT_HOVER);
       switch(mode) {
       case M_CELLS_MIN:                                      // auto tune off: no tune
          CHECK_EQ(key_falls, 0);
@@ -647,7 +654,8 @@ static int run_variant(void) {
                      : mode == M_RESUME_QSY ? "test_app resume-qsy" : mode == M_RESUME_EMPTY ? "test_app resume-empty"
                      : mode == M_BATT_DIP ? "test_app batt-dip" : mode == M_HINT ? "test_app hint"
                      : mode == M_BATT_OFF ? "test_app batt-off" : mode == M_HINT_BLIP ? "test_app hint-blip"
-                     : mode == M_HINT_END ? "test_app hint-end" : "test_app hint-cw");
+                     : mode == M_HINT_END ? "test_app hint-end" : mode == M_HINT_CW ? "test_app hint-cw"
+                     : "test_app batt-hover");
 }
 
 int main(int argc, char **argv) {
