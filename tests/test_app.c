@@ -425,6 +425,8 @@ static void checkpoint_variant(uint32_t t) {
       CHECK(!LATDbits.LATD2);                                // after the grid the progress shows
       CHECK(swr_shows("3.00"));                              // 3.00 again (blanked at the start)
    }
+   if(mode == M_LOWPWR && t == 20000)                       // 0.97 W, below Cell 4: no tune,
+      CHECK(!swr_shows("-.--"));                             // but the SWR is shown
    if(mode == M_BATT_DIP && t == 59000)                     // single low readings: still on
       CHECK_EQ(sleeps, 0);
    if(mode == M_BATT_DIP && t == 75000)                     // low for 9 s: LOW BATT, off
