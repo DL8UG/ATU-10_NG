@@ -1,6 +1,7 @@
 # ATU-10 NG firmware, built with Microchip XC8
 #   make          -> ATU-10_NG_0_9_4.hex (copy it onto the tuner's USB drive)
-#   make test     -> host unit tests
+#   make test     -> host unit tests, after building the hex file
+#   make test-host -> the same tests on the committed hex file, without XC8 (CI)
 #   make clean    (keeps the committed hex file)
 
 VERSION = 0_9_4
@@ -37,7 +38,7 @@ $(TARGET).hex: build/fw.hex tools/normalize_hex.py tools/cells.py
 clean:
 	rm -rf build
 
-.PHONY: all clean test sim simcompare simretune docs
+.PHONY: all clean test test-host sim simcompare simretune docs
 
 # ---- host unit tests (gcc)
 HOSTCC   = gcc
@@ -55,7 +56,12 @@ build/test_app: tests/test_app.c tests/host/xc.h $(HDR) $(wildcard src/*.c)
 	$(HOSTCC) $(HOSTFLAGS) -Wno-unused-parameter -Itests/host -Dmain=app_main -c src/app.c -o build/app_host.o
 	$(HOSTCC) $(HOSTFLAGS) -Wno-unused-parameter -Itests/host -o $@ tests/test_app.c build/app_host.o $(APP_HOST) -lm
 
-test: $(addprefix build/test_, $(TESTS)) build/test_app $(TARGET).hex
+test: $(TARGET).hex
+	$(MAKE) --no-print-directory test-host
+
+# needs only gcc, python3 and node; the Cells tools are tested on the hex
+# file as it is
+test-host: $(addprefix build/test_, $(TESTS)) build/test_app
 	@for t in $(TESTS) app; do build/test_$$t || exit 1; done
 	@for v in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do build/test_app $$v || exit 1; done
 	sh tests/test_tools.sh $(TARGET).hex
