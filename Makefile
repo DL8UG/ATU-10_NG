@@ -63,7 +63,7 @@ test: $(TARGET).hex
 # file as it is
 test-host: $(addprefix build/test_, $(TESTS)) build/test_app
 	@for t in $(TESTS) app; do build/test_$$t || exit 1; done
-	@for v in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23; do build/test_app $$v || exit 1; done
+	@for v in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24; do build/test_app $$v || exit 1; done
 	sh tests/test_tools.sh $(TARGET).hex
 
 # ---- PC simulator of the tuning algorithm (tools/sim, see sim.c)

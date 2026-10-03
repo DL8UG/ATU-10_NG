@@ -38,7 +38,7 @@ static jmp_buf done;
 static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
 enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
-       M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT, M_BATT_OFF, M_HINT_BLIP, M_HINT_END };
+       M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT, M_BATT_OFF, M_HINT_BLIP, M_HINT_END, M_HINT_CW };
 #define M_RESUME(m) ((m) >= M_RESUME_OFF && (m) <= M_RESUME_EMPTY)
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
@@ -139,7 +139,8 @@ void fake_ms(uint32_t ms) {
          if(!display_ok) display_inited = display_lit = 0;   // dark until initialized and on
       }
       PORTDbits.RD2 = LATDbits.LATD2;                                   // key line as driven
-      if(mode == M_EXTDARK || mode == M_BATT_OFF || mode == M_HINT_BLIP || mode == M_HINT_END) rf_on = 0;
+      if(mode == M_EXTDARK || mode == M_BATT_OFF || mode == M_HINT_BLIP || mode == M_HINT_END
+         || mode == M_HINT_CW) rf_on = 0;
       else if(mode == M_NOPOWER) rf_on = wall >= 60000 && wall < 2 * MIN;   // after the NO POWER
       else if(mode == M_PULSE || mode == M_PULSE_SLOW)                  // CW key: 1 s down, 7 s
          rf_on = wall >= 10000 && (wall - 10000) % (mode == M_PULSE ? 8000 : 71000) < 1000;   // (70 s) up
@@ -213,6 +214,8 @@ void meas_take(meas_t *m, uint8_t n) {
       m->pf = wall >= 11000 && wall < 11030 ? 5000000 : 0;
    if(mode == M_HINT_END)            // 20 W (above Cell 5), later 0.5 W (below Cell 4)
       m->pf = wall >= 6000 && wall < 20000 ? 20000000 : wall >= 25000 ? 500000 : 0;
+   if(mode == M_HINT_CW)             // CW at 0.5 W: 60 ms key down, 60 ms up
+      m->pf = wall >= 7000 && (wall - 7000) % 120 < 60 ? 500000 : 0;
    g = d2 / (d2 + 60);
    if(mode == M_STOPAUTO) g = 0.25;                       // SWR 3.00 at every setting
    m->g2 = (uint32_t)(G2_ONE * (g2_floor + (1 - g2_floor) * g));
@@ -473,6 +476,10 @@ static void checkpoint_variant(uint32_t t) {
       CHECK(LATDbits.LATD2 && text_shows(1, LINE2, 0, "TOO HIGH"));   // the end says so too
    if(mode == M_HINT_END && t == 41500)                     // ... and with too little
       CHECK(LATDbits.LATD2 && text_shows(1, LINE2, 0, "TOO LOW"));
+   if(mode == M_HINT_CW && t >= 8000 && t < 16000 && (t - 7000) % 120 == 110)   // key up: the
+      CHECK(small_shows(17, 60, "POWER") && small_shows(25, 60, "TOO LOW"));    // hint stays
+   if(mode == M_HINT_CW && t == 17500)
+      CHECK(LATDbits.LATD2 && text_shows(1, LINE2, 0, "TOO LOW"));
    if(mode == M_BATT_OFF && t == 75000)                     // a single low reading after waking:
       CHECK_EQ(sleeps, 1);                                   // the count before the power off is gone
    if(t == 40000 && mode == M_BLIP)                         // carrier since 10 s: tuned, so
@@ -531,6 +538,10 @@ static void checkpoint_variant(uint32_t t) {
       case M_RESUME_EMPTY:                                   // carriers too short to measure a
          printf("0.25 s carriers: %d tunes\n", key_falls);   // setting: the chain ends, no tune
          CHECK(key_falls <= 3);                              // (key line low) on every carrier
+         break;
+      case M_HINT_CW:                                        // below Cell 4: no tune at all
+         CHECK_EQ(key_falls, 1);
+         CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);
          break;
       case M_HINT_END:                                       // two TUNE presses, nothing
          CHECK_EQ(key_falls, 2);                             // tuned, nothing changed
@@ -601,7 +612,7 @@ static int run_variant(void) {
       press[0].from = 12500; press[0].to = 12600;
       n_press = 1;
    }
-   if(mode == M_HINT || mode == M_HINT_BLIP) {                // long press: TUNE without a carrier
+   if(mode == M_HINT || mode == M_HINT_BLIP || mode == M_HINT_CW) {   // long press: TUNE without a carrier
       press[0].from = 6000; press[0].to = 6600;
       n_press = 1;
    }
@@ -636,7 +647,7 @@ static int run_variant(void) {
                      : mode == M_RESUME_QSY ? "test_app resume-qsy" : mode == M_RESUME_EMPTY ? "test_app resume-empty"
                      : mode == M_BATT_DIP ? "test_app batt-dip" : mode == M_HINT ? "test_app hint"
                      : mode == M_BATT_OFF ? "test_app batt-off" : mode == M_HINT_BLIP ? "test_app hint-blip"
-                     : "test_app hint-end");
+                     : mode == M_HINT_END ? "test_app hint-end" : "test_app hint-cw");
 }
 
 int main(int argc, char **argv) {
