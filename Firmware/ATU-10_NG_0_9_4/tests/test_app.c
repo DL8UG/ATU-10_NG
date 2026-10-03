@@ -38,7 +38,7 @@ static jmp_buf done;
 static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
 enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
-       M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT };
+       M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT, M_BATT_OFF };
 #define M_RESUME(m) ((m) >= M_RESUME_OFF && (m) <= M_RESUME_EMPTY)
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
@@ -139,7 +139,7 @@ void fake_ms(uint32_t ms) {
          if(!display_ok) display_inited = display_lit = 0;   // dark until initialized and on
       }
       PORTDbits.RD2 = LATDbits.LATD2;                                   // key line as driven
-      if(mode == M_EXTDARK) rf_on = 0;
+      if(mode == M_EXTDARK || mode == M_BATT_OFF) rf_on = 0;
       else if(mode == M_NOPOWER) rf_on = wall >= 60000 && wall < 2 * MIN;   // after the NO POWER
       else if(mode == M_PULSE || mode == M_PULSE_SLOW)                  // CW key: 1 s down, 7 s
          rf_on = wall >= 10000 && (wall - 10000) % (mode == M_PULSE ? 8000 : 71000) < 1000;   // (70 s) up
@@ -157,6 +157,9 @@ void fake_ms(uint32_t ms) {
       if(mode == M_BATT_DIP)       // low for one reading (every 3 s), for two, then for good
          vbat_mv = (wall >= 20000 && wall < 22000) || (wall >= 40000 && wall < 46000) || wall >= 60000
                    ? 3300 : 4000;
+      if(mode == M_BATT_OFF)       // low for two readings, switched off by the button, woken
+         vbat_mv = (wall >= 41000 && wall < 50000) || (wall >= 68000 && wall < 71000)   // (60 s),
+                   ? 3300 : 4000;                               // then low for one reading
       if(INTCONbits.GIE && PIE0bits.TMR0IE) {
          PIR0bits.TMR0IF = 1;
          isr();
@@ -456,10 +459,12 @@ static void checkpoint_variant(uint32_t t) {
       CHECK_EQ(sleeps, 0);
    if(mode == M_BATT_DIP && t == 75000)                     // low for 9 s: LOW BATT, off
       CHECK_EQ(sleeps, 1);
+   if(mode == M_BATT_OFF && t == 75000)                     // a single low reading after waking:
+      CHECK_EQ(sleeps, 1);                                   // the count before the power off is gone
    if(t == 40000 && mode == M_BLIP)                         // carrier since 10 s: tuned, so
       CHECK(key_falls >= 1);                                 // not stuck in the setup menu
    if(t == 6 * MIN - 1) {
-      CHECK_EQ(sleeps, mode == M_RESUME_OFF || mode == M_BATT_DIP);
+      CHECK_EQ(sleeps, mode == M_RESUME_OFF || mode == M_BATT_DIP || mode == M_BATT_OFF);
       switch(mode) {
       case M_CELLS_MIN:                                      // auto tune off: no tune
          CHECK_EQ(key_falls, 0);
@@ -583,6 +588,11 @@ static int run_variant(void) {
       press[1].from = 50000; press[1].to = 50500;
       n_press = 2;
    }
+   if(mode == M_BATT_OFF) {                                   // extra long press: power off, then
+      press[0].from = 47000; press[0].to = 50000;            // wake
+      press[1].from = 60000; press[1].to = 62000;
+      n_press = 2;
+   }
    relay_calls = 0;
    end_at = 6 * MIN;
    if(!setjmp(done)) app_main();
@@ -597,7 +607,8 @@ static int run_variant(void) {
                      : mode == M_OVERLOAD ? "test_app overload" : mode == M_PULSE ? "test_app pulse"
                      : mode == M_PULSE_SLOW ? "test_app pulse-slow" : mode == M_RESUME_OFF ? "test_app resume-off"
                      : mode == M_RESUME_QSY ? "test_app resume-qsy" : mode == M_RESUME_EMPTY ? "test_app resume-empty"
-                     : mode == M_BATT_DIP ? "test_app batt-dip" : "test_app hint");
+                     : mode == M_BATT_DIP ? "test_app batt-dip" : mode == M_HINT ? "test_app hint"
+                     : "test_app batt-off");
 }
 
 int main(int argc, char **argv) {

@@ -310,6 +310,7 @@ static void power_off(void) {
    uint8_t n;
    resume = 0;                                 // the clock stands still while sleeping:
                                                // RESUME_MS would go on after waking
+   low_cnt = 0;                                // low readings before count no more
    disp_power(0);
    LED_RED = 1;
    LED_GREEN = 1;
