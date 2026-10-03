@@ -195,7 +195,9 @@ static uint8_t wait_carrier(uint8_t *why) {
             *why = shown;
             break;
          }
-         if(since(t) >= HINT_MS && p != shown) {
+         // once a power was there, its hint stays when it goes away
+         // (CW keying, a carrier near 0.1 W): no flicker with WAITING
+         if(since(t) >= HINT_MS && p != shown && (p != P_NONE || shown == P_OK)) {
             shown = p;
             if(p == P_NONE) hint("WAITING", "FOR RF");
             else hint("POWER", p == P_LOW ? "TOO LOW" : "TOO HIGH");
