@@ -27,6 +27,7 @@
 #define AUTO_STEADY 4          // auto tune after this many measurements in a row
 #define AUTO_HOLD   3000       // ms after a tune without auto tune
 #define RESUME_MS   60000      // a tune within this time continues an interrupted one
+#define SWR_SHOW_UW 100000     // SWR shown from 0.1 W (the lowest Cell 4), also below Cell 4
 #define SETUP_HOLD  100        // x 10 ms held at the end of the greeting: setup menu
 
 static uint32_t t_batt, t_watch, t_show, t_refresh, t_active, t_led, t_msg, t_tuned;
@@ -36,6 +37,7 @@ static uint16_t shown_pwr = 0xFFFF, shown_swr = 0xFFFF;
 static meas_t peak;            // peak hold for the display
 static uint32_t t_peak;
 static uint16_t swr_last;      // last SWR measured with enough power
+static uint16_t swr_disp;      // last SWR measured from SWR_SHOW_UW on, for the display
 static uint8_t resume;         // the last tune can be continued (tune_resumable)
 
 // ms since the tick value t. Always read the clock fresh: a timestamp set
@@ -175,7 +177,7 @@ static void do_tune(void) {
          st.last_swr = (r == TUNE_OK && (rel.l || rel.c))
                        ? (uint8_t)(tune_swr - 100 > 255 ? 255 : tune_swr > 101 ? tune_swr - 100 : 1) : 0;
       swr_ref = tune_swr;
-      swr_last = tune_swr;
+      swr_last = swr_disp = tune_swr;
       save_state();
    }
    // Carrier gone while the search still measured new settings: the next
@@ -186,7 +188,7 @@ static void do_tune(void) {
    if(resume) swr_ref = 0;
    show_swr_label();
    shown_swr = 0xFFFF;
-   show_swr(swr_last);
+   show_swr(swr_disp);
    if(r == TUNE_NO_CARRIER) message("NO POWER", 2000);
    else if(r == TUNE_NO_MATCH) message("NO MATCH", 2000);
    else if(r == TUNE_ABORTED) message("STOP", 1000);
@@ -332,6 +334,7 @@ static void watch(void) {
    // rounded p10), else auto tune starts tunes that never see a carrier
    enough = m.pf >= (uint32_t)cfg[CFG_MIN_PWR] * 100000;
    if(enough) swr_last = swr;
+   if(m.pf >= SWR_SHOW_UW) swr_disp = swr;
 
    // auto tune: enough power, SWR above 1.20 and changed by more than
    // Cell 6 since the last tune (not again right after a tune, and not
@@ -347,7 +350,7 @@ static void watch(void) {
 
 static void show(void) {
    show_power(pwr_x10(peak.pf));
-   show_swr(swr_last);
+   show_swr(swr_disp);
 }
 
 // ---------------------------------------------------------------- main
