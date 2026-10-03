@@ -1,0 +1,41 @@
+# Host tests of every firmware version folder (gcc, python3, node; no XC8,
+# the committed hex files are tested as they are)
+name: Tests
+
+on:
+  push:
+    paths: ["Firmware/**", "tools/cell-editor.html", ".github/workflows/tests.yml"]
+  pull_request:
+    paths: ["Firmware/**", "tools/cell-editor.html", ".github/workflows/tests.yml"]
+  workflow_dispatch:
+
+jobs:
+  folders:
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.find.outputs.list }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: find
+        run: echo "list=$(ls -d Firmware/ATU-10_NG_*/ | xargs -n1 basename | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: folders
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        folder: ${{ fromJSON(needs.folders.outputs.list) }}
+    defaults:
+      run:
+        working-directory: Firmware/${{ matrix.folder }}
+    steps:
+      - uses: actions/checkout@v4
+      # released folders are frozen and have no test-host target: their
+      # "make test" with the hex file marked as up to date (-o) is the same
+      - run: |
+          if grep -q '^test-host:' Makefile; then
+            make test-host
+          else
+            make -o ${{ matrix.folder }}.hex test
+          fi
