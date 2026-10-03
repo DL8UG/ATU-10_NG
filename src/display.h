@@ -15,7 +15,7 @@ void disp_power(uint8_t on);         // on: power up, initialize, redraw
 uint8_t disp_is_on(void);
 void disp_clear(void);
 void disp_big(uint8_t y, uint8_t x, const char *s);        // 12 px per character
-void disp_small(uint8_t row, uint8_t x, const char *s);    // 6 px per character, row 0..3
+void disp_small(uint8_t y, uint8_t x, const char *s);      // 6 px per character, from pixel row y
 void disp_battery(uint16_t mv);
 void disp_service(void);             // sends one changed page; call often
 void disp_flush(void);               // sends all changes now

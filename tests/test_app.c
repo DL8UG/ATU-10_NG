@@ -38,7 +38,7 @@ static jmp_buf done;
 static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
 enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
-       M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP };
+       M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT };
 #define M_RESUME(m) ((m) >= M_RESUME_OFF && (m) <= M_RESUME_EMPTY)
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
@@ -108,9 +108,9 @@ static void check_line2(void) {
    int dirty = 0;
    if(!OLED_PWR) return;             // switched off meanwhile: nothing shown
    if(mode == M_OVERLOAD) return;    // OVERLOAD stays while the carrier is too strong
-   for(int y = 18; y < 32; y++)
+   for(int y = 16; y < 32; y++)                       // rows 16, 17: between the lines
       for(int x = 0; x < 115; x++) {
-         int gap = (x >= 36 && x <= 41) || (x >= 54 && x <= 59) || (x >= 108);
+         int gap = y < 18 || (x >= 36 && x <= 41) || (x >= 54 && x <= 59) || (x >= 108);
          if(gap && (fb[(y / 8) * 128 + x] >> (y % 8) & 1)) dirty++;
       }
    CHECK_EQ(dirty, 0);
@@ -204,6 +204,8 @@ void meas_take(meas_t *m, uint8_t n) {
    memset(m, 0, sizeof *m);
    last_clr = wall;                  // meas_take clears the watchdog
    m->pf = rf_on ? (mode == M_CELLS_MAX ? 12000000 : mode == M_LOWPWR ? 970000 : 5000000) : 0;
+   if(mode == M_HINT)                // none, 0.5 W, 20 W (above Cell 5), then 5 W
+      m->pf = wall < 9000 ? 0 : wall < 10000 ? 500000 : wall < 11000 ? 20000000 : 5000000;
    g = d2 / (d2 + 60);
    if(mode == M_STOPAUTO) g = 0.25;                       // SWR 3.00 at every setting
    m->g2 = (uint32_t)(G2_ONE * (g2_floor + (1 - g2_floor) * g));
@@ -260,6 +262,19 @@ static int tunes_seen(void) {        // a tune switched the relays since the las
 }
 
 static void checkpoint_variant(uint32_t t);
+
+// text s (big or small) at pixel row y, x: drawing it there changes nothing
+static int text_shows(int big, uint8_t y, uint8_t x, const char *s) {
+   uint8_t before[512];
+   int same;
+   memcpy(before, disp_fb(), sizeof before);
+   if(big) disp_big(y, x, s); else disp_small(y, x, s);
+   same = !memcmp(before, disp_fb(), sizeof before);
+   memcpy((uint8_t *)disp_fb(), before, sizeof before);
+   return same;
+}
+
+#define small_shows(y, x, s) text_shows(0, y, x, s)
 
 // the SWR value on the display reads s: drawing s there changes nothing
 static int swr_shows(const char *s) {
@@ -427,6 +442,16 @@ static void checkpoint_variant(uint32_t t) {
    }
    if(mode == M_LOWPWR && t == 20000)                       // 0.97 W, below Cell 4: no tune,
       CHECK(!swr_shows("-.--"));                             // but the SWR is shown
+   if(mode == M_HINT && t == 8500)                          // TUNE pressed, no carrier
+      CHECK(small_shows(17, 60, "WAITING") && small_shows(25, 60, "FOR RF"));
+   if(mode == M_HINT && t == 9500) {                        // 0.5 W, Cell 4 = 1.0 W
+      CHECK(small_shows(17, 60, "POWER") && small_shows(25, 60, "TOO LOW"));
+      CHECK(text_shows(1, LINE1, 60, "0.5"));                // the power meanwhile
+   }
+   if(mode == M_HINT && t == 10500) {                       // 20 W, Cell 5 = 15 W
+      CHECK(small_shows(17, 60, "POWER") && small_shows(25, 60, "TOO HIGH"));
+      CHECK(!LATDbits.LATD2);                                // still tuning
+   }
    if(mode == M_BATT_DIP && t == 59000)                     // single low readings: still on
       CHECK_EQ(sleeps, 0);
    if(mode == M_BATT_DIP && t == 75000)                     // low for 9 s: LOW BATT, off
@@ -488,6 +513,11 @@ static void checkpoint_variant(uint32_t t) {
          printf("0.25 s carriers: %d tunes\n", key_falls);   // setting: the chain ends, no tune
          CHECK(key_falls <= 3);                              // (key line low) on every carrier
          break;
+      case M_HINT:                                           // 5 W: tuned, the hint gone
+         CHECK_EQ(key_falls, 1);                             // (check_line2)
+         CHECK(line2_checks >= 1);
+         CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);
+         break;
       case M_LOWPWR:                                         // 0.97 W, Cell 4 = 1.0 W: the
          CHECK_EQ(key_falls, 0);                             // tune would not see a carrier,
          break;                                              // so no auto tune either
@@ -544,6 +574,10 @@ static int run_variant(void) {
       press[0].from = 12500; press[0].to = 12600;
       n_press = 1;
    }
+   if(mode == M_HINT) {                                       // long press: TUNE without a carrier
+      press[0].from = 6000; press[0].to = 6600;
+      n_press = 1;
+   }
    if(mode == M_RESUME_OFF) {                                 // wake, then a long press: tune
       press[0].from = 40000; press[0].to = 42000;
       press[1].from = 50000; press[1].to = 50500;
@@ -563,7 +597,7 @@ static int run_variant(void) {
                      : mode == M_OVERLOAD ? "test_app overload" : mode == M_PULSE ? "test_app pulse"
                      : mode == M_PULSE_SLOW ? "test_app pulse-slow" : mode == M_RESUME_OFF ? "test_app resume-off"
                      : mode == M_RESUME_QSY ? "test_app resume-qsy" : mode == M_RESUME_EMPTY ? "test_app resume-empty"
-                     : "test_app batt-dip");
+                     : mode == M_BATT_DIP ? "test_app batt-dip" : "test_app hint");
 }
 
 int main(int argc, char **argv) {

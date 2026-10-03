@@ -89,7 +89,7 @@ static void show(uint8_t page) {
    if(page < CELL_COUNT) {
       cat(fmt(head, (uint16_t)(page + 1), 0), "/12");
       disp_small(0, 0, head);
-      disp_small(1, 0, names[page]);
+      disp_small(8, 0, names[page]);
       value_text(page, cfg[page]);
       disp_big(LINE2, 0, txt);
    }

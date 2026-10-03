@@ -50,11 +50,11 @@ int main(void) {
    // greeting
    disp_clear();
    disp_big(LINE1, 29, "ATU-10");
-   disp_small(3, 13, "HARDWARE BY N7DDC");
+   disp_small(24, 13, "HARDWARE BY N7DDC");
    dump("greeting");
    disp_clear();
    disp_big(LINE1, 17, "NG " FW_VERSION);
-   disp_small(3, 13, "FIRMWARE BY DL8UG");
+   disp_small(24, 13, "FIRMWARE BY DL8UG");
    dump("greeting2");
    // power off: alone in the middle
    disp_clear();
@@ -84,6 +84,20 @@ int main(void) {
    disp_big(LINE2, 0, "TUNE");
    disp_big(LINE2, 0, "SWR ");
    dump("tune");
+   // TUNE without a suitable carrier: two small lines where the SWR so far
+   // follows, ending before the battery symbol
+   disp_big(LINE2, 0, "         ");
+   disp_big(LINE2, 0, "TUNE");
+   disp_small(17, 60, "POWER");
+   disp_small(25, 60, "TOO HIGH");
+   dump("hint");
+   for(int y = 0; y < 32; y++) for(int x = 108; x < 115; x++) CHECK(!px(x, y));
+   for(int x = 60; x < 108; x++) CHECK(!px(x, 16));   // the gap row under line 1 stays free
+   disp_small(17, 60, "        ");                   // back to the main screen
+   disp_small(25, 60, "        ");
+   disp_big(LINE2, 0, "SWR ");
+   disp_big(LINE2, 42, "=");
+   disp_big(LINE2, 60, "1.05");
 
    // drawing what is already there sends nothing (the battery symbol is
    // drawn again every 3 s)
