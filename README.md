@@ -6,7 +6,7 @@ stable tuner – not the fastest tune.
 
 ![Display](docs/display-main.png)
 
-**Status: 0.9.3, tested on the device.** See the [timeline](#development-status) below.
+**Status: 0.9.4, tested on the device.** See the [timeline](#development-status) below.
 
 ## Contents
 
@@ -46,21 +46,21 @@ stable tuner – not the fastest tune.
 
 ## Download
 
-**Version 0.9.3**: on the
-[release page](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.3), or
-here in the repository: [`Firmware/ATU-10_NG_0_9_3.zip`](Firmware/ATU-10_NG_0_9_3.zip)
-with the hex file `ATU-10_NG_0_9_3.hex` and the license. What is new: see
-[its README](Firmware/ATU-10_NG_0_9_3/README.md#changes-since-092).
+**Version 0.9.4**: on the
+[release page](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.4), or
+here in the repository: [`Firmware/ATU-10_NG_0_9_4.zip`](Firmware/ATU-10_NG_0_9_4.zip)
+with the hex file `ATU-10_NG_0_9_4.hex` and the license. What is new: see
+[its README](Firmware/ATU-10_NG_0_9_4/README.md#changes-since-093).
 
-The previous version 0.9.2 stays available on its
-[release page](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.2).
+The previous version 0.9.3 stays available on its
+[release page](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.3).
 
 ## Flashing
 
 1. Connect the tuner to the computer with a USB cable.
 2. A USB drive appears. Copy the `.hex` file onto it.
 3. Wait until the tuner restarts and shows the greeting, two pages of 2
-   seconds: "ATU-10 / HARDWARE BY N7DDC", then the version "NG 0.9.3 /
+   seconds: "ATU-10 / HARDWARE BY N7DDC", then the version "NG 0.9.4 /
    FIRMWARE BY DL8UG".
 
    ![Greeting, page 1](docs/display-greeting.png) ![Greeting, page 2](docs/display-greeting2.png)
@@ -98,8 +98,13 @@ the most exact readings. While tuning, the display shows TUNE and the best SWR
 found so far, and the green LED is on. A first tune usually takes 3 to 6
 seconds, a tune on a band used before about 2 seconds.
 
-- If no carrier comes within about 15 seconds after the long press, or the
-  carrier stops for about 5 seconds during the tune, the tuner shows
+- Without a suitable carrier the tune waits. After 1 second two small
+  lines next to TUNE say why: WAITING FOR RF (no carrier), POWER TOO LOW
+  (below setting 4) or POWER TOO HIGH (above setting 5), and the power line
+  shows the power. After 10 seconds the tuner gives up with NO POWER,
+  TOO LOW or TOO HIGH, and everything stays as it was. A carrier that
+  comes while waiting starts the tune after 0.2 seconds.
+- If the carrier stops for about 5 seconds during the tune, the tuner shows
   NO POWER. If it had already found something better, it keeps that,
   otherwise everything stays as it was.
 - Short carriers work too, e.g. the CW key pressed for a second at a time:
@@ -129,16 +134,18 @@ the middle of a search, it goes on with the next carrier (SWR above 1.2).
 | Shown | Meaning |
 |---|---|
 | PWR = 5.0 W | transmit power, with a short peak hold (setting 10) |
-| SWR = 1.05 | SWR, measured while transmitting (the last value stays); -.-- until the first measurement |
+| SWR = 1.05 | SWR, measured while transmitting from 0.1 W on (the last value stays); -.-- until the first measurement |
 | BYP | instead of SWR: bypass is on |
 | battery symbol | battery charge, 3.0 V empty .. 4.2 V full |
 | TUNE | tuning in progress |
+| WAITING FOR RF, POWER TOO LOW, POWER TOO HIGH | small, next to TUNE: the tune waits for a carrier between settings 4 and 5 |
 | BYPASS / TUNED | after a short press: bypass on / back to the tuned setting |
 | NO POWER | no carrier for tuning |
+| TOO LOW, TOO HIGH | no tune: the power stayed below setting 4 / above setting 5 |
 | NO MATCH | nothing better than the direct connection found (SWR above 1.2), the relays are off |
 | STOP | tuning stopped by a button press |
 | OVERLOAD | too much power for the measurement; a tune stops |
-| LOW BATT | battery below 3.4 V: the tuner switches off; also shown at a restart after a voltage drop |
+| LOW BATT | battery below 3.4 V for three readings in a row (6 seconds): the tuner switches off; also shown at a restart after a voltage drop |
 | POWER OFF | the tuner switches off (button held, see [Button](#button)) |
 | WDT RST, STACK RST | the firmware restarted itself after a fault (please report it) |
 
@@ -254,6 +261,7 @@ not come on, switch the tuner off and on again.
 | 2026-10-02 | 0.9.1 | release, tested on the device | review fixes (auto tune near the minimum power, NO MATCH, tune target 0, bypass pulse during a tune), greeting on two pages, POWER OFF screen |
 | 2026-10-02 | 0.9.2 | release, tested on the device | tuning with short carriers (CW key), no auto tune again after STOP, OVERLOAD stops a tune, memory order over many tunes, less current when switched off, display fixes |
 | 2026-10-03 | 0.9.3 | release, tested on the device | review fixes for short carriers: new search after a change of band or bypass, switching off ends an interrupted search, no endless tunes on carriers too short to measure |
+| 2026-10-03 | 0.9.4 | release, tested on the device | TUNE says why it waits (no RF, power too low or too high), SWR shown from 0.1 W, LOW BATT only after three low readings; review fixes; tests on GitHub on every push |
 
 More: [Settings in detail](docs/SETTINGS.md) · [How tuning works](docs/TUNING.md) · [Development](docs/DEVELOPMENT.md)
 
