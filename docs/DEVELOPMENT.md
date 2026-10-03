@@ -88,6 +88,13 @@ make docs       # charts, display and setup menu pictures in docs/
 Most bugs found in the reviews and on the device have a test that fails with
 the code before the fix.
 
+From 0.9.4 on, `make test-host` runs the same tests without XC8, on the
+committed hex file. The GitHub workflow "Tests"
+([`.github/workflows/tests.yml`](../.github/workflows/tests.yml)) runs them
+for every version folder on each push that changes `Firmware/`; the older
+folders have no `test-host` and run `make -o <hex> test` instead (the hex
+file counts as up to date, so XC8 is not needed).
+
 The documentation has its own check, `python3 tools/check_doc_links.py` at
 the top of the repository: every local link and anchor must resolve, and
 each Contents list must name all level 2 and 3 headings after it, in order.
