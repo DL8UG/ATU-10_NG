@@ -172,8 +172,9 @@ static void hint(const char *a, const char *b) {
 // (auto tune has checked it already); one that comes while waiting must
 // last CARRIER_ON_MS, else a blip or a CW element would start a tune that
 // waits again in tune_run, without a hint. TUNE_OK: there is one, else
-// TUNE_NO_CARRIER or TUNE_ABORTED (button, as during the tune).
-static uint8_t wait_carrier(void) {
+// TUNE_NO_CARRIER (*why: the reason shown last) or TUNE_ABORTED (button,
+// as during the tune).
+static uint8_t wait_carrier(uint8_t *why) {
    meas_t m;
    uint8_t p, shown = P_OK, waited = 0, r = TUNE_OK;
    uint32_t t = tick_ms(), t_bad = t;
@@ -189,7 +190,11 @@ static uint8_t wait_carrier(void) {
       disp_flush();
       if(hal_abort()) { r = TUNE_ABORTED; break; }
       if(p != P_OK) {                          // a carrier on its way: the hint stays
-         if(since(t) >= CARRIER_MS) { r = TUNE_NO_CARRIER; break; }
+         if(since(t) >= CARRIER_MS) {
+            r = TUNE_NO_CARRIER;
+            *why = shown;
+            break;
+         }
          if(since(t) >= HINT_MS && p != shown) {
             shown = p;
             if(p == P_NONE) hint("WAITING", "FOR RF");
@@ -203,7 +208,7 @@ static uint8_t wait_carrier(void) {
 }
 
 static void do_tune(void) {
-   uint8_t r, same;
+   uint8_t r, same, why = P_NONE;
    relays_t from = rel;
    wake();
    LED_GREEN = 0;
@@ -213,7 +218,7 @@ static void do_tune(void) {
    disp_big(LINE2, 0, "TUNE");                 // the SWR so far follows at the right
    shown_swr = 0xFFFF;                         // blanked: draw it even if unchanged
    disp_flush();
-   r = wait_carrier();
+   r = wait_carrier(&why);
    if(r == TUNE_OK) {
       tune_resume = resume && since(t_tuned) < RESUME_MS;
       // in bypass the relays hold no tune result (the memory has it)
@@ -251,7 +256,8 @@ static void do_tune(void) {
    show_swr_label();
    shown_swr = 0xFFFF;
    show_swr(swr_disp);
-   if(r == TUNE_NO_CARRIER) message("NO POWER", 2000);
+   if(r == TUNE_NO_CARRIER)                    // as the hint said while waiting
+      message(why == P_LOW ? "TOO LOW" : why == P_HIGH ? "TOO HIGH" : "NO POWER", 2000);
    else if(r == TUNE_NO_MATCH) message("NO MATCH", 2000);
    else if(r == TUNE_ABORTED) message("STOP", 1000);
    else if(r == TUNE_OVERLOAD) message("OVERLOAD", 2000);
