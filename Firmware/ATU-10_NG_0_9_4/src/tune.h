@@ -52,6 +52,14 @@ extern uint8_t tune_resumable;     // set by tune_run: the next tune may continu
                                    // measured, and the search is a continued one or
                                    // found something better than 'from')
 
+// Carrier power a tune works with (uW, cfg[] from cells.h): forward power
+// from Cell 4 on, net power up to Cell 5. tune_run waits up to WAIT_START
+// for it at the start; the firmware uses the same limits and time for its
+// auto tune and its own wait before tune_run.
+#define TUNE_MIN_UW  ((uint32_t)cfg[CFG_MIN_PWR] * 100000)
+#define TUNE_MAX_UW  ((uint32_t)cfg[CFG_MAX_PWR] * 1000000)
+#define WAIT_START   1000          // x 10 ms (and a measurement each)
+
 // Result of the last tune
 extern relays_t tune_best;
 extern uint32_t tune_g2;           // reflection reached, G2_ONE = none
