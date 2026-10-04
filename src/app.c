@@ -22,9 +22,6 @@
 #define WATCH_MS    50         // measurement for the display / auto tune
 #define SHOW_MS     150        // display update of power and SWR
 #define REFRESH_MS  30000      // send the whole picture again
-#define BATT_WARN_MV 3400      // below: the battery symbol blinks
-#define BATT_LOW_MV  3200      // below: RECHARGE (tuning still works)
-#define BATT_OFF_MV  3000      // below: LOW BATT, switched off
 #define BATT_N       3         // readings in a row below a threshold (6 s, one dip does not)
 #define BATT_HYST    50        // a level ends only this far above its threshold (noise)
 #define RECHARGE_N   3         // RECHARGE at every 3rd battery reading (9 s), the SWR stays readable

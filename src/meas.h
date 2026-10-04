@@ -8,6 +8,11 @@
 
 extern uint16_t vbat_mv;                      // last battery voltage
 
+// Battery levels (app.c); BATT_OFF_MV is also the empty battery symbol
+#define BATT_WARN_MV 3400                     // below: the battery symbol blinks
+#define BATT_LOW_MV  3200                     // below: RECHARGE (tuning still works)
+#define BATT_OFF_MV  3000                     // below: LOW BATT, switched off
+
 void meas_init(void);
 void meas_off(void);                          // ADC and reference off (sleep); meas_init again
 uint16_t meas_battery(void);                  // measures and returns vbat_mv

@@ -4,6 +4,7 @@
 #include "i2c_soft.h"
 #include "font5x8.h"
 #include "timer.h"
+#include "meas.h"
 
 #define W      128
 #define PAGES  4
@@ -139,8 +140,7 @@ void disp_small(uint8_t y, uint8_t x, const char *s) {
 }
 
 // Battery symbol at the right edge (x 115..125), filled from the bottom:
-// 3.0 V empty (LOW BATT, off) .. 4.2 V full
-#define BAT_EMPTY_MV 3000
+// empty where the tuner switches off (BATT_OFF_MV, 3.0 V) .. 4.2 V full
 #define BAT_FULL_MV  4200
 static uint8_t bat_px(uint8_t x, uint8_t y, uint8_t fill) {
    if(y <= 1) return x >= 118 && x <= 122;                 // cap
@@ -153,9 +153,9 @@ static uint8_t bat_px(uint8_t x, uint8_t y, uint8_t fill) {
 void disp_battery(uint16_t mv) {
    uint8_t x, p, k, b, fill = 0;
    if(mv) {
-      if(mv < BAT_EMPTY_MV) mv = BAT_EMPTY_MV;
+      if(mv < BATT_OFF_MV) mv = BATT_OFF_MV;
       if(mv > BAT_FULL_MV) mv = BAT_FULL_MV;
-      fill = (uint8_t)((uint32_t)(mv - BAT_EMPTY_MV) * 26 / (BAT_FULL_MV - BAT_EMPTY_MV));
+      fill = (uint8_t)((uint32_t)(mv - BATT_OFF_MV) * 26 / (BAT_FULL_MV - BATT_OFF_MV));
    }
    for(x = 115; x <= 125; x++)
       for(p = 0; p < PAGES; p++) {
