@@ -39,7 +39,7 @@ static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
 enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
        M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT, M_BATT_OFF, M_HINT_BLIP, M_HINT_END, M_HINT_CW, M_BATT_HOVER,
-       M_BATT_LOW, M_BATT_MIX };
+       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL };
 #define M_RESUME(m) ((m) >= M_RESUME_OFF && (m) <= M_RESUME_EMPTY)
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
@@ -50,7 +50,7 @@ static int adc_on = 1;               // ADC and reference (meas_init / meas_off)
 static double opt_l = 20, opt_c = 30;   // best match of the load (capacitor at the output)
 static uint8_t seen1[2][128][128];   // M_RESUME_OFF: settings switched by the 1st / 2nd tune
 static int n_first, n_again;
-static int batt_hidden, recharge_seen, recharge_late;
+static int batt_hidden, recharge_seen, recharge_late, ovl_seen;
 
 typedef struct { uint32_t from, to; } span_t;
 static span_t press[40] = {         // button held (ms); the setup menu presses are added in main()
@@ -109,7 +109,7 @@ static void check_line2(void) {
    const uint8_t *fb = disp_fb();
    int dirty = 0;
    if(!OLED_PWR) return;             // switched off meanwhile: nothing shown
-   if(mode == M_OVERLOAD) return;    // OVERLOAD stays while the carrier is too strong
+   if(mode == M_OVERLOAD || mode == M_BATT_OVL) return;   // OVERLOAD stays while the carrier is too strong
    for(int y = 16; y < 32; y++)                       // rows 16, 17: between the lines
       for(int x = 0; x < 115; x++) {
          int gap = y < 18 || (x >= 36 && x <= 41) || (x >= 54 && x <= 59) || (x >= 108);
@@ -153,6 +153,7 @@ void fake_ms(uint32_t ms) {
          if(mode == M_RESUME_EMPTY)                                     // 0.25 s carriers every 15 s
             rf_on |= wall >= 25000 && (wall - 25000) % 15000 < 250;
       }
+      else if(mode == M_BATT_OVL) rf_on = wall >= 26000 && wall < 26300;   // a short overload
       else rf_on = mode ? wall >= 10000 && wall < 5 * MIN : in_spans(carrier, sizeof carrier / sizeof *carrier);
       if(wall == 100 * MIN && !mode) vbat_mv = 2900;                    // battery empty
       if(mode == M_RESUME_OFF) vbat_mv = wall >= 15000 && wall < 25000 ? 2900 : 4000;   // LOW BATT
@@ -228,7 +229,7 @@ void meas_take(meas_t *m, uint8_t n) {
    g = d2 / (d2 + 60);
    if(mode == M_STOPAUTO) g = 0.25;                       // SWR 3.00 at every setting
    m->g2 = (uint32_t)(G2_ONE * (g2_floor + (1 - g2_floor) * g));
-   if(mode == M_OVERLOAD && rf_on) {                      // 30 W: the forward detector
+   if((mode == M_OVERLOAD || mode == M_BATT_OVL) && rf_on) {   // 30 W: the forward detector
       m->pf = 19000000;                                   // clips at every setting
       m->overflow = 1;
       m->g2 = (uint32_t)(G2_ONE * g);
@@ -524,6 +525,14 @@ static void checkpoint_variant(uint32_t t) {
    }
    if(mode == M_BATT_LOW && t == 50000)                     // TUNE pressed: it tunes too
       CHECK_EQ(key_falls, 2);
+   if(mode == M_BATT_OVL && t == 25900)                     // 3.1 V: RECHARGE from 25.8 s, then
+      CHECK(text_shows(1, LINE2, 0, "RECHARGE"));            // 0.3 s too much power: OVERLOAD
+   if(mode == M_BATT_OVL && t >= 26000 && t < 26400 && t % 10 == 0)   // replaces it at once
+      ovl_seen += text_shows(1, LINE2, 0, "OVERLOAD");
+   if(mode == M_BATT_OVL && t == 27000)
+      CHECK(ovl_seen > 20);
+   if(mode == M_BATT_LOW && t == 40000)                     // RECHARGE 1.5 s of 9 s: the SWR
+      CHECK(recharge_seen > 20 && recharge_seen < 80);
    if(mode == M_BATT_MIX && t == 25500)                     // two readings below 3.4 V so far
       CHECK(!batt_hidden);
    if(mode == M_BATT_MIX && t == 40000)                     // then a dip below 3.0 V: not off,
@@ -680,6 +689,7 @@ static int run_variant(void) {
       press[1].from = 30000; press[1].to = 30600;
       n_press = 2;
    }
+   if(mode == M_BATT_OVL) vbat_mv = 3100;                     // RECHARGE from the start
    if(mode == M_BATT_LOW) {                                   // 3.1 V at the start already,
       vbat_mv = 3100;                                        // then TUNE (carrier from 10 s)
       press[0].from = 40000; press[0].to = 40600;
@@ -708,7 +718,7 @@ static int run_variant(void) {
                      : mode == M_BATT_OFF ? "test_app batt-off" : mode == M_HINT_BLIP ? "test_app hint-blip"
                      : mode == M_HINT_END ? "test_app hint-end" : mode == M_HINT_CW ? "test_app hint-cw"
                      : mode == M_BATT_HOVER ? "test_app batt-hover" : mode == M_BATT_LOW ? "test_app batt-low"
-                     : "test_app batt-mix");
+                     : mode == M_BATT_MIX ? "test_app batt-mix" : "test_app batt-ovl");
 }
 
 int main(int argc, char **argv) {

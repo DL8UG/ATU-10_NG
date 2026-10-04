@@ -27,6 +27,7 @@
 #define BATT_OFF_MV  3000      // below: LOW BATT, switched off
 #define BATT_N       3         // readings in a row below a threshold (6 s, one dip does not)
 #define BATT_HYST    50        // a level ends only this far above its threshold (noise)
+#define RECHARGE_N   3         // RECHARGE at every 3rd battery reading (9 s), the SWR stays readable
 #define AUTO_STEADY 4          // auto tune after this many measurements in a row
 #define AUTO_HOLD   3000       // ms after a tune without auto tune
 #define RESUME_MS   60000      // a tune within this time continues an interrupted one
@@ -41,6 +42,8 @@ static uint8_t led_on, msg_on, auto_cnt, auto_tune, go_off, low_cnt;
 enum { B_OK, B_WARN, B_LOW, B_OFF };
 static uint8_t batt_lvl, batt_blink;   // battery level, symbol hidden this time
 static uint8_t row_lvl;        // the mildest level of the readings in the row so far
+static uint8_t recharge_cnt;   // battery readings until RECHARGE shows again
+static uint8_t msg_batt;       // the message shown is RECHARGE: OVERLOAD may replace it
 static uint16_t swr_ref;       // SWR of the last tune, reference for auto tune
 static uint16_t shown_pwr = 0xFFFF, shown_swr = 0xFFFF;
 static meas_t peak;            // peak hold for the display
@@ -101,6 +104,7 @@ static void show_swr(uint16_t swr) {          // SWR x 100, 0 = none
 
 // a message in place of the SWR line for 'ms'
 static void message(const char *s, uint16_t ms) {
+   msg_batt = 0;
    disp_big(LINE2, 0, "         ");
    disp_big(LINE2, 0, s);
    msg_on = 1;
@@ -340,6 +344,7 @@ static void batt_start(void) {
    if(batt_lvl == B_OFF) batt_lvl = B_LOW;
    low_cnt = 0;
    batt_blink = 0;
+   recharge_cnt = 0;
 }
 
 // Sleeps until the button is held for 1.6 s. The relays keep their setting
@@ -398,7 +403,13 @@ static void battery_check(void) {
    if(batt_lvl == B_OFF) go_off = 2;           // main loop switches off
    batt_blink = batt_lvl >= B_WARN && !batt_blink;
    disp_battery(batt_blink ? 0 : vbat_mv);
-   if(batt_lvl == B_LOW && !msg_on) message("RECHARGE", 1500);
+   if(batt_lvl != B_LOW) recharge_cnt = 0;     // shown at once when the level comes
+   else if(recharge_cnt) recharge_cnt--;
+   else if(!msg_on) {
+      message("RECHARGE", 1500);
+      msg_batt = 1;
+      recharge_cnt = RECHARGE_N - 1;
+   }
    // blink: green above 3.7 V, yellow (both) above 3.59 V, else red
    if(vbat_mv > 3700) LED_GREEN = 0;
    else if(vbat_mv > 3590) { LED_GREEN = 0; LED_RED = 0; }
@@ -426,7 +437,7 @@ static void watch(void) {
    uint32_t now = tick_ms();
    uint8_t pw;
    meas_take(&m, 4);
-   if(m.overflow && !msg_on) message("OVERLOAD", 2000);
+   if(m.overflow && (!msg_on || msg_batt)) message("OVERLOAD", 2000);   // before RECHARGE
    p10 = pwr_x10(m.pf);
    if(p10) wake();
    // peak hold for the power display (Cell 10)
