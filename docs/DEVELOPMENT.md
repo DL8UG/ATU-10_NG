@@ -37,8 +37,8 @@ Firmware/
     tests/               tests on the PC; tests/host/xc.h stands in for the
                          compiler's register header in test_app.c
     tools/               normalize_hex.py, cells.py, sim/ (simulator)
-  ATU-10_NG_0_9_3.zip    the releases before
-  ATU-10_NG_0_9_3/       (kept as they are)
+  ATU-10_NG_0_9_4.zip    the releases before
+  ATU-10_NG_0_9_4/       (kept as they are)
   ATU-10_NG_0_9_0.zip
   ATU-10_NG_0_9_0/
   ATU-10_NG_0_1_0/       first development version (kept as it is, README

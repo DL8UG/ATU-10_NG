@@ -158,10 +158,10 @@ everything else in the file stays byte for byte the same.
 
 The hex file is a text file in the Intel HEX format. The 12 settings are in
 two lines near the end, starting with `:10EEE000` and `:10EEF000`
-(address 0xEEE0 in the program memory). In the hex file of version 0.9.4:
+(address 0xEEE0 in the program memory). In the hex file of version 0.9.5:
 
 ```
-:10EEE0000534303407341034153413340134043409
+:10EEE0000534303410341034153413340134043400
 :10EEF00014346034053402340034003400340034F7
 ```
 
@@ -170,7 +170,7 @@ two lines near the end, starting with `:10EEE000` and `:10EEF000`
 Taking the first line apart:
 
 ```
-:  10  EEE0  00  05 34  30 34  07 34  10 34  15 34  13 34  01 34  04 34  09
+:  10  EEE0  00  05 34  30 34  10 34  10 34  15 34  13 34  01 34  04 34  00
 |  |   |     |   |      |      |      |      |      |      |      |      |
 |  |   |     |   Cell1  Cell2  Cell3  Cell4  Cell5  Cell6  Cell7  Cell8  checksum
 |  |   |     record type 00 = data
@@ -210,17 +210,18 @@ may reject the file or skip the line. The rule: add up all
 bytes of the line after the `:` except the checksum; the checksum is what
 brings the low byte of that sum to zero (256 minus the low byte).
 
-**Example: relay pulse 7 ms → 12 ms** (setting 3, the third pair in the first
-line, `07` becomes `12`; a hex file of 0.9.4, where 7 ms was the default):
+**Example: relay pulse 10 ms → 12 ms** (setting 3, the third pair in the
+first line, `10` becomes `12`; the hex file of 0.9.5):
 
 ```
-before:  :10EEE000 05 34 30 34 07 34 10 34 15 34 13 34 01 34 04 34 09
+before:  :10EEE000 05 34 30 34 10 34 10 34 15 34 13 34 01 34 04 34 00
 after:   :10EEE000 05 34 30 34 12 34 10 34 15 34 13 34 01 34 04 34 FE
 ```
 
-- sum before: 0x10 + 0xEE + 0xE0 + 0x00 + 0x05 + 0x34 + ... + 0x34 = 0x3F7,
-  low byte 0xF7, checksum 0x100 − 0xF7 = **0x09**
-- the value grows by 0x12 − 0x07 = 0x0B, the sum becomes 0x402, low byte 0x02,
+- sum before: 0x10 + 0xEE + 0xE0 + 0x00 + 0x05 + 0x34 + ... + 0x34 = 0x400,
+  low byte 0x00, so the sum is already zero: checksum **0x00** (256 minus 0
+  is 0x100, of which only the low byte 0x00 is written)
+- the value grows by 0x12 − 0x10 = 0x02, the sum becomes 0x402, low byte 0x02,
   checksum 0x100 − 0x02 = **0xFE**
 
 Without the spaces, as it has to be in the file:
