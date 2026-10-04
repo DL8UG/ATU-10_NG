@@ -81,7 +81,7 @@ static void show_screen(void) {
    disp_big(LINE1, 42, "=");
    disp_big(LINE1, 96, "W");
    show_swr_label();
-   disp_battery(vbat_mv);
+   disp_battery(batt_blink ? 0 : vbat_mv);     // as battery_check drew it
    shown_pwr = shown_swr = 0xFFFF;
 }
 
@@ -110,6 +110,7 @@ static void message(const char *s, uint16_t ms) {
 
 static void message_end(void) {
    msg_on = 0;
+   msg_batt = 0;
    disp_big(LINE2, 0, "         ");
    show_swr_label();
    shown_swr = 0xFFFF;
