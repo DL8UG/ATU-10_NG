@@ -4,7 +4,7 @@
 #include "i2c_soft.h"
 #include "font5x8.h"
 #include "timer.h"
-#include "meas.h"
+#include "battery.h"
 
 #define W      128
 #define PAGES  4

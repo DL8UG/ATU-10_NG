@@ -8,6 +8,7 @@
 #include "timer.h"
 #include "cells.h"
 #include "meas.h"
+#include "battery.h"
 #include "relays.h"
 #include "tune.h"
 #include "nvm.h"

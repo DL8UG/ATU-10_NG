@@ -5,6 +5,7 @@
 #include "relays.h"
 #include "cells.h"
 #include "meas.h"
+#include "battery.h"
 
 relays_t rel;
 
