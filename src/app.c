@@ -334,11 +334,16 @@ static uint8_t batt_level(uint16_t mv) {
 }
 
 // At the start and after waking: the level at once (an almost empty
-// battery shows RECHARGE at once), switched off only by BATT_N readings;
-// low readings from before count no more
+// battery shows RECHARGE at once), the mildest of BATT_N readings. The
+// battery rests now: below BATT_OFF_MV it is empty, and the caller switches
+// off before the relays are pulsed. Low readings from before count no more.
 static void batt_start(void) {
-   batt_lvl = batt_level(meas_battery());
-   if(batt_lvl == B_OFF) batt_lvl = B_LOW;
+   uint8_t n, lvl;
+   batt_lvl = B_OFF;
+   for(n = 0; n < BATT_N; n++) {
+      lvl = batt_level(meas_battery());
+      if(lvl < batt_lvl) batt_lvl = lvl;
+   }
    low_cnt = 0;
    batt_blink = 0;
    recharge_cnt = 0;
@@ -476,22 +481,28 @@ void main(void) {
    batt_start();
    mem_load();
    // The relays latch: they hold the setting saved before the reset. They
-   // are pulsed again to be sure, except after a brown-out, where the
-   // pulses could pull the weak battery down once more.
+   // are pulsed again to be sure, except after a brown-out or with an empty
+   // battery, where the pulses could pull the weak battery down (once more).
    if(state_load()) {
       rel = st.r;
-      if(!bor_only) relays_set(st.r.l, st.r.c, st.r.sw);
+      if(!bor_only && batt_lvl != B_OFF) relays_set(st.r.l, st.r.c, st.r.sw);
    }
    else {
       st.bypass = 0;
       st.last_swr = 0;
       st.byp.l = st.byp.c = st.byp.sw = 0;
-      relays_set(0, 0, 0);
+      if(batt_lvl != B_OFF) relays_set(0, 0, 0);
    }
    swr_ref = st.last_swr ? (uint16_t)(100 + st.last_swr) : 0;
    EXT_KEY_OUT = 1;
-   start_screen();
-   reset_reason();
+   if(batt_lvl == B_OFF) {                     // empty: LOW BATT at once, no greeting
+      go_off = 2;
+      buttons_clear();
+   }
+   else {
+      start_screen();
+      reset_reason();
+   }
    WDT_ON();
    t_batt = t_watch = t_show = t_refresh = tick_ms();
 
@@ -555,7 +566,11 @@ void main(void) {
          }
          go_off = 0;
          power_off();
-         start_screen();
+         if(batt_lvl == B_OFF) {               // still empty: LOW BATT again, the
+            go_off = 2;                        // press that woke us is no event
+            buttons_clear();
+         }
+         else start_screen();
          t_batt = t_watch = t_show = t_refresh = tick_ms();
       }
       disp_service();
