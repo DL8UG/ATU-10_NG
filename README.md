@@ -171,6 +171,14 @@ From 0.9.5 on (up to 0.9.4 the tuner switched off below 3.4 V):
 Each step needs three readings in a row (6 seconds), so a short dip while
 transmitting or switching the relays does not count; a step ends only
 when the battery is 0.05 V above its threshold again.
+When switching on or waking up, the step applies at once; switching off
+still needs the three readings. At 3.8 V and below the relay pulse is 1 ms
+longer, as a weak battery drives the coils slower. If the voltage still
+drops below 2.7 V, the processor resets itself (brown-out) and shows LOW
+BATT when it starts again.
+
+Thanks to DL8DTL (Jörg) for his measurements and advice on the battery
+thresholds!
 
 ### Switching off by itself
 
