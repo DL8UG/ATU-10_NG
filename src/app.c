@@ -23,7 +23,7 @@
 #define SHOW_MS     150        // display update of power and SWR
 #define REFRESH_MS  30000      // send the whole picture again
 #define BATT_WARN_MV 3400      // below: the battery symbol blinks
-#define BATT_LOW_MV  3200      // below: RECHARGE, no tuning
+#define BATT_LOW_MV  3200      // below: RECHARGE (tuning still works)
 #define BATT_OFF_MV  3000      // below: LOW BATT, switched off
 #define BATT_N       3         // readings in a row below a threshold (6 s, one dip does not)
 #define BATT_HYST    50        // a level ends only this far above its threshold (noise)
@@ -218,10 +218,6 @@ static void do_tune(void) {
    uint8_t r, same, why = P_NONE;
    relays_t from = rel;
    wake();
-   if(batt_lvl >= B_LOW) {                     // a search pulses the relays hundreds of
-      message("RECHARGE", 2000);               // times: not on an almost empty battery
-      return;
-   }
    LED_GREEN = 0;
    EXT_KEY_OUT = 0;                            // tells the transceiver: tuning
    msg_on = 0;
@@ -336,8 +332,8 @@ static uint8_t batt_level(uint16_t mv) {
 }
 
 // At the start and after waking: the level at once (an almost empty
-// battery shows RECHARGE and does not tune), switched off only by BATT_N
-// readings; low readings from before count no more
+// battery shows RECHARGE at once), switched off only by BATT_N readings;
+// low readings from before count no more
 static void batt_start(void) {
    batt_lvl = batt_level(meas_battery());
    if(batt_lvl == B_OFF) batt_lvl = B_LOW;
@@ -447,7 +443,7 @@ static void watch(void) {
    // Cell 6 since the last tune (not again right after a tune, and not
    // again and again when the antenna cannot be matched better)
    delta = (uint16_t)(cfg[CFG_AUTO_DELTA] - 10) * 10;
-   if(cfg[CFG_AUTO] && !st.bypass && batt_lvl < B_LOW && pw == P_OK && m.stable && swr > 120 && since(t_tuned) >= AUTO_HOLD
+   if(cfg[CFG_AUTO] && !st.bypass && pw == P_OK && m.stable && swr > 120 && since(t_tuned) >= AUTO_HOLD
       && (swr > swr_ref + delta || swr + delta < swr_ref)) {
       if(++auto_cnt >= AUTO_STEADY) auto_tune = 1;   // main loop starts it
    }

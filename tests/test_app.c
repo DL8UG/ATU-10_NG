@@ -50,7 +50,7 @@ static int adc_on = 1;               // ADC and reference (meas_init / meas_off)
 static double opt_l = 20, opt_c = 30;   // best match of the load (capacitor at the output)
 static uint8_t seen1[2][128][128];   // M_RESUME_OFF: settings switched by the 1st / 2nd tune
 static int n_first, n_again;
-static int batt_hidden, recharge_seen, relays_start;
+static int batt_hidden, recharge_seen, recharge_late;
 
 typedef struct { uint32_t from, to; } span_t;
 static span_t press[40] = {         // button held (ms); the setup menu presses are added in main()
@@ -512,20 +512,18 @@ static void checkpoint_variant(uint32_t t) {
       CHECK_EQ(sleeps, 1);
    if(mode == M_BATT_LOW && t >= 8000 && t < 40000 && t % 100 == 0 && text_shows(1, LINE2, 0, "RECHARGE"))
       recharge_seen++;                                       // RECHARGE comes and goes
-   if(mode == M_BATT_LOW && t == 1000) relays_start = relay_calls;
-   if(mode == M_BATT_LOW && t == 40000) {                   // 3.1 V: carrier since 10 s, SWR high,
-      CHECK_EQ(key_falls, 0);                                // but no auto tune and no relay pulse
-      CHECK_EQ(relay_calls, relays_start);
-      CHECK(recharge_seen > 0);
-      CHECK(batt_hidden > 0);                                // the symbol blinks too
-   }
-   if(mode == M_BATT_LOW && t == 41500) {                   // TUNE pressed: refused
-      CHECK(LATDbits.LATD2 && text_shows(1, LINE2, 0, "RECHARGE"));
-      CHECK_EQ(key_falls, 0);
-      CHECK_EQ(relay_calls, relays_start);
-   }
-   if(mode == M_BATT_LOW && t == 90000) {                   // 3.3 V: tuning again, not switched off
+   if(mode == M_BATT_LOW && t >= 64000 && t < 90000 && t % 100 == 0 && text_shows(1, LINE2, 0, "RECHARGE"))
+      recharge_late++;
+   if(mode == M_BATT_LOW && t == 40000) {                   // 3.1 V: RECHARGE, the symbol blinks,
+      CHECK(recharge_seen > 0);                              // but the carrier at 10 s (SWR high)
+      CHECK(batt_hidden > 0);                                // was tuned all the same
       CHECK_EQ(key_falls, 1);
+      CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);
+   }
+   if(mode == M_BATT_LOW && t == 50000)                     // TUNE pressed: it tunes too
+      CHECK_EQ(key_falls, 2);
+   if(mode == M_BATT_LOW && t == 90000) {                   // 3.3 V: RECHARGE gone, not switched off
+      CHECK_EQ(recharge_late, 0);
       CHECK_EQ(sleeps, 0);
    }
    if(mode == M_BATT_OFF && t == 75000)                     // a single low reading after waking:
@@ -676,7 +674,7 @@ static int run_variant(void) {
       n_press = 2;
    }
    if(mode == M_BATT_LOW) {                                   // 3.1 V at the start already,
-      vbat_mv = 3100;                                        // then TUNE
+      vbat_mv = 3100;                                        // then TUNE (carrier from 10 s)
       press[0].from = 40000; press[0].to = 40600;
       n_press = 1;
    }
