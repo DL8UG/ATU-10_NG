@@ -146,7 +146,7 @@ the middle of a search, it goes on with the next carrier (SWR above 1.2).
 | NO MATCH | nothing better than the direct connection found (SWR above 1.2), the relays are off |
 | STOP | tuning stopped by a button press |
 | OVERLOAD | too much power for the measurement; a tune stops |
-| RECHARGE | every 3 seconds in place of the SWR: battery below 3.2 V, please recharge; the tuner still tunes (from 0.9.5) |
+| RECHARGE | every 9 seconds in place of the SWR: battery below 3.2 V, please recharge; the tuner still tunes (from 0.9.5) |
 | LOW BATT | battery below 3.0 V (up to 0.9.4: 3.4 V) for three readings in a row (6 seconds): the tuner switches off; also shown at a restart after a voltage drop |
 | POWER OFF | the tuner switches off (button held, see [Button](#button)) |
 | WDT RST, STACK RST | the firmware restarted itself after a fault (please report it) |
@@ -165,14 +165,16 @@ From 0.9.5 on (up to 0.9.4 the tuner switched off below 3.4 V):
 |---|---|
 | 3.4 V and above | works normally |
 | below 3.4 V | the battery symbol blinks |
-| below 3.2 V | RECHARGE every 3 seconds; tuning still works |
+| below 3.2 V | RECHARGE every 9 seconds; tuning still works |
 | below 3.0 V | LOW BATT, then it switches off |
 
 Each step needs three readings in a row (6 seconds), so a short dip while
 transmitting or switching the relays does not count; a step ends only
 when the battery is 0.05 V above its threshold again.
-When switching on or waking up, the step applies at once; switching off
-still needs the three readings. At 3.8 V and below the relay pulse is 1 ms
+When switching on or waking up, the step applies at once (the mildest of
+three readings): below 3.0 V the tuner shows LOW BATT at once and switches
+off again without pulsing the relays. While it runs, switching off still
+needs the three readings. At 3.8 V and below the relay pulse is 1 ms
 longer, as a weak battery drives the coils slower. If the voltage still
 drops below 2.7 V, the processor resets itself (brown-out) and shows LOW
 BATT when it starts again.

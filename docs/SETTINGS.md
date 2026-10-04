@@ -233,8 +233,8 @@ Rather than calculating by hand, use the [Cell editor](#2-cell-editor-in-the-bro
 or on the command line `tools/cells.py` from the firmware folder:
 
 ```sh
-python3 tools/cells.py show ATU-10_NG_0_9_4.hex                    # list the settings
-python3 tools/cells.py set ATU-10_NG_0_9_4.hex my.hex 3=12 1=10    # change settings 3 and 1
+python3 tools/cells.py show ATU-10_NG_0_9_5.hex                    # list the settings
+python3 tools/cells.py set ATU-10_NG_0_9_5.hex my.hex 3=12 1=10    # change settings 3 and 1
 ```
 
 `cells.py set` takes the values in plain decimal (setting=value), writes the

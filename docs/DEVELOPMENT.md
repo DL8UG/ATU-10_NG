@@ -28,9 +28,9 @@ tools/check_doc_links.py links and Contents lists of the documentation
 .github/workflows/       on every push: check_doc_links.py, and the host
                          tests of every version folder
 Firmware/
-  ATU-10_NG_0_9_4.zip    hex file + LICENSE
-  ATU-10_NG_0_9_4/
-    ATU-10_NG_0_9_4.hex  the firmware
+  ATU-10_NG_0_9_5.zip    hex file + LICENSE
+  ATU-10_NG_0_9_5/
+    ATU-10_NG_0_9_5.hex  the firmware
     README.md, LICENSE
     Makefile             build, checks, tests, simulator, charts
     src/                 firmware
@@ -56,8 +56,8 @@ Firmware/
 - gcc, python3 and node for the tests and the simulator
 
 ```sh
-cd Firmware/ATU-10_NG_0_9_4
-make            # firmware: ATU-10_NG_0_9_4.hex
+cd Firmware/ATU-10_NG_0_9_5
+make            # firmware: ATU-10_NG_0_9_5.hex
 make test       # unit tests, Cells tools, editor logic, and the main
                 # program on the PC with simulated hardware and time
                 # (tests/test_app.c: transmitting, timers, tune, bypass,
@@ -84,7 +84,7 @@ make docs       # charts, display and setup menu pictures in docs/
 | `test_display` | screen layout (also as pictures), display restart and its pauses |
 | `test_settings` | menu values in the EEPROM, the rule hex Cells vs menu values |
 | `test_tune` | memory slots, bypass always in the final comparison |
-| `test_app` | the whole main program with simulated registers and time: 105 minutes of transmitting, timers, tuning, bypass, power off / on, setup menu, external interface, low battery, a missing display; variants 1-26 for start after brown-out / watchdog reset, Cells at minimum / maximum, unmatchable loads, NO POWER, short carriers (CW key), overload, interrupted searches, battery dips and levels (blinking symbol, RECHARGE), the hints while TUNE waits |
+| `test_app` | the whole main program with simulated registers and time: 105 minutes of transmitting, timers, tuning, bypass, power off / on, setup menu, external interface, low battery, a missing display; variants 1-30 for start after brown-out / watchdog reset, Cells at minimum / maximum, unmatchable loads, NO POWER, short carriers (CW key), overload, interrupted searches, battery dips and levels (blinking symbol, RECHARGE, a dip at the end of a row, an overload while RECHARGE shows, LOW BATT in the same moment as the power off, an empty battery at the start), the hints while TUNE waits |
 | `test_tools.sh` | `cells.py` and the logic of `cell-editor.html` (run in node): identical files |
 
 Most bugs found in the reviews and on the device have a test that fails with
@@ -159,7 +159,7 @@ initialization (`oled.c`), font (`font5x8.h`).
    file, the zip and LICENSE attached, e.g.
 
    ```sh
-   gh release create v0.9.4 Firmware/ATU-10_NG_0_9_4/ATU-10_NG_0_9_4.hex \
-      Firmware/ATU-10_NG_0_9_4.zip Firmware/ATU-10_NG_0_9_4/LICENSE \
-      --title "ATU-10 NG 0.9.4" --notes-file notes.md   # --prerelease for a beta
+   gh release create v0.9.5 Firmware/ATU-10_NG_0_9_5/ATU-10_NG_0_9_5.hex \
+      Firmware/ATU-10_NG_0_9_5.zip Firmware/ATU-10_NG_0_9_5/LICENSE \
+      --title "ATU-10 NG 0.9.5" --notes-file notes.md   # --prerelease for a beta
    ```
