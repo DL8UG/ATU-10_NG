@@ -5,7 +5,7 @@ uint8_t cfg[CELL_COUNT];
 //                                      1   2   3   4   5   6   7   8   9  10  11  12
 const uint8_t cell_min[CELL_COUNT] = {  0,  0,  2,  1,  1, 11,  0,  0,  0,  1,  0,  1 };
 const uint8_t cell_max[CELL_COUNT] = { 99, 99, 30, 99, 99, 99,  1, 99, 99, 99, 99,  3 };
-const uint8_t cell_def[CELL_COUNT] = {  5, 30,  7, 10, 15, 13,  1,  4, 14, 60,  5,  2 };
+const uint8_t cell_def[CELL_COUNT] = {  5, 30, 10, 10, 15, 13,  1,  4, 14, 60,  5,  2 };
 
 #ifdef __XC8
 // volatile: the compiler must read the values from program memory at run
@@ -13,7 +13,7 @@ const uint8_t cell_def[CELL_COUNT] = {  5, 30,  7, 10, 15, 13,  1,  4, 14, 60,  
 const volatile uint8_t Cells[CELLS_SIZE] __at(CELLS_ADDR) = {
    0x05,   // 1  display off after 5 min
    0x30,   // 2  power off after 30 min
-   0x07,   // 3  relay pulse 7 ms
+   0x10,   // 3  relay pulse 10 ms (the relay data sheets ask for 10 ms)
    0x10,   // 4  tune from 1.0 W
    0x15,   // 5  tune up to 15 W
    0x13,   // 6  auto tune if the SWR changed by more than 0.3

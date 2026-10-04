@@ -23,7 +23,7 @@ RETLW = 0x34
 CELLS = [
     (1, 'Display off', 'minutes, 0 = never', 0, 99, 5),
     (2, 'Power off', 'minutes, 0 = never', 0, 99, 30),
-    (3, 'Relay pulse', 'ms', 2, 30, 7),
+    (3, 'Relay pulse', 'ms', 2, 30, 10),
     (4, 'Min. power for tuning', '0.1 W', 1, 99, 10),
     (5, 'Max. power for tuning', 'W', 1, 99, 15),
     (6, 'Auto tune SWR change', '(value - 10) / 10, 13 = 0.3, from 90 on practically never', 11, 99, 13),

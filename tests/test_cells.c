@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 volatile uint8_t Cells[16] = {
-   0x05, 0x30, 0x07, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02 };
+   0x05, 0x30, 0x10, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02 };
 
 #include "../src/cells.c"
 
@@ -14,10 +14,10 @@ int main(void) {
    cells_load();
    for(i = 0; i < CELL_COUNT; i++) CHECK_EQ(cfg[i], cell_def[i]);
    // invalid BCD and out of range values fall back to the default
-   CHECK_EQ(cell_decode(CFG_RELAY_MS, 0x0A), 7);    // not BCD
-   CHECK_EQ(cell_decode(CFG_RELAY_MS, 0xA1), 7);
-   CHECK_EQ(cell_decode(CFG_RELAY_MS, 0x01), 7);    // below 2 ms
-   CHECK_EQ(cell_decode(CFG_RELAY_MS, 0x31), 7);    // above 30 ms
+   CHECK_EQ(cell_decode(CFG_RELAY_MS, 0x0A), 10);    // not BCD
+   CHECK_EQ(cell_decode(CFG_RELAY_MS, 0xA1), 10);
+   CHECK_EQ(cell_decode(CFG_RELAY_MS, 0x01), 10);    // below 2 ms
+   CHECK_EQ(cell_decode(CFG_RELAY_MS, 0x31), 10);    // above 30 ms
    CHECK_EQ(cell_decode(CFG_RELAY_MS, 0x30), 30);
    CHECK_EQ(cell_decode(CFG_MIN_PWR, 0x00), 10);    // 0 W would tune on noise
    CHECK_EQ(cell_decode(CFG_AUTO_DELTA, 0x10), 13);

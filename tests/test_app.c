@@ -25,7 +25,7 @@ struct IOCBFbits_t IOCBFbits; struct IOCBNbits_t IOCBNbits; struct PIE0bits_t PI
 struct PIR0bits_t PIR0bits; struct WDTCON0bits_t WDTCON0bits; struct PCON0bits_t PCON0bits;
 uint8_t PCON0_reg;
 volatile uint8_t Cells[16] = {
-   0x05, 0x30, 0x07, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02 };
+   0x05, 0x30, 0x10, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02 };
 
 void isr(void);
 void app_main(void);
@@ -390,10 +390,10 @@ static void checkpoint(uint32_t t) {
       CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);
       CHECK(!st.bypass);
       break;
-   case 95 * MIN:                    // setup menu: relay pulse 7 -> 8 ms, saved
-      CHECK_EQ(cfg[CFG_RELAY_MS], 8);
+   case 95 * MIN:                    // setup menu: relay pulse 10 -> 12 ms, saved
+      CHECK_EQ(cfg[CFG_RELAY_MS], 12);
       CHECK_EQ(ee[0x20], 0x5E);
-      CHECK_EQ(ee[0x20 + 3 + CFG_RELAY_MS], 8);
+      CHECK_EQ(ee[0x20 + 3 + CFG_RELAY_MS], 12);
       CHECK(OLED_PWR);
       tunes_seen();
       break;
@@ -603,7 +603,7 @@ static int run_variant(void) {
       g2_floor = 1.0 / 9;                                    // best possible SWR 2.0
    }
    if(mode == M_EXTDARK) {
-      static const uint8_t c[12] = {0x01, 0x30, 0x07, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02};
+      static const uint8_t c[12] = {0x01, 0x30, 0x10, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02};
       memcpy((void *)Cells, c, 12);                          // display off after 1 min
    }
    n_press = 0;

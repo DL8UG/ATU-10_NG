@@ -7,7 +7,7 @@
 // stand-ins for the hardware (tests/host/xc.h)
 struct PORTBbits_t PORTBbits; struct LATAbits_t LATAbits;
 volatile uint8_t Cells[16] = {
-   0x05, 0x30, 0x07, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02 };
+   0x05, 0x30, 0x10, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02 };
 void fake_ms(uint32_t ms) { (void)ms; }
 void fake_sleep(void) {}
 void fake_clrwdt(void) {}
@@ -46,10 +46,10 @@ int main(void) {
    disp_clear();
    disp_big(LINE1, 34, "SETUP");
    dump("setup");
-   show(2);                          // relay pulse, 7 ms
+   show(2);                          // relay pulse, 10 ms
    dump("relay");
    cfg[CFG_RELAY_MS] = next_value(CFG_RELAY_MS, cfg[CFG_RELAY_MS]);
-   show(2);                          // after a short press: 8 ms
+   show(2);                          // after a short press: 12 ms
    dump("relay2");
    show(PAGE_SAVE);
    dump("save");
