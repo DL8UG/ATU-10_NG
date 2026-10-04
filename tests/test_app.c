@@ -39,7 +39,7 @@ static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
 enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
        M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT, M_BATT_OFF, M_HINT_BLIP, M_HINT_END, M_HINT_CW, M_BATT_HOVER,
-       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL };
+       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL, M_BATT_AUTO };
 #define M_RESUME(m) ((m) >= M_RESUME_OFF && (m) <= M_RESUME_EMPTY)
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
@@ -142,7 +142,7 @@ void fake_ms(uint32_t ms) {
       }
       PORTDbits.RD2 = LATDbits.LATD2;                                   // key line as driven
       if(mode == M_EXTDARK || mode == M_BATT_OFF || mode == M_HINT_BLIP || mode == M_HINT_END
-         || mode == M_HINT_CW) rf_on = 0;
+         || mode == M_HINT_CW || mode == M_BATT_AUTO) rf_on = 0;
       else if(mode == M_NOPOWER) rf_on = wall >= 60000 && wall < 2 * MIN;   // after the NO POWER
       else if(mode == M_PULSE || mode == M_PULSE_SLOW)                  // CW key: 1 s down, 7 s
          rf_on = wall >= 10000 && (wall - 10000) % (mode == M_PULSE ? 8000 : 71000) < 1000;   // (70 s) up
@@ -171,6 +171,8 @@ void fake_ms(uint32_t ms) {
          vbat_mv = wall < 60000 ? 3100 : 3300;
       if(mode == M_BATT_MIX && wall >= 18000)    // 3.38 V (readings at 19.8 and 22.8 s), one
          vbat_mv = wall >= 25000 && wall < 26000 ? 2990 : 3380;   // dip to 2.99 V at 25.8 s
+      if(mode == M_BATT_AUTO && wall >= 58000)   // the third reading below 3.0 V (64.8 s) comes
+         vbat_mv = 2900;                         // in the same pass as the power off (Cell 2)
       if(INTCONbits.GIE && PIE0bits.TMR0IE) {
          PIR0bits.TMR0IF = 1;
          isr();
@@ -182,6 +184,10 @@ void fake_ms(uint32_t ms) {
 
 void fake_sleep(void) {
    sleeps++;
+   if(mode == M_BATT_AUTO) {         // switched off by the battery, not by the time: says so
+      check_centred();               // LOW BATT alone in the middle, not the dark main screen
+      centred_checks++;
+   }
    CHECK(!adc_on);                   // no reference current while switched off
    // the last picture before sleeping (the framebuffer keeps it): POWER OFF
    // (button held at 86 min) and LOW BATT (100 min) alone in the middle
@@ -548,7 +554,8 @@ static void checkpoint_variant(uint32_t t) {
       CHECK(key_falls >= 1);                                 // not stuck in the setup menu
    if(t == 6 * MIN - 1) {
       CHECK_EQ(sleeps, mode == M_RESUME_OFF || mode == M_BATT_DIP || mode == M_BATT_OFF
-               || mode == M_BATT_HOVER);
+               || mode == M_BATT_HOVER || mode == M_BATT_AUTO);
+      if(mode == M_BATT_AUTO) CHECK_EQ(centred_checks, 1);
       switch(mode) {
       case M_CELLS_MIN:                                      // auto tune off: no tune
          CHECK_EQ(key_falls, 0);
@@ -658,6 +665,10 @@ static int run_variant(void) {
       memcpy((void *)Cells, c, 12);
       g2_floor = 1.0 / 9;                                    // best possible SWR 2.0
    }
+   if(mode == M_BATT_AUTO) {                                 // power off after 1 min
+      static const uint8_t c[12] = {0x05, 0x01, 0x10, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02};
+      memcpy((void *)Cells, c, 12);
+   }
    if(mode == M_EXTDARK) {
       static const uint8_t c[12] = {0x01, 0x30, 0x10, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02};
       memcpy((void *)Cells, c, 12);                          // display off after 1 min
@@ -718,7 +729,8 @@ static int run_variant(void) {
                      : mode == M_BATT_OFF ? "test_app batt-off" : mode == M_HINT_BLIP ? "test_app hint-blip"
                      : mode == M_HINT_END ? "test_app hint-end" : mode == M_HINT_CW ? "test_app hint-cw"
                      : mode == M_BATT_HOVER ? "test_app batt-hover" : mode == M_BATT_LOW ? "test_app batt-low"
-                     : mode == M_BATT_MIX ? "test_app batt-mix" : "test_app batt-ovl");
+                     : mode == M_BATT_MIX ? "test_app batt-mix" : mode == M_BATT_OVL ? "test_app batt-ovl"
+                     : "test_app batt-auto");
 }
 
 int main(int argc, char **argv) {

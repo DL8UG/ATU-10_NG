@@ -541,8 +541,8 @@ void main(void) {
       }
       if(disp_is_on() && cfg[CFG_DISP_OFF] && since(t_active) >= (uint32_t)cfg[CFG_DISP_OFF] * 60000)
          disp_power(0);
-      if(cfg[CFG_POWER_OFF] && since(t_active) >= (uint32_t)cfg[CFG_POWER_OFF] * 60000)
-         go_off = 3;
+      if(!go_off && cfg[CFG_POWER_OFF] && since(t_active) >= (uint32_t)cfg[CFG_POWER_OFF] * 60000)
+         go_off = 3;                           // LOW BATT / POWER OFF of this pass stay
       if(go_off) {
          if(go_off < 3) {
             wake();
