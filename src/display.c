@@ -149,16 +149,19 @@ static uint8_t bat_px(uint8_t x, uint8_t y, uint8_t fill) {
    return y > 29 - fill;                                   // charge, 0..26 rows
 }
 
+// mv 0: no symbol (it blinks while the battery runs low)
 void disp_battery(uint16_t mv) {
-   uint8_t x, p, k, b, fill;
-   if(mv < BAT_EMPTY_MV) mv = BAT_EMPTY_MV;
-   if(mv > BAT_FULL_MV) mv = BAT_FULL_MV;
-   fill = (uint8_t)((uint32_t)(mv - BAT_EMPTY_MV) * 26 / (BAT_FULL_MV - BAT_EMPTY_MV));
+   uint8_t x, p, k, b, fill = 0;
+   if(mv) {
+      if(mv < BAT_EMPTY_MV) mv = BAT_EMPTY_MV;
+      if(mv > BAT_FULL_MV) mv = BAT_FULL_MV;
+      fill = (uint8_t)((uint32_t)(mv - BAT_EMPTY_MV) * 26 / (BAT_FULL_MV - BAT_EMPTY_MV));
+   }
    for(x = 115; x <= 125; x++)
       for(p = 0; p < PAGES; p++) {
          b = 0;
          for(k = 0; k < 8; k++)
-            if(bat_px(x, (uint8_t)(p * 8 + k), fill)) b |= (uint8_t)(1 << k);
+            if(mv && bat_px(x, (uint8_t)(p * 8 + k), fill)) b |= (uint8_t)(1 << k);
          put8(x, (uint8_t)(p * 8), b, 8);
       }
 }

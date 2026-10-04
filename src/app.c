@@ -22,9 +22,11 @@
 #define WATCH_MS    50         // measurement for the display / auto tune
 #define SHOW_MS     150        // display update of power and SWR
 #define REFRESH_MS  30000      // send the whole picture again
-#define LOW_BATT_MV 3400
-#define LOW_BATT_N  3          // readings in a row below it: switch off (6 s, one dip does not)
-#define LOW_BATT_OK 3450       // only a reading above this ends the row (noise at the threshold)
+#define BATT_WARN_MV 3400      // below: the battery symbol blinks
+#define BATT_LOW_MV  3200      // below: RECHARGE, no tuning
+#define BATT_OFF_MV  3000      // below: LOW BATT, switched off
+#define BATT_N       3         // readings in a row below a threshold (6 s, one dip does not)
+#define BATT_HYST    50        // a level ends only this far above its threshold (noise)
 #define AUTO_STEADY 4          // auto tune after this many measurements in a row
 #define AUTO_HOLD   3000       // ms after a tune without auto tune
 #define RESUME_MS   60000      // a tune within this time continues an interrupted one
@@ -36,6 +38,8 @@
 
 static uint32_t t_batt, t_watch, t_show, t_refresh, t_active, t_led, t_msg, t_tuned;
 static uint8_t led_on, msg_on, auto_cnt, auto_tune, go_off, low_cnt;
+enum { B_OK, B_WARN, B_LOW, B_OFF };
+static uint8_t batt_lvl, batt_blink;   // battery level, symbol hidden this time
 static uint16_t swr_ref;       // SWR of the last tune, reference for auto tune
 static uint16_t shown_pwr = 0xFFFF, shown_swr = 0xFFFF;
 static meas_t peak;            // peak hold for the display
@@ -214,6 +218,10 @@ static void do_tune(void) {
    uint8_t r, same, why = P_NONE;
    relays_t from = rel;
    wake();
+   if(batt_lvl >= B_LOW) {                     // a search pulses the relays hundreds of
+      message("RECHARGE", 2000);               // times: not on an almost empty battery
+      return;
+   }
    LED_GREEN = 0;
    EXT_KEY_OUT = 0;                            // tells the transceiver: tuning
    msg_on = 0;
@@ -322,6 +330,21 @@ static void start_screen(void) {
    t_active = tick_ms();
 }
 
+// Battery level of a reading (BATT_N readings in a row make it the level)
+static uint8_t batt_level(uint16_t mv) {
+   return mv < BATT_OFF_MV ? B_OFF : mv < BATT_LOW_MV ? B_LOW : mv < BATT_WARN_MV ? B_WARN : B_OK;
+}
+
+// At the start and after waking: the level at once (an almost empty
+// battery shows RECHARGE and does not tune), switched off only by BATT_N
+// readings; low readings from before count no more
+static void batt_start(void) {
+   batt_lvl = batt_level(meas_battery());
+   if(batt_lvl == B_OFF) batt_lvl = B_LOW;
+   low_cnt = 0;
+   batt_blink = 0;
+}
+
 // Sleeps until the button is held for 1.6 s. The relays keep their setting
 // without power; the watchdog is off while sleeping. The caller starts the
 // display again (start_screen) - one hardware stack level less.
@@ -329,7 +352,6 @@ static void power_off(void) {
    uint8_t n;
    resume = 0;                                 // the clock stands still while sleeping:
                                                // RESUME_MS would go on after waking
-   low_cnt = 0;                                // low readings before count no more
    disp_power(0);
    LED_RED = 1;
    LED_GREEN = 1;
@@ -355,23 +377,36 @@ static void power_off(void) {
    INTCONbits.GIE = 1;
    WDT_ON();
    meas_init();
-   meas_battery();
+   batt_start();
 }
 
 static void battery_check(void) {
+   uint8_t lvl;
    meas_battery();
-   disp_battery(vbat_mv);
+   lvl = batt_level(vbat_mv);
+   if(lvl > batt_lvl) {
+      if(++low_cnt >= BATT_N) {                // the level of this reading
+         low_cnt = 0;
+         batt_lvl = lvl;
+      }
+   }
+   else {                                      // lvl <= batt_lvl < B_OFF: no underflow
+      lvl = batt_level(vbat_mv - BATT_HYST);
+      if(lvl <= batt_lvl) {                    // clearly above the next threshold: the
+         low_cnt = 0;                          // row ends, and a level ends BATT_HYST
+         batt_lvl = lvl;                       // above its threshold
+      }
+   }
+   if(batt_lvl == B_OFF) go_off = 2;           // main loop switches off
+   batt_blink = batt_lvl >= B_WARN && !batt_blink;
+   disp_battery(batt_blink ? 0 : vbat_mv);
+   if(batt_lvl == B_LOW && !msg_on) message("RECHARGE", 1500);
    // blink: green above 3.7 V, yellow (both) above 3.59 V, else red
    if(vbat_mv > 3700) LED_GREEN = 0;
    else if(vbat_mv > 3590) { LED_GREEN = 0; LED_RED = 0; }
    else LED_RED = 0;
    led_on = 1;
    t_led = tick_ms();
-   if(vbat_mv >= LOW_BATT_OK) low_cnt = 0;
-   else if(vbat_mv < LOW_BATT_MV && ++low_cnt >= LOW_BATT_N) {          // main loop switches off
-      low_cnt = 0;
-      go_off = 2;
-   }
 }
 
 // Why the PIC was reset, shown for 2 s; nothing after a normal power-up
@@ -412,7 +447,7 @@ static void watch(void) {
    // Cell 6 since the last tune (not again right after a tune, and not
    // again and again when the antenna cannot be matched better)
    delta = (uint16_t)(cfg[CFG_AUTO_DELTA] - 10) * 10;
-   if(cfg[CFG_AUTO] && !st.bypass && pw == P_OK && m.stable && swr > 120 && since(t_tuned) >= AUTO_HOLD
+   if(cfg[CFG_AUTO] && !st.bypass && batt_lvl < B_LOW && pw == P_OK && m.stable && swr > 120 && since(t_tuned) >= AUTO_HOLD
       && (swr > swr_ref + delta || swr + delta < swr_ref)) {
       if(++auto_cnt >= AUTO_STEADY) auto_tune = 1;   // main loop starts it
    }
@@ -432,7 +467,7 @@ void main(void) {
    bor_only = PCON0bits.nPOR && !PCON0bits.nBOR;
    settings_load();
    meas_init();
-   meas_battery();
+   batt_start();
    mem_load();
    // The relays latch: they hold the setting saved before the reset. They
    // are pulsed again to be sure, except after a brown-out, where the

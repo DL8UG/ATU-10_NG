@@ -87,6 +87,8 @@ int main(void) {
    disp_battery(3000);
    for(int y = 0; y < 32; y++) for(int x = 115; x < 126; x++) below += px(x, y);
    CHECK_EQ(below, empty);
+   disp_battery(0);                              // no symbol (it blinks)
+   for(int y = 0; y < 32; y++) for(int x = 115; x < 126; x++) CHECK(!px(x, y));
    disp_battery(4200);
    // line 2 overwrites cleanly: old text gone
    disp_big(LINE2, 0, "TUNE");
