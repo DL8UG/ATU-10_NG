@@ -16,7 +16,7 @@ relays_t rel;
 // pulse every time, latching relays already in place do not move.
 void relays_set(uint8_t l, uint8_t c, uint8_t sw) {
    uint8_t t = cfg[CFG_RELAY_MS];
-   if(vbat_mv <= 3800) t++;          // a weak battery drives the coils slower
+   if(vbat_mv <= BATT_SLOW_MV) t++;  // a weak battery drives the coils slower
    REL_L_010  = !(l & 0x01);
    REL_L_022  = !(l & 0x02);
    REL_L_045  = !(l & 0x04);

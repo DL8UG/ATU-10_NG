@@ -412,9 +412,9 @@ static void battery_check(void) {
       msg_batt = 1;
       recharge_cnt = RECHARGE_N - 1;
    }
-   // blink: green above 3.7 V, yellow (both) above 3.59 V, else red
-   if(vbat_mv > 3700) LED_GREEN = 0;
-   else if(vbat_mv > 3590) { LED_GREEN = 0; LED_RED = 0; }
+   // blink: green, yellow (both), else red
+   if(vbat_mv > BATT_GREEN_MV) LED_GREEN = 0;
+   else if(vbat_mv > BATT_YELLOW_MV) { LED_GREEN = 0; LED_RED = 0; }
    else LED_RED = 0;
    led_on = 1;
    t_led = tick_ms();
