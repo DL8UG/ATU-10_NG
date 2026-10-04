@@ -93,6 +93,7 @@
 <script id="cells-core">
 // ---- pure logic, also used by the automatic test (tests/test_cell_editor.mjs)
 const CELLS_ADDR = 0xEEE0;
+// default = the default up to firmware 0.9.4; later changes in NEW_DEFAULTS
 const CELLS = [
   // name, help, min, max, default, meaning(v)
   ["Display off", "minutes without activity, 0 = never", 0, 99, 5, v => v ? v + " min" : "never"],
@@ -110,6 +111,21 @@ const CELLS = [
      v => v ? "SWR " + (1 + v / 100).toFixed(2) : "full search"],
   ["Search effort", "1 quick, 2 normal, 3 thorough", 1, 3, 2, v => ["", "quick", "normal", "thorough"][v]],
 ];
+
+// Defaults that changed: from firmware version on, Cell number, default
+const NEW_DEFAULTS = [
+  ["0.9.5", 3, 10],          // relay pulse 10 ms, as the relay data sheets ask
+];
+
+const verNum = v => v.split(".").reduce((n, x) => n * 1000 + Number(x), 0);
+
+// Defaults of a firmware version; the newest ones for an unknown version
+function defaultsFor(version) {
+  const d = CELLS.map(c => c[4]);
+  for (const [from, n, def] of NEW_DEFAULTS)
+    if (version === null || verNum(version) >= verNum(from)) d[n - 1] = def;
+  return d;
+}
 
 // Parses an Intel HEX text into records, keeping each line as it is
 function parseHex(text) {
@@ -150,6 +166,19 @@ function checkLayout(h) {
   return null;
 }
 
+// Firmware version from the greeting text "NG x.y.z" (RETLW words); null if not found
+function fwVersion(h) {
+  const mem = new Uint8Array(0x10000);
+  for (const i of Object.values(h.recs)) {
+    const b = hexBytes(h.lines[i].slice(1));
+    mem.set(b.slice(4, 4 + b[0]), b[1] << 8 | b[2]);
+  }
+  let text = "";
+  for (let a = 0; a < mem.length; a += 2) text += mem[a + 1] === 0x34 ? String.fromCharCode(mem[a]) : "\x01";
+  const m = text.match(/NG (\d+\.\d+\.\d+)\x00/);
+  return m ? m[1] : null;
+}
+
 function readCells(h) {
   const d = record(h, CELLS_ADDR).slice(4, 20).concat(record(h, CELLS_ADDR + 16).slice(4, 20));
   return CELLS.map((_, i) => d[2 * i]);
@@ -181,7 +210,7 @@ function hexText(h) {
 
 <script>
 // ---- user interface
-let hex = null, name = "", original = [];
+let hex = null, name = "", original = [], defaults = defaultsFor(null);
 const $ = id => document.getElementById(id);
 
 function message(text, bad) {
@@ -198,7 +227,9 @@ function load(file) {
       hex = h;
       name = file.name;
       original = readCells(h);
-      $("fname").textContent = file.name;
+      const version = fwVersion(h);
+      defaults = defaultsFor(version);
+      $("fname").textContent = file.name + (version ? " (firmware " + version + ")" : "");
       build(original);
       const invalid = original.filter((r, i) => fromBcd(r, i) === null).length;
       message(invalid ? invalid + " Cell(s) hold an invalid value; the firmware uses the default for them."
@@ -214,8 +245,8 @@ function load(file) {
 function build(raws) {
   const rows = $("rows");
   rows.textContent = "";
-  CELLS.forEach(([title, help, min, max, def, means], i) => {
-    const v = fromBcd(raws[i], i);
+  CELLS.forEach(([title, help, min, max, , means], i) => {
+    const v = fromBcd(raws[i], i), def = defaults[i];
     const tr = document.createElement("tr");
     tr.innerHTML = `<td class="n">${i + 1}</td>
       <td><div class="name"></div><div class="help"></div></td>
@@ -272,7 +303,7 @@ $("save").addEventListener("click", () => {
   message("Saved as " + name + " (check your downloads folder).");
 });
 $("defaults").addEventListener("click", () => {
-  document.querySelectorAll("#rows input").forEach((inp, i) => inp.value = CELLS[i][4]);
+  document.querySelectorAll("#rows input").forEach((inp, i) => inp.value = defaults[i]);
   update();
 });
 $("reset").addEventListener("click", () => build(original));
