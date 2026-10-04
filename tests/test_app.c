@@ -39,7 +39,7 @@ static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
 enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
        M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT, M_BATT_OFF, M_HINT_BLIP, M_HINT_END, M_HINT_CW, M_BATT_HOVER,
-       M_BATT_LOW };
+       M_BATT_LOW, M_BATT_MIX };
 #define M_RESUME(m) ((m) >= M_RESUME_OFF && (m) <= M_RESUME_EMPTY)
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
@@ -168,6 +168,8 @@ void fake_ms(uint32_t ms) {
                  : wall >= 50000 ? 3100 : (wall / 3000) % 2 ? 3390 : 3420;   // around 3.0 V
       if(mode == M_BATT_LOW)       // almost empty at the start, 3.3 V from 60 s on
          vbat_mv = wall < 60000 ? 3100 : 3300;
+      if(mode == M_BATT_MIX && wall >= 18000)    // 3.38 V (readings at 19.8 and 22.8 s), one
+         vbat_mv = wall >= 25000 && wall < 26000 ? 2990 : 3380;   // dip to 2.99 V at 25.8 s
       if(INTCONbits.GIE && PIE0bits.TMR0IE) {
          PIR0bits.TMR0IF = 1;
          isr();
@@ -495,7 +497,7 @@ static void checkpoint_variant(uint32_t t) {
       CHECK(small_shows(17, 60, "POWER") && small_shows(25, 60, "TOO LOW"));    // hint stays
    if(mode == M_HINT_CW && t == 17500)
       CHECK(LATDbits.LATD2 && text_shows(1, LINE2, 0, "TOO LOW"));
-   if((mode == M_BATT_HOVER || mode == M_BATT_LOW) && t > 6000 && OLED_PWR && !battery_px())
+   if((mode == M_BATT_HOVER || mode == M_BATT_LOW || mode == M_BATT_MIX) && t > 6000 && OLED_PWR && !battery_px())
       batt_hidden++;                                         // the battery symbol blinks (not
                                                              // there during the greeting)
    if(mode == M_BATT_HOVER && t == 33000)                   // two readings below 3.4 V so far:
@@ -522,6 +524,11 @@ static void checkpoint_variant(uint32_t t) {
    }
    if(mode == M_BATT_LOW && t == 50000)                     // TUNE pressed: it tunes too
       CHECK_EQ(key_falls, 2);
+   if(mode == M_BATT_MIX && t == 25500)                     // two readings below 3.4 V so far
+      CHECK(!batt_hidden);
+   if(mode == M_BATT_MIX && t == 40000)                     // then a dip below 3.0 V: not off,
+      CHECK(sleeps == 0 && batt_hidden > 0);                 // the symbol blinks (below 3.4 V,
+                                                             // the mildest level of the row)
    if(mode == M_BATT_LOW && t == 90000) {                   // 3.3 V: RECHARGE gone, not switched off
       CHECK_EQ(recharge_late, 0);
       CHECK_EQ(sleeps, 0);
@@ -700,7 +707,8 @@ static int run_variant(void) {
                      : mode == M_BATT_DIP ? "test_app batt-dip" : mode == M_HINT ? "test_app hint"
                      : mode == M_BATT_OFF ? "test_app batt-off" : mode == M_HINT_BLIP ? "test_app hint-blip"
                      : mode == M_HINT_END ? "test_app hint-end" : mode == M_HINT_CW ? "test_app hint-cw"
-                     : mode == M_BATT_HOVER ? "test_app batt-hover" : "test_app batt-low");
+                     : mode == M_BATT_HOVER ? "test_app batt-hover" : mode == M_BATT_LOW ? "test_app batt-low"
+                     : "test_app batt-mix");
 }
 
 int main(int argc, char **argv) {

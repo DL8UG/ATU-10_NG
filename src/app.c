@@ -40,6 +40,7 @@ static uint32_t t_batt, t_watch, t_show, t_refresh, t_active, t_led, t_msg, t_tu
 static uint8_t led_on, msg_on, auto_cnt, auto_tune, go_off, low_cnt;
 enum { B_OK, B_WARN, B_LOW, B_OFF };
 static uint8_t batt_lvl, batt_blink;   // battery level, symbol hidden this time
+static uint8_t row_lvl;        // the mildest level of the readings in the row so far
 static uint16_t swr_ref;       // SWR of the last tune, reference for auto tune
 static uint16_t shown_pwr = 0xFFFF, shown_swr = 0xFFFF;
 static meas_t peak;            // peak hold for the display
@@ -381,9 +382,10 @@ static void battery_check(void) {
    meas_battery();
    lvl = batt_level(vbat_mv);
    if(lvl > batt_lvl) {
-      if(++low_cnt >= BATT_N) {                // the level of this reading
-         low_cnt = 0;
-         batt_lvl = lvl;
+      if(!low_cnt || lvl < row_lvl) row_lvl = lvl;
+      if(++low_cnt >= BATT_N) {                // the mildest level of the row: a
+         low_cnt = 0;                          // single dip at its end does not
+         batt_lvl = row_lvl;                   // switch off
       }
    }
    else {                                      // lvl <= batt_lvl < B_OFF: no underflow
