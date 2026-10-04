@@ -139,7 +139,9 @@ void disp_small(uint8_t y, uint8_t x, const char *s) {
 }
 
 // Battery symbol at the right edge (x 115..125), filled from the bottom:
-// 3.0 V empty .. 4.2 V full
+// 3.2 V empty (RECHARGE) .. 4.2 V full
+#define BAT_EMPTY_MV 3200
+#define BAT_FULL_MV  4200
 static uint8_t bat_px(uint8_t x, uint8_t y, uint8_t fill) {
    if(y <= 1) return x >= 118 && x <= 122;                 // cap
    if(y == 2 || y == 31 || x <= 116 || x >= 124) return 1; // frame, 2 px at the sides
@@ -149,9 +151,9 @@ static uint8_t bat_px(uint8_t x, uint8_t y, uint8_t fill) {
 
 void disp_battery(uint16_t mv) {
    uint8_t x, p, k, b, fill;
-   if(mv < 3000) mv = 3000;
-   if(mv > 4200) mv = 4200;
-   fill = (uint8_t)((uint32_t)(mv - 3000) * 26 / 1200);
+   if(mv < BAT_EMPTY_MV) mv = BAT_EMPTY_MV;
+   if(mv > BAT_FULL_MV) mv = BAT_FULL_MV;
+   fill = (uint8_t)((uint32_t)(mv - BAT_EMPTY_MV) * 26 / (BAT_FULL_MV - BAT_EMPTY_MV));
    for(x = 115; x <= 125; x++)
       for(p = 0; p < PAGES; p++) {
          b = 0;
