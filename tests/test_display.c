@@ -74,17 +74,17 @@ int main(void) {
    // the text ends before the battery symbol (x 115)
    for(int y = 0; y < 32; y++) for(int x = 108; x < 115; x++) CHECK(!px(x, y));
    // battery: empty and full differ only inside
-   disp_battery(3200);
+   disp_battery(3000);
    int empty = 0, full = 0, half = 0, below = 0;
    for(int y = 0; y < 32; y++) for(int x = 115; x < 126; x++) empty += px(x, y);
    disp_battery(4200);
    for(int y = 0; y < 32; y++) for(int x = 115; x < 126; x++) full += px(x, y);
    CHECK_EQ(full - empty, 26 * 5);
-   // 3.2 V empty (RECHARGE), 3.7 V half, below 3.2 V as empty
-   disp_battery(3700);
+   // 3.0 V empty (LOW BATT), 3.6 V half, below 3.0 V as empty
+   disp_battery(3600);
    for(int y = 0; y < 32; y++) for(int x = 115; x < 126; x++) half += px(x, y);
    CHECK_EQ(half - empty, 13 * 5);
-   disp_battery(3000);
+   disp_battery(2900);
    for(int y = 0; y < 32; y++) for(int x = 115; x < 126; x++) below += px(x, y);
    CHECK_EQ(below, empty);
    disp_battery(0);                              // no symbol (it blinks)

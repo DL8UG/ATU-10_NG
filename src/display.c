@@ -139,8 +139,8 @@ void disp_small(uint8_t y, uint8_t x, const char *s) {
 }
 
 // Battery symbol at the right edge (x 115..125), filled from the bottom:
-// 3.2 V empty (RECHARGE) .. 4.2 V full
-#define BAT_EMPTY_MV 3200
+// 3.0 V empty (LOW BATT, off) .. 4.2 V full
+#define BAT_EMPTY_MV 3000
 #define BAT_FULL_MV  4200
 static uint8_t bat_px(uint8_t x, uint8_t y, uint8_t fill) {
    if(y <= 1) return x >= 118 && x <= 122;                 // cap
