@@ -18,57 +18,58 @@
 </style>
 <rect class="bg" width="760" height="330"/>
 <text class="title" x="16" y="26">How long a tune takes (simulated)</text>
-<text class="sub" x="16" y="46">Share of tunes per second of tuning time. Mean: full search 4.6 s, band change with the memory 1.8 s. Last bar: 14 s and more.</text>
+<text class="sub" x="16" y="46">Share of tunes per second of tuning time. Mean: full search 5.8 s, band change with the memory 2.3 s. Last bar: 14 s and more.</text>
 <rect x="16" y="62" width="12" height="12" rx="2" fill="var(--s1)"/><text class="ax" x="34" y="72">full search (2808 tunes)</text>
 <rect x="276" y="62" width="12" height="12" rx="2" fill="var(--s2)"/><text class="ax" x="294" y="72">band change, memory filled (1620 tunes)</text>
 <line class="gridline" x1="56" x2="736" y1="272.0" y2="272.0"/><text class="ax" x="48" y="276.0" text-anchor="end">0 %</text>
-<line class="gridline" x1="56" x2="736" y1="246.3" y2="246.3"/><text class="ax" x="48" y="250.3" text-anchor="end">10 %</text>
-<line class="gridline" x1="56" x2="736" y1="220.6" y2="220.6"/><text class="ax" x="48" y="224.6" text-anchor="end">20 %</text>
-<line class="gridline" x1="56" x2="736" y1="194.9" y2="194.9"/><text class="ax" x="48" y="198.9" text-anchor="end">30 %</text>
-<line class="gridline" x1="56" x2="736" y1="169.1" y2="169.1"/><text class="ax" x="48" y="173.1" text-anchor="end">40 %</text>
-<line class="gridline" x1="56" x2="736" y1="143.4" y2="143.4"/><text class="ax" x="48" y="147.4" text-anchor="end">50 %</text>
-<line class="gridline" x1="56" x2="736" y1="117.7" y2="117.7"/><text class="ax" x="48" y="121.7" text-anchor="end">60 %</text>
-<line class="gridline" x1="56" x2="736" y1="92.0" y2="92.0"/><text class="ax" x="48" y="96.0" text-anchor="end">70 %</text>
-<path d="M62.0 272.0 V272.0 Q62.0 270.6 63.4 270.6 H76.3 Q77.7 270.6 77.7 272.0 V272.0 Z" fill="var(--s1)"><title>0-1 s: 0.5 %</title></path>
-<path d="M79.7 272.0 V109.3 Q79.7 105.3 83.7 105.3 H91.3 Q95.3 105.3 95.3 109.3 V272.0 Z" fill="var(--s2)"><title>0-1 s: 64.8 %</title></path>
+<line class="gridline" x1="56" x2="736" y1="236.0" y2="236.0"/><text class="ax" x="48" y="240.0" text-anchor="end">10 %</text>
+<line class="gridline" x1="56" x2="736" y1="200.0" y2="200.0"/><text class="ax" x="48" y="204.0" text-anchor="end">20 %</text>
+<line class="gridline" x1="56" x2="736" y1="164.0" y2="164.0"/><text class="ax" x="48" y="168.0" text-anchor="end">30 %</text>
+<line class="gridline" x1="56" x2="736" y1="128.0" y2="128.0"/><text class="ax" x="48" y="132.0" text-anchor="end">40 %</text>
+<line class="gridline" x1="56" x2="736" y1="92.0" y2="92.0"/><text class="ax" x="48" y="96.0" text-anchor="end">50 %</text>
+<path d="M62.0 272.0 V272.0 Q62.0 270.1 63.9 270.1 H75.7 Q77.7 270.1 77.7 272.0 V272.0 Z" fill="var(--s1)"><title>0-1 s: 0.5 %</title></path>
+<path d="M79.7 272.0 V112.2 Q79.7 108.2 83.7 108.2 H91.3 Q95.3 108.2 95.3 112.2 V272.0 Z" fill="var(--s2)"><title>0-1 s: 45.5 %</title></path>
 <text class="ax" x="56.0" y="288" text-anchor="middle">0</text>
-<path d="M125.0 272.0 V253.8 Q125.0 249.8 129.0 249.8 H136.7 Q140.7 249.8 140.7 253.8 V272.0 Z" fill="var(--s2)"><title>1-2 s: 8.6 %</title></path>
+<path d="M125.0 272.0 V177.6 Q125.0 173.6 129.0 173.6 H136.7 Q140.7 173.6 140.7 177.6 V272.0 Z" fill="var(--s2)"><title>1-2 s: 27.3 %</title></path>
 <text class="ax" x="101.3" y="288" text-anchor="middle">1</text>
-<path d="M152.7 272.0 V237.6 Q152.7 233.6 156.7 233.6 H164.3 Q168.3 233.6 168.3 237.6 V272.0 Z" fill="var(--s1)"><title>2-3 s: 14.9 %</title></path>
-<path d="M170.3 272.0 V270.9 Q170.3 266.9 174.3 266.9 H182.0 Q186.0 266.9 186.0 270.9 V272.0 Z" fill="var(--s2)"><title>2-3 s: 2.0 %</title></path>
+<path d="M152.7 272.0 V268.9 Q152.7 264.9 156.7 264.9 H164.3 Q168.3 264.9 168.3 268.9 V272.0 Z" fill="var(--s1)"><title>2-3 s: 2.0 %</title></path>
+<path d="M170.3 272.0 V272.0 Q170.3 269.1 173.2 269.1 H183.1 Q186.0 269.1 186.0 272.0 V272.0 Z" fill="var(--s2)"><title>2-3 s: 0.8 %</title></path>
 <text class="ax" x="146.7" y="288" text-anchor="middle">2</text>
-<path d="M198.0 272.0 V183.5 Q198.0 179.5 202.0 179.5 H209.7 Q213.7 179.5 213.7 183.5 V272.0 Z" fill="var(--s1)"><title>3-4 s: 36.0 %</title></path>
-<path d="M215.7 272.0 V252.0 Q215.7 248.0 219.7 248.0 H227.3 Q231.3 248.0 231.3 252.0 V272.0 Z" fill="var(--s2)"><title>3-4 s: 9.3 %</title></path>
+<path d="M198.0 272.0 V204.7 Q198.0 200.7 202.0 200.7 H209.7 Q213.7 200.7 213.7 204.7 V272.0 Z" fill="var(--s1)"><title>3-4 s: 19.8 %</title></path>
+<path d="M215.7 272.0 V262.9 Q215.7 258.9 219.7 258.9 H227.3 Q231.3 258.9 231.3 262.9 V272.0 Z" fill="var(--s2)"><title>3-4 s: 3.6 %</title></path>
 <text class="ax" x="192.0" y="288" text-anchor="middle">3</text>
-<path d="M243.3 272.0 V237.0 Q243.3 233.0 247.3 233.0 H255.0 Q259.0 233.0 259.0 237.0 V272.0 Z" fill="var(--s1)"><title>4-5 s: 15.2 %</title></path>
-<path d="M261.0 272.0 V257.6 Q261.0 253.6 265.0 253.6 H272.7 Q276.7 253.6 276.7 257.6 V272.0 Z" fill="var(--s2)"><title>4-5 s: 7.2 %</title></path>
+<path d="M243.3 272.0 V174.3 Q243.3 170.3 247.3 170.3 H255.0 Q259.0 170.3 259.0 174.3 V272.0 Z" fill="var(--s1)"><title>4-5 s: 28.2 %</title></path>
+<path d="M261.0 272.0 V249.8 Q261.0 245.8 265.0 245.8 H272.7 Q276.7 245.8 276.7 249.8 V272.0 Z" fill="var(--s2)"><title>4-5 s: 7.3 %</title></path>
 <text class="ax" x="237.3" y="288" text-anchor="middle">4</text>
-<path d="M288.7 272.0 V245.0 Q288.7 241.0 292.7 241.0 H300.3 Q304.3 241.0 304.3 245.0 V272.0 Z" fill="var(--s1)"><title>5-6 s: 12.0 %</title></path>
-<path d="M306.3 272.0 V266.5 Q306.3 262.5 310.3 262.5 H318.0 Q322.0 262.5 322.0 266.5 V272.0 Z" fill="var(--s2)"><title>5-6 s: 3.7 %</title></path>
+<path d="M288.7 272.0 V227.5 Q288.7 223.5 292.7 223.5 H300.3 Q304.3 223.5 304.3 227.5 V272.0 Z" fill="var(--s1)"><title>5-6 s: 13.5 %</title></path>
+<path d="M306.3 272.0 V254.2 Q306.3 250.2 310.3 250.2 H318.0 Q322.0 250.2 322.0 254.2 V272.0 Z" fill="var(--s2)"><title>5-6 s: 6.0 %</title></path>
 <text class="ax" x="282.7" y="288" text-anchor="middle">5</text>
-<path d="M334.0 272.0 V252.7 Q334.0 248.7 338.0 248.7 H345.7 Q349.7 248.7 349.7 252.7 V272.0 Z" fill="var(--s1)"><title>6-7 s: 9.0 %</title></path>
-<path d="M351.7 272.0 V270.6 Q351.7 266.6 355.7 266.6 H363.3 Q367.3 266.6 367.3 270.6 V272.0 Z" fill="var(--s2)"><title>6-7 s: 2.1 %</title></path>
+<path d="M334.0 272.0 V240.1 Q334.0 236.1 338.0 236.1 H345.7 Q349.7 236.1 349.7 240.1 V272.0 Z" fill="var(--s1)"><title>6-7 s: 10.0 %</title></path>
+<path d="M351.7 272.0 V263.6 Q351.7 259.6 355.7 259.6 H363.3 Q367.3 259.6 367.3 263.6 V272.0 Z" fill="var(--s2)"><title>6-7 s: 3.5 %</title></path>
 <text class="ax" x="328.0" y="288" text-anchor="middle">6</text>
-<path d="M379.3 272.0 V263.5 Q379.3 259.5 383.3 259.5 H391.0 Q395.0 259.5 395.0 263.5 V272.0 Z" fill="var(--s1)"><title>7-8 s: 4.9 %</title></path>
-<path d="M397.0 272.0 V272.0 Q397.0 269.8 399.2 269.8 H410.4 Q412.7 269.8 412.7 272.0 V272.0 Z" fill="var(--s2)"><title>7-8 s: 0.9 %</title></path>
+<path d="M379.3 272.0 V240.9 Q379.3 236.9 383.3 236.9 H391.0 Q395.0 236.9 395.0 240.9 V272.0 Z" fill="var(--s1)"><title>7-8 s: 9.8 %</title></path>
+<path d="M397.0 272.0 V267.1 Q397.0 263.1 401.0 263.1 H408.7 Q412.7 263.1 412.7 267.1 V272.0 Z" fill="var(--s2)"><title>7-8 s: 2.5 %</title></path>
 <text class="ax" x="373.3" y="288" text-anchor="middle">7</text>
-<path d="M424.7 272.0 V264.9 Q424.7 260.9 428.7 260.9 H436.3 Q440.3 260.9 440.3 264.9 V272.0 Z" fill="var(--s1)"><title>8-9 s: 4.3 %</title></path>
-<path d="M442.3 272.0 V272.0 Q442.3 269.9 444.4 269.9 H455.9 Q458.0 269.9 458.0 272.0 V272.0 Z" fill="var(--s2)"><title>8-9 s: 0.8 %</title></path>
+<path d="M424.7 272.0 V258.3 Q424.7 254.3 428.7 254.3 H436.3 Q440.3 254.3 440.3 258.3 V272.0 Z" fill="var(--s1)"><title>8-9 s: 4.9 %</title></path>
+<path d="M442.3 272.0 V271.1 Q442.3 267.1 446.3 267.1 H454.0 Q458.0 267.1 458.0 271.1 V272.0 Z" fill="var(--s2)"><title>8-9 s: 1.4 %</title></path>
 <text class="ax" x="418.7" y="288" text-anchor="middle">8</text>
-<path d="M470.0 272.0 V272.0 Q470.0 268.1 473.9 268.1 H481.7 Q485.7 268.1 485.7 272.0 V272.0 Z" fill="var(--s1)"><title>9-10 s: 1.5 %</title></path>
-<path d="M487.7 272.0 V272.0 Q487.7 271.7 488.0 271.7 H503.0 Q503.3 271.7 503.3 272.0 V272.0 Z" fill="var(--s2)"><title>9-10 s: 0.1 %</title></path>
+<path d="M470.0 272.0 V261.4 Q470.0 257.4 474.0 257.4 H481.7 Q485.7 257.4 485.7 261.4 V272.0 Z" fill="var(--s1)"><title>9-10 s: 4.1 %</title></path>
+<path d="M487.7 272.0 V272.0 Q487.7 269.6 490.1 269.6 H500.9 Q503.3 269.6 503.3 272.0 V272.0 Z" fill="var(--s2)"><title>9-10 s: 0.7 %</title></path>
 <text class="ax" x="464.0" y="288" text-anchor="middle">9</text>
-<path d="M515.3 272.0 V272.0 Q515.3 270.9 516.4 270.9 H529.9 Q531.0 270.9 531.0 272.0 V272.0 Z" fill="var(--s1)"><title>10-11 s: 0.4 %</title></path>
-<path d="M533.0 272.0 V272.0 Q533.0 271.8 533.2 271.8 H548.5 Q548.7 271.8 548.7 272.0 V272.0 Z" fill="var(--s2)"><title>10-11 s: 0.1 %</title></path>
+<path d="M515.3 272.0 V263.3 Q515.3 259.3 519.3 259.3 H527.0 Q531.0 259.3 531.0 263.3 V272.0 Z" fill="var(--s1)"><title>10-11 s: 3.5 %</title></path>
+<path d="M533.0 272.0 V272.0 Q533.0 269.8 535.2 269.8 H546.4 Q548.7 269.8 548.7 272.0 V272.0 Z" fill="var(--s2)"><title>10-11 s: 0.6 %</title></path>
 <text class="ax" x="509.3" y="288" text-anchor="middle">10</text>
-<path d="M560.7 272.0 V272.0 Q560.7 271.4 561.3 271.4 H575.7 Q576.3 271.4 576.3 272.0 V272.0 Z" fill="var(--s1)"><title>11-12 s: 0.2 %</title></path>
-<path d="M578.3 272.0 V272.0 Q578.3 271.4 579.0 271.4 H593.4 Q594.0 271.4 594.0 272.0 V272.0 Z" fill="var(--s2)"><title>11-12 s: 0.2 %</title></path>
+<path d="M560.7 272.0 V268.6 Q560.7 264.6 564.7 264.6 H572.3 Q576.3 264.6 576.3 268.6 V272.0 Z" fill="var(--s1)"><title>11-12 s: 2.1 %</title></path>
+<path d="M578.3 272.0 V272.0 Q578.3 271.1 579.2 271.1 H593.1 Q594.0 271.1 594.0 272.0 V272.0 Z" fill="var(--s2)"><title>11-12 s: 0.2 %</title></path>
 <text class="ax" x="554.7" y="288" text-anchor="middle">11</text>
-<path d="M606.0 272.0 V272.0 Q606.0 269.6 608.4 269.6 H619.3 Q621.7 269.6 621.7 272.0 V272.0 Z" fill="var(--s1)"><title>12-13 s: 0.9 %</title></path>
-<path d="M623.7 272.0 V272.0 Q623.7 271.7 624.0 271.7 H639.0 Q639.3 271.7 639.3 272.0 V272.0 Z" fill="var(--s2)"><title>12-13 s: 0.1 %</title></path>
+<path d="M606.0 272.0 V272.0 Q606.0 271.0 607.0 271.0 H620.6 Q621.7 271.0 621.7 272.0 V272.0 Z" fill="var(--s1)"><title>12-13 s: 0.3 %</title></path>
+<path d="M623.7 272.0 V272.0 Q623.7 271.6 624.1 271.6 H638.9 Q639.3 271.6 639.3 272.0 V272.0 Z" fill="var(--s2)"><title>12-13 s: 0.1 %</title></path>
 <text class="ax" x="600.0" y="288" text-anchor="middle">12</text>
-<path d="M669.0 272.0 V272.0 Q669.0 271.8 669.2 271.8 H684.5 Q684.7 271.8 684.7 272.0 V272.0 Z" fill="var(--s2)"><title>13-14 s: 0.1 %</title></path>
+<path d="M651.3 272.0 V272.0 Q651.3 270.8 652.5 270.8 H665.8 Q667.0 270.8 667.0 272.0 V272.0 Z" fill="var(--s1)"><title>13-14 s: 0.3 %</title></path>
+<path d="M669.0 272.0 V272.0 Q669.0 271.8 669.2 271.8 H684.4 Q684.7 271.8 684.7 272.0 V272.0 Z" fill="var(--s2)"><title>13-14 s: 0.1 %</title></path>
 <text class="ax" x="645.3" y="288" text-anchor="middle">13</text>
+<path d="M696.7 272.0 V272.0 Q696.7 268.0 700.6 268.0 H708.4 Q712.3 268.0 712.3 272.0 V272.0 Z" fill="var(--s1)"><title>14-15 s: 1.1 %</title></path>
+<path d="M714.3 272.0 V272.0 Q714.3 270.7 715.7 270.7 H728.7 Q730.0 270.7 730.0 272.0 V272.0 Z" fill="var(--s2)"><title>14-15 s: 0.4 %</title></path>
 <text class="ax" x="690.7" y="288" text-anchor="middle">14</text>
 <line class="axis" x1="56" x2="736" y1="272" y2="272"/>
 <text class="ax" x="396.0" y="308" text-anchor="middle">tuning time, seconds</text>

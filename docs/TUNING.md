@@ -23,7 +23,7 @@ and how well it does that in the simulator.
 - Each measurement also tells how noisy it is; a setting only counts as
   better if it is better by more than that noise.
 - The last 12 good results are remembered. Back on a band used before, a
-  short search from the remembered setting is usually enough (about 2 s).
+  short search from the remembered setting is usually enough (about 2 to 3 s).
 - In the simulator, with models of many real antennas, the tuner reaches the
   best possible SWR (within 0.05) in practically every case that can be
   matched at all.
@@ -116,7 +116,7 @@ flowchart TD
    reached, kept in the EEPROM). At the start of a tune it measures them; the
    best one starts a local search with single relay steps. If that
    ends at most 0.05 worse than when the setting was found, the tune is done.
-   After a band change to a band used before, this takes about 2 s.
+   After a band change to a band used before, this takes about 2 to 3 s.
 2. **Coarse grid.** L and C at 0, 3, 10, 30 and 90 relay steps (about
    logarithmic), for both capacitor sides: 50 measurements. This finds the
    valleys anywhere, not only the nearest one.
@@ -181,11 +181,11 @@ short wire); there the tuner finds the best that is possible.
 
 | Scenario | Matchable cases | reached SWR ≤ 1.5 | within 0.05 of the best possible | mean tuning time |
 |---|---|---|---|---|
-| ideal measurement | 768 | 100 % | 100 % | 4.6 s |
-| 3 mV ADC noise | 3840 | 100 % | 100 % | 4.6 s |
-| hard: noise, unsteady carrier (3 %), QRP rig with 10 Ohm source resistance, 5 % component tolerance, detector calibration off | 3860 | 99.2 % | 99.0 % | 5.1 s |
-| small QSY (1 to 3 %) after a tune | 2652 | 100 % | 99.8 % | 2.3 s |
-| band changes (20 ↔ 30 m, 40 ↔ 20 m, ...) with the memory filled | 2008 | 100 % | 100 % | 2.2 s (1.8 s after the first round) |
+| ideal measurement | 768 | 100 % | 100 % | 5.7 s |
+| 3 mV ADC noise | 3840 | 100 % | 100 % | 5.8 s |
+| hard: noise, unsteady carrier (3 %), QRP rig with 10 Ohm source resistance, 5 % component tolerance, detector calibration off | 3860 | 99.2 % | 99.0 % | 6.4 s |
+| small QSY (1 to 3 %) after a tune | 2652 | 100 % | 99.8 % | 2.9 s |
+| band changes (20 ↔ 30 m, 40 ↔ 20 m, ...) with the memory filled | 2008 | 100 % | 100 % | 2.8 s (2.3 s after the first round) |
 
 By antenna type (3 mV noise, matchable cases within 0.05 of the best possible):
 random wire 100 %, EFHW 100 %, resonant dipoles 100 %, dipoles with 1:4
@@ -195,4 +195,6 @@ balun 100 %, non-resonant dipoles 100 %, doublets 100 %, fixed loads 99.8 %.
 ![Tuning time](tuning-time.svg)
 
 The tuning time counts relay pulses (3 x Cell 3 plus settling) and the
-measurements; the transmitter has to send a carrier for that long.
+measurements; the transmitter has to send a carrier for that long. The
+times are for the relay pulse of 10 ms (from 0.9.5); with 7 ms (up to
+0.9.4) they are about 20 % shorter.

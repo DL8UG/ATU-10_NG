@@ -84,7 +84,7 @@ make docs       # charts, display and setup menu pictures in docs/
 | `test_display` | screen layout (also as pictures), display restart and its pauses |
 | `test_settings` | menu values in the EEPROM, the rule hex Cells vs menu values |
 | `test_tune` | memory slots, bypass always in the final comparison |
-| `test_app` | the whole main program with simulated registers and time: 105 minutes of transmitting, timers, tuning, bypass, power off / on, setup menu, external interface, low battery, a missing display; variants 1-25 for start after brown-out / watchdog reset, Cells at minimum / maximum, unmatchable loads, NO POWER, short carriers (CW key), overload, interrupted searches, battery dips, the hints while TUNE waits |
+| `test_app` | the whole main program with simulated registers and time: 105 minutes of transmitting, timers, tuning, bypass, power off / on, setup menu, external interface, low battery, a missing display; variants 1-26 for start after brown-out / watchdog reset, Cells at minimum / maximum, unmatchable loads, NO POWER, short carriers (CW key), overload, interrupted searches, battery dips and levels (blinking symbol, RECHARGE), the hints while TUNE waits |
 | `test_tools.sh` | `cells.py` and the logic of `cell-editor.html` (run in node): identical files |
 
 Most bugs found in the reviews and on the device have a test that fails with

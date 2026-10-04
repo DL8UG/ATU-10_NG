@@ -32,7 +32,7 @@ There are three ways, for the same 12 settings:
 |---|---|---|---|---|---|
 | 1 | Display off after | minutes without activity, 0 = never | 0..99 | 5 min | 0 (never), 1, 2, 3, 5, 10, 15, 20, 30, 45, 60, 99 |
 | 2 | Power off after | minutes without activity, 0 = never | 0..99 | 30 min | 0 (never), 5, 10, 15, 20, 30, 45, 60, 90, 99 |
-| 3 | Relay pulse | ms per relay pulse | 2..30 | 7 ms | 3 .. 10, 12, 15, 20, 25, 30 |
+| 3 | Relay pulse | ms per relay pulse | 2..30 | 10 ms (up to 0.9.4: 7 ms) | 3 .. 10, 12, 15, 20, 25, 30 |
 | 4 | Min. tune power | in 0.1 W | 1..99 | 1.0 W | 0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0 W |
 | 5 | Max. tune power | in W | 1..99 | 15 W | 3, 5, 8, 10, 12, 15, 20 W |
 | 6 | Auto tune: SWR change | tune again when the SWR changed by more than (value − 10) / 10; from 90 on practically never | 11..99 | 13 (0.3) | 0.1, 0.2, 0.3, 0.5, 1.0, 1.5, 2.0 |
@@ -68,9 +68,9 @@ open the menu – the button has to be held for at least a second.
 Each page shows the number of the setting, its name and its value in plain
 units:
 
-| ![Setting 3, 7 ms](menu-relay.png) | ![after a short press: 8 ms](menu-relay2.png) |
+| ![Setting 3, 10 ms](menu-relay.png) | ![after a short press: 12 ms](menu-relay2.png) |
 |---|---|
-| setting 3 of 12, relay pulse 7 ms | after a short press: 8 ms |
+| setting 3 of 12, relay pulse 10 ms | after a short press: 12 ms |
 
 | Button | Action |
 |---|---|
@@ -211,7 +211,7 @@ bytes of the line after the `:` except the checksum; the checksum is what
 brings the low byte of that sum to zero (256 minus the low byte).
 
 **Example: relay pulse 7 ms → 12 ms** (setting 3, the third pair in the first
-line, `07` becomes `12`):
+line, `07` becomes `12`; a hex file of 0.9.4, where 7 ms was the default):
 
 ```
 before:  :10EEE000 05 34 30 34 07 34 10 34 15 34 13 34 01 34 04 34 09

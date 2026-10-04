@@ -19,6 +19,7 @@ stable tuner – not the fastest tune.
   - [Tuning](#tuning)
   - [Display](#display)
   - [LEDs](#leds)
+  - [Battery](#battery)
   - [Switching off by itself](#switching-off-by-itself)
   - [External interface](#external-interface)
 - [Settings](#settings)
@@ -37,7 +38,7 @@ stable tuner – not the fastest tune.
   doublets and more. [How tuning works](docs/TUNING.md)
 - **Remembers the last 12 good tunes.** Back on a band you used before, the
   tuner tries the remembered settings first: a band change then takes about
-  2 seconds instead of 4 to 5.
+  2 to 3 seconds instead of 5 to 6.
 - **Bypass** with a short press, and back to the tuned setting.
 - **Settings in three ways:** in a menu on the tuner, with an editor in your
   browser, or directly in the hex file.
@@ -95,8 +96,8 @@ time – this firmware never blocks the way back.
 
 Tuning needs a steady carrier of 1 to 15 W (settings 4 and 5); 2 to 5 W give
 the most exact readings. While tuning, the display shows TUNE and the best SWR
-found so far, and the green LED is on. A first tune usually takes 3 to 6
-seconds, a tune on a band used before about 2 seconds.
+found so far, and the green LED is on. A first tune usually takes 4 to 7
+seconds, a tune on a band used before about 2 to 3 seconds.
 
 - Without a suitable carrier the tune waits. After 1 second two small
   lines next to TUNE say why: WAITING FOR RF (no carrier), POWER TOO LOW
@@ -136,7 +137,7 @@ the middle of a search, it goes on with the next carrier (SWR above 1.2).
 | PWR = 5.0 W | transmit power, with a short peak hold (setting 10) |
 | SWR = 1.05 | SWR, measured while transmitting from 0.1 W on (the last value stays); -.-- until the first measurement |
 | BYP | instead of SWR: bypass is on |
-| battery symbol | battery charge, 3.0 V empty .. 4.2 V full |
+| battery symbol | battery charge, 3.0 V empty .. 4.2 V full; blinks below 3.4 V (from 0.9.5) |
 | TUNE | tuning in progress |
 | WAITING FOR RF, POWER TOO LOW, POWER TOO HIGH | small, next to TUNE: the tune waits for a carrier between settings 4 and 5 |
 | BYPASS / TUNED | after a short press: bypass on / back to the tuned setting |
@@ -145,7 +146,8 @@ the middle of a search, it goes on with the next carrier (SWR above 1.2).
 | NO MATCH | nothing better than the direct connection found (SWR above 1.2), the relays are off |
 | STOP | tuning stopped by a button press |
 | OVERLOAD | too much power for the measurement; a tune stops |
-| LOW BATT | battery below 3.4 V for three readings in a row (6 seconds): the tuner switches off; also shown at a restart after a voltage drop |
+| RECHARGE | every 3 seconds in place of the SWR: battery below 3.2 V, please recharge; the tuner still tunes (from 0.9.5) |
+| LOW BATT | battery below 3.0 V (up to 0.9.4: 3.4 V) for three readings in a row (6 seconds): the tuner switches off; also shown at a restart after a voltage drop |
 | POWER OFF | the tuner switches off (button held, see [Button](#button)) |
 | WDT RST, STACK RST | the firmware restarted itself after a fault (please report it) |
 
@@ -154,6 +156,21 @@ the middle of a search, it goes on with the next carrier (SWR above 1.2).
 Every 3 seconds a LED blinks briefly and shows the battery: **green** above
 3.7 V, **green and red** (yellow) from 3.6 to 3.7 V, **red** below 3.6 V.
 While tuning the green LED is on.
+
+### Battery
+
+From 0.9.5 on (up to 0.9.4 the tuner switched off below 3.4 V):
+
+| Battery | The tuner |
+|---|---|
+| 3.4 V and above | works normally |
+| below 3.4 V | the battery symbol blinks |
+| below 3.2 V | RECHARGE every 3 seconds; tuning still works |
+| below 3.0 V | LOW BATT, then it switches off |
+
+Each step needs three readings in a row (6 seconds), so a short dip while
+transmitting or switching the relays does not count; a step ends only
+when the battery is 0.05 V above its threshold again.
 
 ### Switching off by itself
 
@@ -185,7 +202,7 @@ For a transceiver that controls the tuner through the start and key lines:
 |---|---|---|
 | 1 | Display off after (minutes, 0 = never) | 5 |
 | 2 | Power off after (minutes, 0 = never) | 30 |
-| 3 | Relay pulse (ms) | 7 |
+| 3 | Relay pulse (ms) | 10 (up to 0.9.4: 7) |
 | 4 | Minimum power for tuning (in 0.1 W) | 1.0 W |
 | 5 | Maximum power for tuning (W) | 15 W |
 | 6 | Auto tune when the SWR changed by more than (from 9.0 on: practically never) | 0.3 |
