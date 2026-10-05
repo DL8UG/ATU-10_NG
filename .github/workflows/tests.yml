@@ -1,41 +1,47 @@
-# Host tests of every firmware version folder (gcc, python3, node; no XC8,
-# the committed hex files are tested as they are)
+# Builds the firmware with XC8 and runs the host tests (gcc, python3, node);
+# the hex file is kept as an artifact of the run
 name: Tests
 
 on:
   push:
-    paths: ["Firmware/**", "tools/cell-editor.html", ".github/workflows/tests.yml"]
+    paths: ["src/**", "tests/**", "tools/**", "Makefile", ".github/workflows/tests.yml"]
   pull_request:
-    paths: ["Firmware/**", "tools/cell-editor.html", ".github/workflows/tests.yml"]
+    paths: ["src/**", "tests/**", "tools/**", "Makefile", ".github/workflows/tests.yml"]
   workflow_dispatch:
 
-jobs:
-  folders:
-    runs-on: ubuntu-latest
-    outputs:
-      list: ${{ steps.find.outputs.list }}
-    steps:
-      - uses: actions/checkout@v7
-      - id: find
-        run: echo "list=$(ls -d Firmware/ATU-10_NG_*/ | xargs -n1 basename | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+env:
+  XC8_VERSION: "4.00"
+  XC8_SHA256: a24104a8f1fa3dcd2e18d8e42c08485a6c26d5789960ed8bcc7e6bdc2c6b46c6
+  DFP_VERSION: "1.32.471"
+  DFP_SHA256: d6ae65e0f12e6ac755cea873497d54e53a9efe4bf94cbe6b30bcd4d8ce6520be
 
+jobs:
   test:
-    needs: folders
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        folder: ${{ fromJSON(needs.folders.outputs.list) }}
-    defaults:
-      run:
-        working-directory: Firmware/${{ matrix.folder }}
     steps:
       - uses: actions/checkout@v7
-      # released folders are frozen and have no test-host target: their
-      # "make test" with the hex file marked as up to date (-o) is the same
-      - run: |
-          if grep -q '^test-host:' Makefile; then
-            make test-host
-          else
-            make -o ${{ matrix.folder }}.hex test
-          fi
+
+      - id: cache
+        uses: actions/cache@v6
+        with:
+          path: ~/microchip
+          key: xc8-${{ env.XC8_VERSION }}-dfp-${{ env.DFP_VERSION }}
+
+      # XC8 (free mode) and the PIC16F1xxxx Device Family Pack from Microchip
+      - if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/microchip/dfp
+          curl -fsSL -o xc8.tar.xz https://ww1.microchip.com/downloads/aemDocuments/documents/DEV/ProductDocuments/SoftwareTools/xc8-v$XC8_VERSION-full-install-linux-x64.tar.xz
+          curl -fsSL -o dfp.atpack https://packs.download.microchip.com/Microchip.PIC16F1xxxx_DFP.$DFP_VERSION.atpack
+          echo "$XC8_SHA256  xc8.tar.xz" | sha256sum -c
+          echo "$DFP_SHA256  dfp.atpack" | sha256sum -c
+          tar -xJf xc8.tar.xz -C ~/microchip
+          unzip -q dfp.atpack -d ~/microchip/dfp
+          rm xc8.tar.xz dfp.atpack
+
+      - run: make test XC8=$HOME/microchip/xc8-v$XC8_VERSION/bin/xc8-cc DFP=$HOME/microchip/dfp
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: hex
+          path: build/ATU-10_NG_*.hex
