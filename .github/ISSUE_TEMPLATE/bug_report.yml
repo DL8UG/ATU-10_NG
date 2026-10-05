@@ -1,0 +1,59 @@
+name: Problem report
+description: Something does not work as expected on the tuner
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! The more of the following you can fill in,
+        the easier the problem is to find.
+  - type: input
+    id: version
+    attributes:
+      label: Firmware version
+      description: shown in the greeting after switching on, e.g. NG 0.9.5
+    validations:
+      required: true
+  - type: textarea
+    id: antenna
+    attributes:
+      label: Antenna and feed line
+      description: e.g. random wire 12 m with 9:1 unun, 5 m RG58
+    validations:
+      required: true
+  - type: input
+    id: band
+    attributes:
+      label: Band and frequency
+    validations:
+      required: true
+  - type: input
+    id: rig
+    attributes:
+      label: Transceiver and power
+      description: e.g. QMX, 5 W, CW carrier
+    validations:
+      required: true
+  - type: textarea
+    id: display
+    attributes:
+      label: What the display showed
+      description: SWR, messages (NO POWER, NO MATCH, ...), LEDs
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      description: the steps, as far as you know them
+  - type: textarea
+    id: settings
+    attributes:
+      label: Changed settings
+      description: settings changed in the setup menu or the Cell editor, if any
