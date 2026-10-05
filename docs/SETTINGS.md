@@ -231,7 +231,7 @@ Without the spaces, as it has to be in the file:
 ```
 
 Rather than calculating by hand, use the [Cell editor](#2-cell-editor-in-the-browser),
-or on the command line `tools/cells.py` from the firmware folder:
+or on the command line `tools/cells.py` from this repository:
 
 ```sh
 python3 tools/cells.py show ATU-10_NG_0_9_5.hex                    # list the settings

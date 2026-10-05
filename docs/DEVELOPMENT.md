@@ -13,36 +13,29 @@
 
 ## Layout
 
-Each release has its own folder under `Firmware/` with the complete source,
-the hex file and the license, and a zip next to it with the hex file and the
-license. The source and the hex file of a released folder are never changed
-again, nor is its zip; the next version starts as a copy in a new folder.
-Only the folder's README may still be updated (e.g. feedback, contents list).
+The source of the current version is at the top of the repository. Each
+version is a tag `vX.Y.Z`; its hex file, a zip (hex file + license) and the
+license are on the GitHub release of that tag. The hex file is built, not
+committed.
 
 ```
 LICENSE                  Beerware
 README.md                for users
-docs/                    this documentation, charts and pictures
-tools/cell-editor.html   Cells editor for users (one offline HTML file)
-tools/check_doc_links.py links and Contents lists of the documentation
-.github/workflows/       on every push: check_doc_links.py, and the host
-                         tests of every version folder
-Firmware/
-  ATU-10_NG_0_9_5.zip    hex file + LICENSE
-  ATU-10_NG_0_9_5/
-    ATU-10_NG_0_9_5.hex  the firmware
-    README.md, LICENSE
-    Makefile             build, checks, tests, simulator, charts
-    src/                 firmware
-    tests/               tests on the PC; tests/host/xc.h stands in for the
+CHANGELOG.md             changes from version to version
+Makefile                 build, checks, tests, simulator, charts
+src/                     firmware
+tests/                   tests on the PC; tests/host/xc.h stands in for the
                          compiler's register header in test_app.c
-    tools/               normalize_hex.py, cells.py, sim/ (simulator)
-  ATU-10_NG_0_9_4.zip    the releases before
-  ATU-10_NG_0_9_4/       (kept as they are)
-  ATU-10_NG_0_9_0.zip
-  ATU-10_NG_0_9_0/
-  ATU-10_NG_0_1_0/       first development version (kept as it is, README
-                         included, so it has no Contents list)
+tools/                   normalize_hex.py, cells.py, sim/ (simulator),
+                         cell-editor.html (Cells editor for users, one
+                         offline HTML file), check_doc_links.py (links and
+                         Contents lists of the documentation), sim-fw16/
+                         (FW 1.6 search in the simulator)
+docs/                    this documentation, charts and pictures
+.github/workflows/       on every push: build and tests, documentation check
+.github/ISSUE_TEMPLATE/  form for problem reports
+build/                   (not committed) hex file, map, test programs
+dist/                    (not committed) files for a release: make dist
 ```
 
 ## Toolchain
@@ -56,20 +49,19 @@ Firmware/
 - gcc, python3 and node for the tests and the simulator
 
 ```sh
-cd Firmware/ATU-10_NG_0_9_5
-make            # firmware: ATU-10_NG_0_9_5.hex
+make            # firmware: build/ATU-10_NG_x_y_z.hex (version from src/version.h)
 make test       # unit tests, Cells tools, editor logic, and the main
                 # program on the PC with simulated hardware and time
                 # (tests/test_app.c: transmitting, timers, tune, bypass,
                 # power off / on, setup menu, external interface, low battery)
-make test-host  # the same without XC8, on the committed hex file
+make dist       # dist/: hex file, zip (hex file + LICENSE), LICENSE
 make simcompare # simulator: ideal / noise / hard scenario
 make simretune  # simulator: QSY after a tune
 make docs       # charts, display and setup menu pictures in docs/
                 # (rendered with the firmware's display and menu code)
 ```
 
-`make clean` deletes `build/` only, the hex file stays.
+`make clean` deletes `build/` and `dist/`.
 
 ## Tests
 
@@ -90,12 +82,12 @@ make docs       # charts, display and setup menu pictures in docs/
 Most bugs found in the reviews and on the device have a test that fails with
 the code before the fix.
 
-From 0.9.4 on, `make test-host` runs the same tests without XC8, on the
-committed hex file. The GitHub workflow "Tests"
-([`.github/workflows/tests.yml`](../.github/workflows/tests.yml)) runs them
-for every version folder on each push that changes `Firmware/`; the older
-folders have no `test-host` and run `make -o <hex> test` instead (the hex
-file counts as up to date, so XC8 is not needed).
+The GitHub workflow "Tests"
+([`.github/workflows/tests.yml`](../.github/workflows/tests.yml)) runs
+`make test` on each push that changes the source, the tests, the tools or
+the Makefile. It downloads XC8 and the Device Family Pack from Microchip
+(checked by their SHA-256, then cached) and keeps the hex file as an
+artifact of the run; it is the same, byte for byte, as a local build.
 
 The documentation has its own check, `python3 tools/check_doc_links.py` at
 the top of the repository: every local link and anchor must resolve, and
@@ -150,16 +142,15 @@ initialization (`oled.c`), font (`font5x8.h`).
 
 ## Release
 
-1. new folder `Firmware/ATU-10_NG_x_y_z` as a copy of the last one, version in
-   `src/version.h` and `Makefile`
-2. `make && make test`, simulator runs, `python3 tools/check_doc_links.py`
-3. zip with the hex file and LICENSE, README and LICENSE in the folder, top
-   level README (download link, timeline)
-4. commit, push, then a GitHub release with the tag `vX.Y.Z` and the hex
-   file, the zip and LICENSE attached, e.g.
+1. version in `src/version.h`, the changes in `CHANGELOG.md`
+2. `make test`, simulator runs, `python3 tools/check_doc_links.py`
+3. `make docs` (the greeting picture shows the new version), top level README
+   (status, download, timeline)
+4. commit, tag `vX.Y.Z`, push both
+5. `make dist`, then a GitHub release of the tag with the files of `dist/`,
+   e.g.
 
    ```sh
-   gh release create v0.9.5 Firmware/ATU-10_NG_0_9_5/ATU-10_NG_0_9_5.hex \
-      Firmware/ATU-10_NG_0_9_5.zip Firmware/ATU-10_NG_0_9_5/LICENSE \
-      --title "ATU-10 NG 0.9.5" --notes-file notes.md   # --prerelease for a beta
+   gh release create v0.9.7 dist/* \
+      --title "ATU-10 NG 0.9.7" --notes-file notes.md   # --prerelease for a beta
    ```

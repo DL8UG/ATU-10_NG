@@ -19,7 +19,7 @@ are on the page [Comparison with FW 1.6](../../docs/COMPARISON.md).
 | `compare.sh` | builds both simulators and runs the comparison |
 
 The relays and the ADC readings (with FW 1.6's three ranges) come from the
-simulator: `tools/sim/glue_ref.c` of the version folder. This code is never
+simulator: `tools/sim/glue_ref.c`. This code is never
 built for the tuner. FW 1.6 by N7DDC is public domain.
 
 ## Running the comparison
@@ -27,17 +27,15 @@ built for the tuner. FW 1.6 by N7DDC is public domain.
 From the top of the repository:
 
 ```
-tools/sim-fw16/compare.sh                              # newest version folder
-tools/sim-fw16/compare.sh Firmware/ATU-10_NG_0_9_5     # a given one
+tools/sim-fw16/compare.sh
 ```
 
 It needs a C compiler (`cc`, or set `CC`) and Python 3, and takes a few
-minutes. It builds `fw16` (this code) and `ng` (the search of the version
-folder) into `build/` here and runs both on the same cases:
+minutes. It builds `fw16` (this code) and `ng` (the search in `src/`) into `build/` here and runs both on the same cases:
 
 - ideal measurement, 3 mV ADC noise, and the hard scenario (noise, unsteady
   carrier, QRP rig with 10 Ohm source resistance, component tolerance,
-  detector calibration off) – the scenarios of the version folder's
+  detector calibration off) – the scenarios of the
   Makefile
 - a small QSY (1 to 3 %) after a tune, and band changes
 

@@ -92,7 +92,7 @@ noise of the measurement.
 
 ## How the comparison was made
 
-The simulator of NG (`Firmware/ATU-10_NG_0_9_5/tools/sim`) models the L
+The simulator of NG (`tools/sim`) models the L
 network, the bridge, the detector diodes, the ADC and the transmitter, and
 behind it real antennas: random wires with a 9:1 unun, an EFHW, resonant and
 non-resonant dipoles, dipoles with a 1:4 balun, doublets on ladder line, and

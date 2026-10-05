@@ -54,13 +54,12 @@ stable tuner – not the fastest tune.
 ## Download
 
 **Version 0.9.5**: on the
-[release page](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.5), or
-here in the repository: [`Firmware/ATU-10_NG_0_9_5.zip`](Firmware/ATU-10_NG_0_9_5.zip)
-with the hex file `ATU-10_NG_0_9_5.hex` and the license. What is new: see
-[its README](Firmware/ATU-10_NG_0_9_5/README.md#changes-since-094).
+[latest release page](https://github.com/DL8UG/ATU-10_NG/releases/latest),
+the hex file `ATU-10_NG_0_9_5.hex`, or a zip with the hex file and the
+license. What is new: see the [changelog](CHANGELOG.md#095).
 
-The previous version 0.9.4 stays available on its
-[release page](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.4).
+All earlier versions stay available on the
+[releases page](https://github.com/DL8UG/ATU-10_NG/releases).
 
 ## Flashing
 
@@ -297,14 +296,15 @@ not come on, switch the tuner off and on again.
 | 2026-10-03 | 0.9.4 | release, tested on the device | TUNE says why it waits (no RF, power too low or too high), SWR shown from 0.1 W, LOW BATT only after three low readings; review fixes; tests on GitHub on every push |
 | 2026-10-04 | 0.9.5 | release, tested on the device | battery warnings in steps (symbol blinks below 3.4 V, RECHARGE below 3.2 V, off below 3.0 V), LOW BATT at once when switched on with an empty battery, relay pulse 10 ms as the data sheets ask, Cell editor shows the firmware version; review fixes |
 
-More: [Settings in detail](docs/SETTINGS.md) · [How tuning works](docs/TUNING.md) · [Comparison with FW 1.6](docs/COMPARISON.md) · [Development](docs/DEVELOPMENT.md)
+More: [Changelog](CHANGELOG.md) · [Settings in detail](docs/SETTINGS.md) · [How tuning works](docs/TUNING.md) · [Comparison with FW 1.6](docs/COMPARISON.md) · [Development](docs/DEVELOPMENT.md)
 
 ## Feedback
 
 Problems, questions and reports from use on the air are very welcome. Please
 report them with a detailed description
 
-- as an [issue here on GitHub](https://github.com/DL8UG/ATU-10_NG/issues), or
+- as an [issue here on GitHub](https://github.com/DL8UG/ATU-10_NG/issues/new/choose)
+  (a form asks for the points below), or
 - in the groups.io thread [ATU-10 NG firmware](https://groups.io/g/ATU100/topic/atu_10_ng_firmware/121543821).
 
 Please include: the firmware version (shown in the greeting), the antenna and
