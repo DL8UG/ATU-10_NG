@@ -36,6 +36,12 @@ stable tuner – not the fastest tune.
   the simulator it reaches the best possible SWR (within 0.05) in practically
   all cases that can be matched at all (over 99.9 %), with random wires, EFHWs, dipoles,
   doublets and more. [How tuning works](docs/TUNING.md)
+- **Differences to FW 1.6**, the original firmware: settings, search and
+  tuning results side by side. Both search algorithms were run in the
+  simulator against the same antennas: NG reaches SWR 1.5 or better in
+  practically every case where that is possible, FW 1.6 in about 61 %.
+  A purely technical comparison, not meant to belittle FW 1.6 or N7DDC's
+  work. [Comparison with FW 1.6](docs/COMPARISON.md)
 - **Remembers the last 12 good tunes.** Back on a band you used before, the
   tuner tries the remembered settings first: a band change then takes about
   2 to 3 seconds instead of 5 to 6.
@@ -291,7 +297,7 @@ not come on, switch the tuner off and on again.
 | 2026-10-03 | 0.9.4 | release, tested on the device | TUNE says why it waits (no RF, power too low or too high), SWR shown from 0.1 W, LOW BATT only after three low readings; review fixes; tests on GitHub on every push |
 | 2026-10-04 | 0.9.5 | release, tested on the device | battery warnings in steps (symbol blinks below 3.4 V, RECHARGE below 3.2 V, off below 3.0 V), LOW BATT at once when switched on with an empty battery, relay pulse 10 ms as the data sheets ask, Cell editor shows the firmware version; review fixes |
 
-More: [Settings in detail](docs/SETTINGS.md) · [How tuning works](docs/TUNING.md) · [Development](docs/DEVELOPMENT.md)
+More: [Settings in detail](docs/SETTINGS.md) · [How tuning works](docs/TUNING.md) · [Comparison with FW 1.6](docs/COMPARISON.md) · [Development](docs/DEVELOPMENT.md)
 
 ## Feedback
 
