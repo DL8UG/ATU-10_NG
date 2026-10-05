@@ -6,6 +6,7 @@
 
 // stand-ins for the hardware (tests/host/xc.h)
 struct PORTBbits_t PORTBbits; struct LATAbits_t LATAbits;
+uint8_t ANSELA;
 volatile uint8_t Cells[16] = {
    0x05, 0x30, 0x10, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02 };
 void fake_ms(uint32_t ms) { (void)ms; }
