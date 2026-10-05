@@ -2,25 +2,24 @@
 # Runs the search of FW 1.6 (tune.c, swr.c here) and the search of NG in the
 # NG simulator on the same cases and prints the results side by side, as in
 # docs/COMPARISON.md.
-# Usage: tools/sim-fw16/compare.sh [Firmware/ATU-10_NG_x_y_z]   (default: newest)
+# Usage: tools/sim-fw16/compare.sh
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
-FW=$(cd "${1:-$(ls -d "$ROOT"/Firmware/ATU-10_NG_*/ | sort -V | tail -1)}" && pwd)
-SIM=$FW/tools/sim
+SIM=$ROOT/tools/sim
 OUT=$HERE/build
 CC=${CC:-cc}
 FLAGS="-O2 -std=c99 -D_DEFAULT_SOURCE"
 MODEL="$SIM/sim.c $SIM/model.c $SIM/antennas.c"
 mkdir -p "$OUT"
-echo "NG: $FW"
+echo "NG: $(sed -n 's/.*FW_VERSION "\(.*\)"/\1/p' "$ROOT/src/version.h")"
 
 $CC $FLAGS -w -funsigned-char -I"$HERE" -I"$SIM" -o "$OUT/fw16" \
    $MODEL "$SIM/glue_ref.c" "$HERE/tune.c" "$HERE/swr.c" -lm
-$CC $FLAGS -Wall -I"$FW/src" -I"$SIM" -o "$OUT/ng" \
-   $MODEL "$SIM/glue_new.c" "$FW/src/tune.c" "$FW/src/meas_math.c" "$FW/src/cells.c" -lm
+$CC $FLAGS -Wall -I"$ROOT/src" -I"$SIM" -o "$OUT/ng" \
+   $MODEL "$SIM/glue_new.c" "$ROOT/src/tune.c" "$ROOT/src/meas_math.c" "$ROOT/src/cells.c" -lm
 
-# the scenarios of the version folder's Makefile, plus QSY and band changes
+# the scenarios of the Makefile, plus QSY and band changes
 HARD="--noise 3 --rs 10 --jitter 0.03 --tol 5 --cal 1.3 0.3"
 for b in fw16 ng; do
    sh "$SIM/run.sh" "$OUT/$b" "$OUT/${b}_clean.tsv" "1" &

@@ -1,11 +1,13 @@
 # ATU-10 NG firmware, built with Microchip XC8
-#   make          -> ATU-10_NG_0_9_6.hex (copy it onto the tuner's USB drive)
+#   make          -> build/ATU-10_NG_x_y_z.hex (copy it onto the tuner's USB drive)
 #   make test     -> host unit tests, after building the hex file
-#   make test-host -> the same tests on the committed hex file, without XC8 (CI)
-#   make clean    (keeps the committed hex file)
+#   make dist     -> dist/: hex file, zip (hex + LICENSE) and LICENSE for a release
+#   make clean
 
-VERSION = 0_9_6
-TARGET  = ATU-10_NG_$(VERSION)
+# the version comes from src/version.h only
+VERSION := $(subst .,_,$(shell sed -n 's/.*FW_VERSION "\(.*\)"/\1/p' src/version.h))
+TARGET  = build/ATU-10_NG_$(VERSION)
+NAME    = $(notdir $(TARGET))
 
 XC8    ?= $(firstword $(wildcard /opt/microchip/xc8/*/bin/xc8-cc) xc8-cc)
 CPU     = 16LF18877
@@ -36,9 +38,16 @@ $(TARGET).hex: build/fw.hex tools/normalize_hex.py tools/cells.py
 	python3 tools/cells.py check $@ --defaults
 
 clean:
-	rm -rf build
+	rm -rf build dist
 
-.PHONY: all clean test test-host sim simcompare simretune docs
+# release files
+dist: $(TARGET).hex LICENSE
+	rm -rf dist
+	mkdir -p dist
+	cp $(TARGET).hex LICENSE dist/
+	cd dist && zip -q -X $(NAME).zip $(NAME).hex LICENSE
+
+.PHONY: all clean dist test sim simcompare simretune docs
 
 # ---- host unit tests (gcc)
 HOSTCC   = gcc
@@ -56,12 +65,8 @@ build/test_app: tests/test_app.c tests/host/xc.h $(HDR) $(wildcard src/*.c)
 	$(HOSTCC) $(HOSTFLAGS) -Wno-unused-parameter -Itests/host -Dmain=app_main -c src/app.c -o build/app_host.o
 	$(HOSTCC) $(HOSTFLAGS) -Wno-unused-parameter -Itests/host -o $@ tests/test_app.c build/app_host.o $(APP_HOST) -lm
 
-test: $(TARGET).hex
-	$(MAKE) --no-print-directory test-host
-
-# needs only gcc, python3 and node; the Cells tools are tested on the hex
-# file as it is
-test-host: $(addprefix build/test_, $(TESTS)) build/test_app
+# gcc, python3 and node; the Cells tools are tested on the hex file as it is
+test: $(TARGET).hex $(addprefix build/test_, $(TESTS)) build/test_app
 	@for t in $(TESTS) app; do build/test_$$t || exit 1; done
 	@for v in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do build/test_app $$v || exit 1; done
 	sh tests/test_tools.sh $(TARGET).hex
@@ -111,8 +116,8 @@ simretune: build/sim
 	for p in -3 -1 1 3; do build/sim --suite ant --retune $$p --noise 3; done > build/new_retune.tsv
 	python3 tools/sim/compare.py build/new_retune.tsv
 
-# ---- charts and pictures for the documentation (docs/ at the top of the repository)
-DOCS = ../../docs
+# ---- charts and pictures for the documentation
+DOCS = docs
 docs: build/sim build/test_display
 	mkdir -p $(DOCS)
 	build/sim --ant 5 3.65 --noise 3 --map build/map.tsv 2> /dev/null > /dev/null

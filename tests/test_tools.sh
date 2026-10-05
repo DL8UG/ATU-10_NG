@@ -17,7 +17,7 @@ cmp "$HEX" $T/b.hex
 ! python3 tools/cells.py set "$HEX" $T/c.hex 12=4 2> /dev/null
 echo "test_tools: OK"
 # the HTML editor: same Cells table and byte-identical output as cells.py
-ED=../../tools/cell-editor.html
+ED=tools/cell-editor.html
 META_JS=$(node tests/cell_editor.mjs $ED --meta "$HEX")
 META_PY=$(python3 -c "import sys; sys.path.insert(0, 'tools'); import cells; print(' '.join(f'{c[3]},{c[4]},{c[5]}' for c in cells.CELLS))")
 test "$META_JS" = "$META_PY"

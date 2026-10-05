@@ -13,8 +13,6 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-# frozen: the first development version is kept exactly as it is
-SKIP = [ROOT / "Firmware" / "ATU-10_NG_0_1_0"]
 
 HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
 LINK = re.compile(r"(?<!!)\[([^\]]*)\]\(([^)\s]+)\)|!\[[^\]]*\]\(([^)\s]+)\)")
@@ -93,7 +91,7 @@ def check_contents(path, headings, problems):
 
 def main():
     files = sorted(p for p in ROOT.rglob("*.md")
-                   if not any(s in p.parents for s in SKIP) and ".git" not in p.parts)
+                   if ".git" not in p.parts)
     cache = {}
 
     def parsed(p):
