@@ -52,11 +52,13 @@ uint8_t disp_is_on(void) {
 void disp_power(uint8_t pwr) {
    if(!pwr) {
       OLED_PWR = 0;
-      I2C_SCL = 0;                   // no current into the unpowered module
-      I2C_SDA = 0;
+      I2C_SCL = 1;                   // released: driven low, they would draw
+      I2C_SDA = 1;                   // current through the module's pull-ups
+      ANSELA |= 0b00001100;          // no input buffer on the open lines
       on = 0;
       return;
    }
+   ANSELA &= (uint8_t)~0b00001100;
    OLED_PWR = 1;
    delay_ms(200);                    // module supply settles
    faults = 0;

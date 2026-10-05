@@ -367,6 +367,8 @@ static void power_off(void) {
    IOCBNbits.IOCBN5 = 1;                       // wake on the button going low
    PIE0bits.IOCIE = 1;
    meas_off();
+   ANSELD |= 0b00000110;                       // external interface: no input buffer
+                                               // on lines that may be open
    for(;;) {
       delay_ms(100);
       IOCBFbits.IOCBF5 = 0;
@@ -375,6 +377,7 @@ static void power_off(void) {
       for(n = 0; n < 16 && BUTTON_DOWN; n++) __delay_ms(100);
       if(n == 16) break;
    }
+   ANSELD &= (uint8_t)~0b00000110;
    PIE0bits.IOCIE = 0;
    IOCBNbits.IOCBN5 = 0;
    IOCBFbits.IOCBF5 = 0;

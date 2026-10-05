@@ -24,6 +24,7 @@ BITS8(PIR0bits, TMR0IF:1);
 BITS8(WDTCON0bits, SEN:1);
 BITS8(PCON0bits, nBOR:1, nPOR:1, nRWDT:1, STKOVF:1, STKUNF:1);
 extern uint8_t PCON0_reg;
+extern uint8_t ANSELA, ANSELD;
 #define PCON0 PCON0_reg
 
 void fake_ms(uint32_t ms);           // let simulated time pass

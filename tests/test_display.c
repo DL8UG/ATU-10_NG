@@ -6,7 +6,7 @@
 
 // stand-ins for the hardware
 #define BOARD_H
-static uint8_t OLED_PWR, I2C_SCL, I2C_SDA;
+static uint8_t OLED_PWR, I2C_SCL, I2C_SDA, ANSELA;
 static uint32_t now_ms;
 static int display_ok = 1, acks_data = 1, inits, writes;
 static void delay_ms(uint16_t ms) { now_ms += ms; }
@@ -47,6 +47,14 @@ static void dump(const char *name) {
 
 int main(void) {
    disp_power(1);
+   // switched off: the lines released (no current through the module's
+   // pull-ups), no input buffer on them; back on: inputs again
+   disp_power(0);
+   CHECK(!OLED_PWR && I2C_SCL && I2C_SDA);
+   CHECK_EQ(ANSELA, 0x0C);
+   disp_power(1);
+   CHECK(OLED_PWR);
+   CHECK_EQ(ANSELA, 0);
    // greeting
    disp_clear();
    disp_big(LINE1, 29, "ATU-10");

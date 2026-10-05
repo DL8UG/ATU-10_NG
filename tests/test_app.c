@@ -23,7 +23,7 @@ struct LATDbits_t LATDbits; struct LATEbits_t LATEbits; struct PORTAbits_t PORTA
 struct PORTBbits_t PORTBbits; struct PORTDbits_t PORTDbits; struct INTCONbits_t INTCONbits;
 struct IOCBFbits_t IOCBFbits; struct IOCBNbits_t IOCBNbits; struct PIE0bits_t PIE0bits;
 struct PIR0bits_t PIR0bits; struct WDTCON0bits_t WDTCON0bits; struct PCON0bits_t PCON0bits;
-uint8_t PCON0_reg;
+uint8_t PCON0_reg, ANSELA, ANSELD;
 volatile uint8_t Cells[16] = {
    0x05, 0x30, 0x10, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02 };
 
@@ -131,6 +131,11 @@ void fake_ms(uint32_t ms) {
       if(!LATDbits.LATD2 && key_prev) key_falls++;                     // a tune started
       if(LATDbits.LATD2 && !key_prev) check_line2_at = wall + 2500;     // ended: check the picture
       key_prev = LATDbits.LATD2;
+      if(OLED_PWR && ((ANSELA & 0x0C) || (ANSELD & 0x06))) {        // awake: inputs read
+         CHECK_EQ(ANSELA & 0x0C, 0);
+         CHECK_EQ(ANSELD & 0x06, 0);
+         ANSELA = ANSELD = 0;                                       // report once
+      }
       if(wall == check_line2_at) check_line2();
       PORTBbits.RB5 = !in_spans(press, n_press);                        // low = pressed
       if(mode == M_EXTDARK) PORTDbits.RD1 = !(wall >= 3 * MIN && wall < 3 * MIN + 50);   // short pulse
@@ -196,6 +201,10 @@ void fake_sleep(void) {
       centred_checks++;
    }
    CHECK(!adc_on);                   // no reference current while switched off
+   // no current through the pins: display lines and external interface
+   // released, without input buffer (the lines may be open)
+   CHECK(!OLED_PWR && LATAbits.LATA2 && LATAbits.LATA3 && (ANSELA & 0x0C) == 0x0C);
+   CHECK(LATDbits.LATD2 && (ANSELD & 0x06) == 0x06);
    // the last picture before sleeping (the framebuffer keeps it): POWER OFF
    // (button held at 86 min) and LOW BATT (100 min) alone in the middle
    if(!mode && ((wall >= 86 * MIN && wall < 87 * MIN) || (wall >= 100 * MIN && wall < 101 * MIN))) {
