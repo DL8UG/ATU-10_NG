@@ -81,10 +81,10 @@ make docs       # charts, display and setup menu pictures in docs/
 | `test_meas` | integer power / Pr / Pf / SWR against the floating point formulas |
 | `test_antennas` | plausibility of the simulator's antenna models |
 | `test_nvm` | EEPROM ring of the relay state, memory slots, damaged data |
-| `test_display` | screen layout (also as pictures), display restart and its pauses |
+| `test_display` | screen layout (also as pictures), display restart and its pauses, the display lines when switched off |
 | `test_settings` | menu values in the EEPROM, the rule hex Cells vs menu values |
 | `test_tune` | memory slots, bypass always in the final comparison |
-| `test_app` | the whole main program with simulated registers and time: 105 minutes of transmitting, timers, tuning, bypass, power off / on, setup menu, external interface, low battery, a missing display; variants 1-30 for start after brown-out / watchdog reset, Cells at minimum / maximum, unmatchable loads, NO POWER, short carriers (CW key), overload, interrupted searches, battery dips and levels (blinking symbol, RECHARGE, a dip at the end of a row, an overload while RECHARGE shows, LOW BATT in the same moment as the power off, an empty battery at the start), the hints while TUNE waits |
+| `test_app` | the whole main program with simulated registers and time: 105 minutes of transmitting, timers, tuning, bypass, power off / on (pins without current while sleeping), setup menu, external interface, low battery, a missing display; variants 1-30 for start after brown-out / watchdog reset, Cells at minimum / maximum, unmatchable loads, NO POWER, short carriers (CW key), overload, interrupted searches, battery dips and levels (blinking symbol, RECHARGE, a dip at the end of a row, an overload while RECHARGE shows, LOW BATT in the same moment as the power off, an empty battery at the start), the hints while TUNE waits |
 | `test_tools.sh` | `cells.py` and the logic of `cell-editor.html` (run in node): identical files |
 
 Most bugs found in the reviews and on the device have a test that fails with
