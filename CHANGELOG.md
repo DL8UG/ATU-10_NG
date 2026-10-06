@@ -16,12 +16,15 @@ tag `vX.Y.Z` in this repository; the hex file is on its release page.
 
 ## 0.9.6
 
-2026-10-05, [pre-release](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.6), not yet tested on the device
+2026-10-06, [release](https://github.com/DL8UG/ATU-10_NG/releases/tag/v0.9.6), tested on the device
 
 - less current while switched off: the display lines are released instead
   of driven low (with the display module switched on its ground side,
   current flowed through its pull-ups), and the display lines and the lines
-  of the external interface get no input buffer while they may be open
+  of the external interface get no input buffer while they may be open;
+  measured: 15 µA instead of 75 µA, so even after LOW BATT the tuner
+  survives a few weeks in a drawer without deep discharge. Thanks to
+  DL8DTL (Jörg) for his detailed measurements
 
 ## 0.9.5
 
