@@ -146,7 +146,7 @@ the middle of a search, it goes on with the next carrier (SWR above 1.2).
 | PWR = 5.0 W | transmit power, with a short peak hold (setting 10) |
 | SWR = 1.05 | SWR, measured while transmitting from 0.1 W on (the last value stays); -.-- until the first measurement |
 | BYP | instead of SWR: bypass is on |
-| battery symbol | battery charge, 3.0 V empty .. 4.2 V full; blinks below 3.4 V (from 0.9.5) |
+| battery symbol | battery charge, 3.0 V empty .. 4.2 V full; blinks below 3.4 V |
 | TUNE | tuning in progress |
 | WAITING FOR RF, POWER TOO LOW, POWER TOO HIGH | small, next to TUNE: the tune waits for a carrier between settings 4 and 5 |
 | BYPASS / TUNED | after a short press: bypass on / back to the tuned setting |
@@ -155,8 +155,8 @@ the middle of a search, it goes on with the next carrier (SWR above 1.2).
 | NO MATCH | nothing better than the direct connection found (SWR above 1.2), the relays are off |
 | STOP | tuning stopped by a button press |
 | OVERLOAD | too much power for the measurement; a tune stops |
-| RECHARGE | every 9 seconds in place of the SWR: battery below 3.2 V, please recharge; the tuner still tunes (from 0.9.5) |
-| LOW BATT | battery below 3.0 V (up to 0.9.4: 3.4 V) for three readings in a row (6 seconds): the tuner switches off; also shown at a restart after a voltage drop |
+| RECHARGE | every 9 seconds in place of the SWR: battery below 3.2 V, please recharge; the tuner still tunes |
+| LOW BATT | battery below 3.0 V for three readings in a row (6 seconds): the tuner switches off; also shown at a restart after a voltage drop |
 | POWER OFF | the tuner switches off (button held, see [Button](#button)) |
 | WDT RST, STACK RST | the firmware restarted itself after a fault (please report it) |
 
@@ -167,8 +167,6 @@ Every 3 seconds a LED blinks briefly and shows the battery: **green** above
 While tuning the green LED is on.
 
 ### Battery
-
-From 0.9.5 on (up to 0.9.4 the tuner switched off below 3.4 V):
 
 | Battery | The tuner |
 |---|---|
@@ -221,13 +219,13 @@ For a transceiver that controls the tuner through the start and key lines:
 |---|---|---|
 | 1 | Display off after (minutes, 0 = never) | 5 |
 | 2 | Power off after (minutes, 0 = never) | 30 |
-| 3 | Relay pulse (ms) | 10 (up to 0.9.4: 7) |
+| 3 | Relay pulse (ms) | 10 |
 | 4 | Minimum power for tuning (in 0.1 W) | 1.0 W |
 | 5 | Maximum power for tuning (W) | 15 W |
-| 6 | Auto tune when the SWR changed by more than (from 9.0 on: practically never) | 0.3 |
+| 6 | Auto tune when the SWR changed by more than (from 8.0 on: practically never) | 0.3 |
 | 7 | Auto tune on / off | on |
-| 8 | Detector calibration b (1 W) | 4 |
-| 9 | Detector calibration a (10 W) | 14 |
+| 8 | Detector calibration b (1 W) | 4 (b = 0.4) |
+| 9 | Detector calibration a (10 W) | 14 (a = 1.14) |
 | 10 | Power peak hold | 600 ms |
 | 11 | Tune target: stop at this SWR (0 = always the full search) | 1.05 |
 | 12 | Search effort: 1 quick, 2 normal, 3 thorough | 2 |
@@ -257,7 +255,7 @@ flash the file.
 **3. In the hex file:** the settings are 12 BCD coded bytes ("Cells") at
 address 0xEEE0, in the lines starting with `:10EEE000` (settings 1–8) and
 `:10EEF000` (9–12). Each setting is a pair of bytes: the value, written with
-its decimal digits, and `34`. Example: `07 34` = 7 ms relay pulse. After
+its decimal digits, and `34`. Example: `10 34` = 10 ms relay pulse. After
 changing a line its checksum (last byte) must be corrected – see
 [Settings](docs/SETTINGS.md#3-directly-in-the-hex-file); the editor does that
 for you.
@@ -273,8 +271,8 @@ the carrier is steady. Some antennas cannot be matched on some bands (the
 display then shows the best that was possible). Search effort 3 (setting 12)
 tries harder.
 
-**Tuning takes long.** A first tune usually takes 3 to 6 seconds (rarely up to
-15), a tune on a band used before about 2 seconds. Search effort 1 (setting
+**Tuning takes long.** A first tune usually takes 4 to 7 seconds (rarely up to
+15), a tune on a band used before about 2 to 3 seconds. Search effort 1 (setting
 12) is quicker but finds the best match less often.
 
 **The tuner tunes again and again.** Auto tune reacts to a changing SWR. If

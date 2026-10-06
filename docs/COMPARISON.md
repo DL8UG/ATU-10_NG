@@ -47,7 +47,7 @@ Both use the defaults of their hex files.
 |---|---|---|
 | Settings (Cells) | 10, only in the hex file | 12, in a menu on the tuner, in a browser editor or in the hex file |
 | Display off / power off after | 5 / 30 min | 5 / 30 min |
-| Relay pulse | 7 ms (8 ms below 3.8 V) | 10 ms, as the relay data sheets ask |
+| Relay pulse | 7 ms (8 ms below 3.8 V) | 10 ms (11 ms at 3.8 V and below), as the relay data sheets ask |
 | Min. / max. tune power | 1.0 W / 15 W, maximum checked on the forward power | 1.0 W / 15 W, maximum checked on the power the transmitter delivers (forward − reflected) |
 | Calibration a / b | 1.14 / 0.4 | 1.14 / 0.4 |
 | Power peak hold | 600 ms | 600 ms |

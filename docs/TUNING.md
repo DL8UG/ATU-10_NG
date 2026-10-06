@@ -196,5 +196,5 @@ balun 100 %, non-resonant dipoles 100 %, doublets 100 %, fixed loads 99.8 %.
 
 The tuning time counts relay pulses (3 x Cell 3 plus settling) and the
 measurements; the transmitter has to send a carrier for that long. The
-times are for the relay pulse of 10 ms (from 0.9.5); with 7 ms (up to
-0.9.4) they are about 20 % shorter.
+times are for the default relay pulse of 10 ms; with 7 ms (setting 3) they
+are about 20 % shorter.

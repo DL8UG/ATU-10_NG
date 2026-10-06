@@ -32,7 +32,7 @@ There are three ways, for the same 12 settings:
 |---|---|---|---|---|---|
 | 1 | Display off after | minutes without activity, 0 = never | 0..99 | 5 min | 0 (never), 1, 2, 3, 5, 10, 15, 20, 30, 45, 60, 99 |
 | 2 | Power off after | minutes without activity, 0 = never | 0..99 | 30 min | 0 (never), 5, 10, 15, 20, 30, 45, 60, 90, 99 |
-| 3 | Relay pulse | ms per relay pulse | 2..30 | 10 ms (up to 0.9.4: 7 ms) | 3 .. 10, 12, 15, 20, 25, 30 |
+| 3 | Relay pulse | ms per relay pulse | 2..30 | 10 ms | 3 .. 10, 12, 15, 20, 25, 30 |
 | 4 | Min. tune power | in 0.1 W | 1..99 | 1.0 W | 0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0 W |
 | 5 | Max. tune power | in W | 1..99 | 15 W | 3, 5, 8, 10, 12, 15, 20 W |
 | 6 | Auto tune: SWR change | tune again when the SWR changed by more than (value − 10) / 10; from 90 on practically never | 11..99 | 13 (0.3) | 0.1, 0.2, 0.3, 0.5, 1.0, 1.5, 2.0 |
@@ -55,7 +55,7 @@ Keep the button pressed while switching the tuner on, and keep holding it
 through the greeting, until **SETUP** appears. Then let go.
 
 - switched off: press and hold the button – after about 1½ s the greeting
-  appears, keep holding for another 3 s
+  appears, keep holding through the whole greeting (4 s)
 - when connecting the battery: hold the button while connecting it
 
 A short press that only happens to fall on the end of the greeting does not
@@ -158,7 +158,7 @@ everything else in the file stays byte for byte the same.
 
 The hex file is a text file in the Intel HEX format. The 12 settings are in
 two lines near the end, starting with `:10EEE000` and `:10EEF000`
-(address 0xEEE0 in the program memory). In the hex file of version 0.9.5:
+(address 0xEEE0 in the program memory). In the hex file of version 1.0.0:
 
 ```
 :10EEE0000534303410341034153413340134043400
@@ -211,7 +211,7 @@ bytes of the line after the `:` except the checksum; the checksum is what
 brings the low byte of that sum to zero (256 minus the low byte).
 
 **Example: relay pulse 10 ms → 12 ms** (setting 3, the third pair in the
-first line, `10` becomes `12`; the hex file of 0.9.5):
+first line, `10` becomes `12`; the hex file of 1.0.0):
 
 ```
 before:  :10EEE000 05 34 30 34 10 34 10 34 15 34 13 34 01 34 04 34 00
@@ -234,8 +234,8 @@ Rather than calculating by hand, use the [Cell editor](#2-cell-editor-in-the-bro
 or on the command line `tools/cells.py` from this repository:
 
 ```sh
-python3 tools/cells.py show ATU-10_NG_0_9_5.hex                    # list the settings
-python3 tools/cells.py set ATU-10_NG_0_9_5.hex my.hex 3=12 1=10    # change settings 3 and 1
+python3 tools/cells.py show ATU-10_NG_1_0_0.hex                    # list the settings
+python3 tools/cells.py set ATU-10_NG_1_0_0.hex my.hex 3=12 1=10    # change settings 3 and 1
 ```
 
 `cells.py set` takes the values in plain decimal (setting=value), writes the
