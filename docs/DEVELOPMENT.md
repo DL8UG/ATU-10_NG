@@ -130,8 +130,9 @@ state ring (16 slots); the rest is not used.
 firmware's `tune.c` and `meas_math.c`. Options: see the comment at the top of
 `sim.c`. `compare.py` summarizes runs per antenna type.
 
-For development only, `make build/sim_ref REF_DIR=...` builds another tuning
-algorithm against the same model for comparison.
+`make simcompare REF_DIR=<folder>` runs another search algorithm (`tune.c`,
+`swr.c` in that folder) against the same model and shows both side by side,
+e.g. `REF_DIR=tools/sim-fw16` for the search of FW 1.6.
 
 ## License
 

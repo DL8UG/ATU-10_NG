@@ -80,9 +80,9 @@ build/sim: $(SIM_SRC) tools/sim/glue_new.c tools/sim/model.h $(SIM_FW) $(HDR)
 	mkdir -p build
 	$(HOSTCC) $(SIMFLAGS) -Isrc -Itools/sim -o $@ $(SIM_SRC) tools/sim/glue_new.c $(SIM_FW) -lm
 
-# Development only: an older algorithm for comparison, from outside this
-# repository (tune.c / swr.c of the previous firmware line)
-REF_DIR ?= $(HOME)/Work/ATU-10-DL8UG/Firmware/ATU-10_FW_182_xc8
+# Another search algorithm for comparison (a folder with tune.c / swr.c), e.g.
+# make simcompare REF_DIR=tools/sim-fw16
+REF_DIR ?=
 build/sim_ref: $(SIM_SRC) tools/sim/glue_ref.c tools/sim/model.h
 	mkdir -p build
 	$(HOSTCC) $(SIMFLAGS) -w -funsigned-char -I$(REF_DIR) -Itools/sim -o $@ \
