@@ -151,6 +151,6 @@ initialization (`oled.c`), font (`font5x8.h`).
    e.g.
 
    ```sh
-   gh release create v0.9.7 dist/* \
-      --title "ATU-10 NG 0.9.7" --notes-file notes.md   # --prerelease for a beta
+   gh release create v1.0.1 dist/* \
+      --title "ATU-10 NG 1.0.1" --notes-file notes.md   # --prerelease for a beta
    ```

@@ -5,6 +5,7 @@ tag `vX.Y.Z` in this repository; the hex file is on its release page.
 
 ## Contents
 
+- [1.0.0](#100)
 - [0.9.6](#096)
 - [0.9.5](#095)
 - [0.9.4](#094)
@@ -13,6 +14,23 @@ tag `vX.Y.Z` in this repository; the hex file is on its release page.
 - [0.9.1](#091)
 - [0.9.0](#090)
 - [0.1.0](#010)
+
+## 1.0.0
+
+2026-10-06, [release](https://github.com/DL8UG/ATU-10_NG/releases/tag/v1.0.0), tested on the device
+
+Nothing new – and that is the news. The list of things to improve is
+empty: the tuner finds the best match, sleeps on 15 µA, keeps its settings
+and warns before the battery runs dry. When there is nothing left to make
+better, it is simply perfect – time for a 1.0.0.
+
+- the greeting says "NG 1.0.0"; apart from that, the firmware is the same
+  as 0.9.6, byte for byte
+- no new bugs added (we checked)
+- settings changed in the setup menu are kept
+
+Found something that is not perfect after all? Please tell us – that is
+what 1.0.1 is for.
 
 ## 0.9.6
 

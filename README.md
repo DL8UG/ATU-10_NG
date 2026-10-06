@@ -6,7 +6,7 @@ stable tuner – not the fastest tune.
 
 ![Display](docs/display-main.png)
 
-**Status: 0.9.6, tested on the device.** See the [timeline](#development-status) below.
+**Status: 1.0.0, tested on the device.** See the [timeline](#development-status) below.
 
 ## Contents
 
@@ -57,10 +57,10 @@ stable tuner – not the fastest tune.
 
 ## Download
 
-**Version 0.9.6**: on the
+**Version 1.0.0**: on the
 [latest release page](https://github.com/DL8UG/ATU-10_NG/releases/latest),
-the hex file `ATU-10_NG_0_9_6.hex`, or a zip with the hex file and the
-license. What is new: see the [changelog](CHANGELOG.md#096).
+the hex file `ATU-10_NG_1_0_0.hex`, or a zip with the hex file and the
+license. What is new: see the [changelog](CHANGELOG.md#100).
 
 All earlier versions stay available on the
 [releases page](https://github.com/DL8UG/ATU-10_NG/releases).
@@ -70,7 +70,7 @@ All earlier versions stay available on the
 1. Connect the tuner to the computer with a USB cable.
 2. A USB drive appears. Copy the `.hex` file onto it.
 3. Wait until the tuner restarts and shows the greeting, two pages of 2
-   seconds: "ATU-10 / HARDWARE BY N7DDC", then the version "NG 0.9.6 /
+   seconds: "ATU-10 / HARDWARE BY N7DDC", then the version "NG 1.0.0 /
    FIRMWARE BY DL8UG".
 
    ![Greeting, page 1](docs/display-greeting.png) ![Greeting, page 2](docs/display-greeting2.png)
@@ -300,6 +300,7 @@ not come on, switch the tuner off and on again.
 | 2026-10-03 | 0.9.4 | release, tested on the device | TUNE says why it waits (no RF, power too low or too high), SWR shown from 0.1 W, LOW BATT only after three low readings; review fixes; tests on GitHub on every push |
 | 2026-10-04 | 0.9.5 | release, tested on the device | battery warnings in steps (symbol blinks below 3.4 V, RECHARGE below 3.2 V, off below 3.0 V), LOW BATT at once when switched on with an empty battery, relay pulse 10 ms as the data sheets ask, Cell editor shows the firmware version; review fixes |
 | 2026-10-06 | 0.9.6 | release, tested on the device | less current while switched off, 15 µA (FW 1.6: 75 µA): display lines released, no input buffers on open lines |
+| 2026-10-06 | 1.0.0 | release, tested on the device | nothing left to improve: the same as 0.9.6, only the version number grew up |
 
 More: [Changelog](CHANGELOG.md) · [Settings in detail](docs/SETTINGS.md) · [How tuning works](docs/TUNING.md) · [Comparison with FW 1.6](docs/COMPARISON.md) · [Development](docs/DEVELOPMENT.md)
 

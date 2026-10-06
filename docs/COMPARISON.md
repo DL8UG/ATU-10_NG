@@ -43,7 +43,7 @@ against the same models of antennas and of the tuner.
 
 Both use the defaults of their hex files.
 
-| | FW 1.6 | ATU-10 NG 0.9.6 |
+| | FW 1.6 | ATU-10 NG 1.0.0 |
 |---|---|---|
 | Settings (Cells) | 10, only in the hex file | 12, in a menu on the tuner, in a browser editor or in the hex file |
 | Display off / power off after | 5 / 30 min | 5 / 30 min |
