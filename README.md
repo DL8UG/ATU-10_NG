@@ -49,10 +49,10 @@ stable tuner – not the fastest tune.
 - **Settings in three ways:** in a menu on the tuner, with an editor in your
   browser, or directly in the hex file.
 - **Keeps its setting** after switching off, a reset or a battery change.
-- **Hardly any current while switched off:** about 15 µA (75 µA before
-  0.9.6). Even after switching off at LOW BATT, the tuner survives a few
-  weeks in a drawer without deep discharge. Thanks to DL8DTL (Jörg) for his
-  detailed measurements!
+- **Hardly any current while switched off:** about 15 µA (FW 1.6: 75 µA).
+  Even after switching off at LOW BATT, the tuner survives a few weeks in a
+  drawer without deep discharge. Thanks to DL8DTL (Jörg) for his detailed
+  measurements!
 - **Can always be updated** over USB, to any other firmware too.
 
 ## Download
@@ -299,7 +299,7 @@ not come on, switch the tuner off and on again.
 | 2026-10-03 | 0.9.3 | release, tested on the device | review fixes for short carriers: new search after a change of band or bypass, switching off ends an interrupted search, no endless tunes on carriers too short to measure |
 | 2026-10-03 | 0.9.4 | release, tested on the device | TUNE says why it waits (no RF, power too low or too high), SWR shown from 0.1 W, LOW BATT only after three low readings; review fixes; tests on GitHub on every push |
 | 2026-10-04 | 0.9.5 | release, tested on the device | battery warnings in steps (symbol blinks below 3.4 V, RECHARGE below 3.2 V, off below 3.0 V), LOW BATT at once when switched on with an empty battery, relay pulse 10 ms as the data sheets ask, Cell editor shows the firmware version; review fixes |
-| 2026-10-06 | 0.9.6 | release, tested on the device | current while switched off 15 µA instead of 75 µA (display lines released, no input buffers on open lines) |
+| 2026-10-06 | 0.9.6 | release, tested on the device | less current while switched off, 15 µA (FW 1.6: 75 µA): display lines released, no input buffers on open lines |
 
 More: [Changelog](CHANGELOG.md) · [Settings in detail](docs/SETTINGS.md) · [How tuning works](docs/TUNING.md) · [Comparison with FW 1.6](docs/COMPARISON.md) · [Development](docs/DEVELOPMENT.md)
 

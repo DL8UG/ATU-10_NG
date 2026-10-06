@@ -22,7 +22,7 @@ tag `vX.Y.Z` in this repository; the hex file is on its release page.
   of driven low (with the display module switched on its ground side,
   current flowed through its pull-ups), and the display lines and the lines
   of the external interface get no input buffer while they may be open;
-  measured: 15 µA instead of 75 µA, so even after LOW BATT the tuner
+  measured: 15 µA (FW 1.6: 75 µA), so even after LOW BATT the tuner
   survives a few weeks in a drawer without deep discharge. Thanks to
   DL8DTL (Jörg) for his detailed measurements
 

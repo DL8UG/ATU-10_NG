@@ -36,12 +36,14 @@ against the same models of antennas and of the tuner.
 - With a QRP rig that is no 50 Ohm source, FW 1.6 waited for minutes in the
   model in about 3 of 10 cases (on average almost 2 minutes) and then gave
   up; NG did not.
+- Switched off, NG draws about 15 µA, FW 1.6 75 µA (measured on the
+  device).
 
 ## Settings and behaviour
 
 Both use the defaults of their hex files.
 
-| | FW 1.6 | ATU-10 NG 0.9.5 |
+| | FW 1.6 | ATU-10 NG 0.9.6 |
 |---|---|---|
 | Settings (Cells) | 10, only in the hex file | 12, in a menu on the tuner, in a browser editor or in the hex file |
 | Display off / power off after | 5 / 30 min | 5 / 30 min |
@@ -60,6 +62,11 @@ Both use the defaults of their hex files.
 | Auto tune | SWR above 1.20 and changed by more than 0.3 | the same, and only after 4 steady measurements in a row and not within 3 s after a tune |
 | Detector above its range | "OVERLOAD" shown, the tune goes on | 64 such settings in a row stop the tune (OVERLOAD) |
 | Battery: switched off at | 3.4 V | 3.0 V (symbol blinks below 3.4 V, RECHARGE below 3.2 V) |
+| Current while switched off | 75 µA | 15 µA |
+
+The current while switched off was measured on the device by DL8DTL (Jörg).
+With 15 µA, a tuner switched off at LOW BATT survives a few weeks in a
+drawer without deep discharge.
 
 ## The search
 
