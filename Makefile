@@ -130,8 +130,10 @@ docs: build/sim build/test_display
 	python3 tools/sim/plot.py screen build/screen_main.pbm $(DOCS)/display-main.png
 	python3 tools/sim/plot.py screen build/screen_greeting.pbm $(DOCS)/display-greeting.png
 	python3 tools/sim/plot.py screen build/screen_greeting2.pbm $(DOCS)/display-greeting2.png
+	python3 tools/sim/plot.py screen build/screen_relays.pbm $(DOCS)/display-relays.png
+	python3 tools/sim/plot.py screen build/screen_relays_tune.pbm $(DOCS)/display-relays-tune.png
 	$(HOSTCC) -O2 -std=c99 -D_DEFAULT_SOURCE -Isrc -Itests/host -o build/render_menu tests/render_menu.c \
 	   src/display.c src/text.c src/cells.c
 	build/render_menu
-	for m in setup relay relay2 save hex exit; do \
+	for m in setup relay relay2 display save hex exit; do \
 	   python3 tools/sim/plot.py screen build/menu_$$m.pbm $(DOCS)/menu-$$m.png; done

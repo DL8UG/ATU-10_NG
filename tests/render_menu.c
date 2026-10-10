@@ -52,6 +52,9 @@ int main(void) {
    cfg[CFG_RELAY_MS] = next_value(CFG_RELAY_MS, cfg[CFG_RELAY_MS]);
    show(2);                          // after a short press: 12 ms
    dump("relay2");
+   cfg[CFG_LAYOUT] = 1;
+   show(CFG_LAYOUT);                 // the main screen: relay view
+   dump("display");
    show(PAGE_SAVE);
    dump("save");
    show(PAGE_HEX);
