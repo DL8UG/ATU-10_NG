@@ -158,23 +158,24 @@ int main(void) {
    // one column before the cap of the small battery
    for(int y = 0; y < 32; y++) CHECK(!px(126, y) && !px(127, y));
    for(int y = 0; y < 16; y++) CHECK(!px(123, y) && !px(124, y) && !px(125, y));
-   // small battery: frame x 110..123 rows 20..29, behind the SWR value
-   // (x 60..107, one free column at 108, 109), filled from the left
-   for(int y = 16; y < 32; y++) CHECK(!px(108, y) && !px(109, y));
-   CHECK(px(110, 20) && px(123, 29) && px(124, 23) && px(125, 26) && !px(124, 22));
+   // small battery: frame x 113..123 rows 22..28, cap x 124, behind the
+   // SWR value (x 60..107), filled from the left
+   for(int y = 16; y < 32; y++) for(int x = 108; x < 113; x++) CHECK(!px(x, y));
+   for(int x = 113; x <= 125; x++) CHECK(!px(x, 21) && !px(x, 29));
+   CHECK(px(113, 22) && px(123, 28) && px(124, 24) && px(124, 26) && !px(124, 23) && !px(125, 25));
    {
       int cols[4];
       const uint16_t mv[4] = {3000, 3600, 4200, 0};
       for(int k = 0; k < 4; k++) {
          disp_bat_small(mv[k]);
          cols[k] = 0;
-         for(int x = 112; x <= 121; x++) cols[k] += px(x, 24);
-         for(int x = 112; x <= 121; x++)                 // from the left
-            CHECK_EQ(px(x, 24), x - 112 < cols[k]);
+         for(int x = 115; x <= 121; x++) cols[k] += px(x, 25);
+         for(int x = 115; x <= 121; x++)                 // from the left
+            CHECK_EQ(px(x, 25), x - 115 < cols[k]);
       }
       CHECK_EQ(cols[0], 0);
-      CHECK_EQ(cols[1], 5);
-      CHECK_EQ(cols[2], 10);
+      CHECK_EQ(cols[1], 3);
+      CHECK_EQ(cols[2], 7);
       CHECK_EQ(cols[3], 0);                      // blinking: nothing
       for(int y = 16; y < 32; y++) for(int x = 110; x < 128; x++) CHECK(!px(x, y));
       disp_bat_small(3400);

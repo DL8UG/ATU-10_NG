@@ -113,7 +113,7 @@ static void check_line2(void) {
    if(!OLED_PWR) return;             // switched off meanwhile: nothing shown
    if(mode == M_OVERLOAD || mode == M_BATT_OVL) return;   // OVERLOAD stays while the carrier is too strong
    for(int y = 16; y < 32; y++)                       // rows 16, 17: between the lines
-      for(int x = 0; x < (mode == M_RELAYS ? 110 : 115); x++) {   // up to the battery
+      for(int x = 0; x < (mode == M_RELAYS ? 113 : 115); x++) {   // up to the battery
          int gap = y < 18 || (x >= 36 && x <= 41) || (x >= 54 && x <= 59) || (x >= 108);
          if(gap && (fb[(y / 8) * 128 + x] >> (y % 8) & 1)) dirty++;
       }
@@ -629,7 +629,7 @@ static void checkpoint_variant(uint32_t t) {
       CHECK(text_shows(0, 0, 100, "5.0W"));
       CHECK(text_shows(0, 0, 58, "0.32uH") && text_shows(0, 8, 58, "2937pF"));
       CHECK(text_shows(0, 0, 0, "L") && text_shows(0, 8, 0, "C"));
-      CHECK(pix(110, 20) && pix(119, 24) && !pix(120, 24));  // 4.0 V: 8 of 10 columns
+      CHECK(pix(113, 22) && pix(119, 25) && !pix(120, 25));  // 4.0 V: 5 of 7 columns
    }
    if(mode == M_RELAYS && t == 3 * MIN + 2000) {            // bypass: all cells empty
       CHECK_EQ(drawn_setting(), 0);
