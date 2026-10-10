@@ -133,8 +133,8 @@ static int drawn_setting(void) {
       l |= pix(x + 2, 3) << i;
       c |= pix(x + 2, 11) << i;
    }
-   if(text_shows(0, 8, 100, "  TX")) sw = 1;
-   else if(text_shows(0, 8, 100, " ANT")) sw = 0;
+   if(text_shows(0, 8, 100, " ANT")) sw = 1;
+   else if(text_shows(0, 8, 100, "  TX")) sw = 0;
    else return -1;
    return sw << 14 | c << 7 | l;
 }

@@ -83,7 +83,8 @@ static void show_battery(void) {               // symbol, or the small one in th
 }
 
 // Relay view (Cell 13): the relays as two rows of 7 cells (L, C, the
-// smallest left), their sum, and the side the capacitor is on
+// smallest left), their sum, and the side the capacitor is on (sw 1: the
+// antenna side, found on the device with a 4 kOhm load)
 static const uint16_t l_10nh[7] = {10, 22, 45, 100, 220, 450, 1000};   // 0.01 uH
 // the "2200 pF" relay switches 1000 + 1000 + 220 pF (C1, C3, C74 in the
 // schematic traced by VK3PE)
@@ -109,7 +110,7 @@ static void show_relays(const relays_t *r) {
    e = fmt_num(buf, c, 0, 4);
    e[0] = 'p'; e[1] = 'F'; e[2] = 0;
    disp_small(8, 58, buf);
-   disp_small(8, 100, r->sw ? "  TX" : " ANT");
+   disp_small(8, 100, r->sw ? " ANT" : "  TX");
 }
 
 static void show_screen(void) {

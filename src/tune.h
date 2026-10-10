@@ -12,7 +12,7 @@
 #define C_MAX 127                  // 7 capacitor relays
 
 typedef struct {
-   uint8_t l, c, sw;               // sw: 1 = capacitor on the input side
+   uint8_t l, c, sw;               // sw: 1 = capacitor on the antenna side
 } relays_t;
 
 enum {
