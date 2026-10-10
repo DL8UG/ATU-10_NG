@@ -5,6 +5,7 @@ tag `vX.Y.Z` in this repository; the hex file is on its release page.
 
 ## Contents
 
+- [Not released yet](#not-released-yet)
 - [1.0.0](#100)
 - [0.9.6](#096)
 - [0.9.5](#095)
@@ -14,6 +15,23 @@ tag `vX.Y.Z` in this repository; the hex file is on its release page.
 - [0.9.1](#091)
 - [0.9.0](#090)
 - [0.1.0](#010)
+
+## Not released yet
+
+- new: relay view (setting 13, DISPLAY in the setup menu). The upper half of
+  the display shows the L and C relays as cells, the sum of the coils and
+  capacitors switched in, the power and the side the capacitors are on (TX
+  or ANT); while tuning, the best setting found so far. The lower line stays
+  as it is, the battery is a small symbol behind the SWR value. The classic
+  screen stays the default.
+- setting 13 is saved in the menu in a block of its own: an update from
+  1.0.0 keeps the menu values of settings 1 to 12
+- the Cell editor and `cells.py` know setting 13 (the editor shows it for
+  firmware 1.1.0 and later)
+- the capacitor relay SW: measured on the device with 120 Ohm and 4 kOhm,
+  SW 1 puts the capacitors on the antenna side. The simulator had the two
+  sides swapped; corrected, the results hardly change (numbers in
+  docs/TUNING.md and docs/COMPARISON.md updated)
 
 ## 1.0.0
 

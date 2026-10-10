@@ -5,7 +5,7 @@
 > device does it. Editing the hex file still works as before, and a browser
 > editor makes that easy too.
 
-There are three ways, for the same 12 settings:
+There are three ways, for the same 13 settings:
 
 1. the setup menu on the tuner – quick, anywhere
 2. the Cell editor in the browser – changes the hex file, with explanations
@@ -13,7 +13,7 @@ There are three ways, for the same 12 settings:
 
 ## Contents
 
-- [The 12 settings](#the-12-settings)
+- [The 13 settings](#the-13-settings)
 - [1. Setup menu on the tuner](#1-setup-menu-on-the-tuner)
   - [Opening the menu](#opening-the-menu)
   - [Changing a setting](#changing-a-setting)
@@ -26,7 +26,7 @@ There are three ways, for the same 12 settings:
   - [The values are written as decimal digits (BCD)](#the-values-are-written-as-decimal-digits-bcd)
   - [The checksum at the end of each line](#the-checksum-at-the-end-of-each-line)
 
-## The 12 settings
+## The 13 settings
 
 | # | Setting | Meaning | Range | Default | Values in the menu |
 |---|---|---|---|---|---|
@@ -42,10 +42,14 @@ There are three ways, for the same 12 settings:
 | 10 | Power peak hold | in 10 ms | 1..99 | 600 ms | 100, 200, 300, 400, 600, 800, 990 ms |
 | 11 | Tune target | stop at SWR 1 + value / 100; 0 = always the full search | 0..99 | 5 (SWR 1.05) | full, 1.02, 1.03, 1.05, 1.08, 1.10, 1.15, 1.20 |
 | 12 | Search effort | 1 quick, 2 normal, 3 thorough | 1..3 | 2 (normal) | quick, normal, thorough |
+| 13 | Display | main screen: 0 = classic (power and SWR big), 1 = relays (the L and C relays, see [Relay view](../README.md#relay-view)) | 0..1 | 0 (classic) | classic, relays |
 
 Settings 8 and 9 calibrate the power reading of the detector diodes
 (P = a·V² + b·V); the defaults fit the BAT41 diodes of the ATU-10. The tuning
 itself compares reflected to forward power and hardly depends on them.
+
+Setting 13 exists from firmware 1.1.0 on. Older hex files have a spare byte
+`00` in its place, which means the classic screen.
 
 ## 1. Setup menu on the tuner
 
@@ -70,7 +74,7 @@ units:
 
 | ![Setting 3, 10 ms](menu-relay.png) | ![after a short press: 12 ms](menu-relay2.png) |
 |---|---|
-| setting 3 of 12, relay pulse 10 ms | after a short press: 12 ms |
+| setting 3 of 13, relay pulse 10 ms | after a short press: 12 ms |
 
 | Button | Action |
 |---|---|
@@ -78,13 +82,17 @@ units:
 | **long press** (¼ s) | next setting |
 | no press for 60 s | the menu ends **without saving** |
 
+The last setting chooses the main screen:
+
+![Setting 13: relay view](menu-display.png)
+
 The menu offers the values listed in the table above. A value set in the hex
 file that is not in the list (for example 13 ms relay pulse) is shown as it
 is; the next short press goes to the next value of the list.
 
 ### The last three pages: SAVE, HEX VALUES, EXIT
 
-After setting 12 a long press leads to three more pages. On each of them a
+After setting 13 a long press leads to three more pages. On each of them a
 **short press** does what the page says; a long press goes on to the next page
 (after EXIT back to setting 1).
 
@@ -92,11 +100,11 @@ After setting 12 a long press leads to three more pages. On each of them a
 |---|---|---|
 | **SAVE**: keeps the values as shown and leaves the menu | **HEX VALUES**: back to the values of the hex file | **EXIT**: leaves the menu, changes are dropped |
 
-**SAVE** stores the 12 values in the tuner's data EEPROM. They apply from now
+**SAVE** stores the 13 values in the tuner's data EEPROM. They apply from now
 on, also after switching off and after a battery change.
 
 **HEX VALUES** deletes the values that were saved in the menu. From then on
-the tuner uses the 12 settings ("Cells") that are written in the firmware hex
+the tuner uses the 13 settings ("Cells") that are written in the firmware hex
 file again – for a hex file as published, these are the defaults in the table
 above. In detail:
 
@@ -124,6 +132,10 @@ file had at that moment (a checksum of them).
 | a hex file with **other** Cells flashed (edited Cells, or a version with other defaults) | the Cells of the new hex file; the saved menu values are ignored |
 | HEX VALUES chosen in the menu | the Cells of the hex file |
 
+Settings 1 to 12 and setting 13 are checked separately (setting 13 came
+with 1.1.0). An update from 1.0.0 therefore keeps the menu values of
+settings 1 to 12; setting 13 starts with the value of the hex file.
+
 The tuner keeps its settings in the data EEPROM. Whether the USB programmer
 erases that memory when a new hex file is flashed is not documented; if it
 does, the values of the hex file apply after flashing as well.
@@ -145,9 +157,12 @@ file that runs in any browser, offline – nothing is uploaded anywhere.
    highlighted (green in the picture: settings 1 and 3). An invalid value
    blocks saving.
 4. **Save hex file** writes the file (into the downloads folder, under the
-   same name). *Default values* sets all 12 to the defaults, *Undo changes*
+   same name). *Default values* sets all settings to the defaults, *Undo changes*
    goes back to the values of the loaded file.
 5. Flash the saved file as usual: copy it onto the tuner's USB drive.
+
+The editor reads the firmware version from the hex file and shows only the
+settings that version has: setting 13 from 1.1.0 on.
 
 The editor changes only the two lines with the Cells and their checksums;
 everything else in the file stays byte for byte the same.
@@ -156,7 +171,7 @@ everything else in the file stays byte for byte the same.
 
 ### Where the settings are
 
-The hex file is a text file in the Intel HEX format. The 12 settings are in
+The hex file is a text file in the Intel HEX format. The 13 settings are in
 two lines near the end, starting with `:10EEE000` and `:10EEF000`
 (address 0xEEE0 in the program memory). In the hex file of version 1.0.0:
 
@@ -182,8 +197,9 @@ start of the line
 - Each setting is a **pair of bytes: the value, then `34`**. Only change the
   value; the `34` must stay (together the two bytes form a "RETLW" instruction
   of the processor).
-- The first line holds settings 1 to 8, the second line settings 9 to 12 and
-  then four spare pairs `00 34`, which must stay as they are.
+- The first line holds settings 1 to 8, the second line settings 9 to 13 and
+  then three spare pairs `00 34`, which must stay as they are. (Up to 1.0.0
+  setting 13 was a spare pair as well; `00` means the classic screen.)
 
 ### The values are written as decimal digits (BCD)
 

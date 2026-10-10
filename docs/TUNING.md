@@ -40,18 +40,23 @@ parallel. A relay (SW) puts the capacitors either on the transmitter side or
 on the antenna side.
 
 ```
- SW 0: capacitor on the antenna side          SW 1: capacitor on the transmitter side
+ SW 0: capacitor on the transmitter side      SW 1: capacitor on the antenna side
 
- TX ──[ L ]──┬── antenna                      TX ──┬──[ L ]── antenna
-             │                                     │
-            ═╪═ C                                 ═╪═ C
-             │                                     │
- GND ────────┴──                              GND ─┴──────────
+ TX ──┬──[ L ]── antenna                      TX ──[ L ]──┬── antenna
+      │                                                   │
+     ═╪═ C                                               ═╪═ C
+      │                                                   │
+ GND ─┴──────────                             GND ────────┴──
 ```
 
 - 7 coil relays: 0.1, 0.22, 0.45, 1.0, 2.2, 4.5, 10 µH (0 .. 18.5 µH, 128 steps)
-- 7 capacitor relays: 22, 47, 100, 220, 470, 1000, 2200 pF (0 .. 4.06 nF, 128 steps)
+- 7 capacitor relays: 22, 47, 100, 220, 470, 1000, 2200 pF (0 .. 4.06 nF, 128 steps;
+  on the board the "2200 pF" relay switches 1000 + 1000 + 220 pF)
 - with SW: 2 x 128 x 128 = 32768 possible settings
+
+A load above 50 Ohm needs the capacitor on the antenna side, a load below
+50 Ohm on the transmitter side. Which relay position is which was checked on
+the device with 120 Ohm and 4 kOhm resistors on 40 m (both tune with SW 1).
 
 The relays are latching: they keep their setting without power.
 
@@ -182,14 +187,14 @@ short wire); there the tuner finds the best that is possible.
 | Scenario | Matchable cases | reached SWR ≤ 1.5 | within 0.05 of the best possible | mean tuning time |
 |---|---|---|---|---|
 | ideal measurement | 768 | 100 % | 100 % | 5.7 s |
-| 3 mV ADC noise | 3840 | 100 % | 100 % | 5.8 s |
-| hard: noise, unsteady carrier (3 %), QRP rig with 10 Ohm source resistance, 5 % component tolerance, detector calibration off | 3860 | 99.2 % | 99.0 % | 6.4 s |
-| small QSY (1 to 3 %) after a tune | 2652 | 100 % | 99.8 % | 2.9 s |
-| band changes (20 ↔ 30 m, 40 ↔ 20 m, ...) with the memory filled | 2008 | 100 % | 100 % | 2.8 s (2.3 s after the first round) |
+| 3 mV ADC noise | 3840 | 99.9 % | 99.9 % | 5.8 s |
+| hard: noise, unsteady carrier (3 %), QRP rig with 10 Ohm source resistance, 5 % component tolerance, detector calibration off | 3860 | 99.2 % | 99.2 % | 6.4 s |
+| small QSY (1 to 3 %) after a tune | 2652 | 99.9 % | 99.8 % | 2.9 s |
+| band changes (20 ↔ 30 m, 40 ↔ 20 m, ...) with the memory filled | 2008 | 100 % | 99.9 % | 2.8 s (2.3 s after the first round) |
 
 By antenna type (3 mV noise, matchable cases within 0.05 of the best possible):
 random wire 100 %, EFHW 100 %, resonant dipoles 100 %, dipoles with 1:4
-balun 100 %, non-resonant dipoles 100 %, doublets 100 %, fixed loads 99.8 %.
+balun 100 %, non-resonant dipoles 100 %, doublets 100 %, fixed loads 99.4 %.
 (100 % is rounded: a single case in a few thousand may miss.)
 
 ![Tuning time](tuning-time.svg)

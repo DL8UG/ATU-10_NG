@@ -18,6 +18,7 @@ stable tuner – not the fastest tune.
   - [Button](#button)
   - [Tuning](#tuning)
   - [Display](#display)
+  - [Relay view](#relay-view)
   - [LEDs](#leds)
   - [Battery](#battery)
   - [Switching off by itself](#switching-off-by-itself)
@@ -34,7 +35,7 @@ stable tuner – not the fastest tune.
 - **Finds the best match, not the first one.** The tuner looks at the whole
   range of relay settings first and then refines the most promising ones. In
   the simulator it reaches the best possible SWR (within 0.05) in practically
-  all cases that can be matched at all (over 99.9 %), with random wires, EFHWs, dipoles,
+  all cases that can be matched at all (99.9 %), with random wires, EFHWs, dipoles,
   doublets and more. [How tuning works](docs/TUNING.md)
 - **Differences to FW 1.6**, the original firmware: settings, search and
   tuning results side by side. Both search algorithms were run in the
@@ -160,6 +161,28 @@ the middle of a search, it goes on with the next carrier (SWR above 1.2).
 | POWER OFF | the tuner switches off (button held, see [Button](#button)) |
 | WDT RST, STACK RST | the firmware restarted itself after a fault (please report it) |
 
+### Relay view
+
+Instead of the big power line the display can show the relays: setting 13
+(DISPLAY in the setup menu) = RELAYS.
+
+![Relay view](docs/display-relays.png)
+
+- **L** and **C**: one cell per relay, the smallest coil or capacitor on the
+  left (L 0.1, 0.22, 0.45, 1, 2.2, 4.5, 10 µH; C 22, 47, 100, 220, 470,
+  1000, 2220 pF). A filled cell is a relay that is on.
+- Next to the cells the sum of the coils and capacitors switched in. These
+  are the nominal values, without stray capacitance, wiring and tolerances.
+- Top right the power, below it the side the capacitors are on: **TX**
+  (transmitter side) or **ANT** (antenna side). With L = 0 or C = 0 the side
+  makes no difference.
+- The lower line works as in the classic view (SWR, TUNE, all messages). The
+  battery is the small symbol behind the SWR value.
+- While tuning, the cells show the best setting found so far, together with
+  the SWR so far.
+
+![Relay view while tuning](docs/display-relays-tune.png)
+
 ### LEDs
 
 Every 3 seconds a LED blinks briefly and shows the battery: **green** above
@@ -229,10 +252,11 @@ For a transceiver that controls the tuner through the start and key lines:
 | 10 | Power peak hold | 600 ms |
 | 11 | Tune target: stop at this SWR (0 = always the full search) | 1.05 |
 | 12 | Search effort: 1 quick, 2 normal, 3 thorough | 2 |
+| 13 | Display: classic, or the [relay view](#relay-view) | classic |
 
 **1. Menu on the tuner:** keep the button pressed when switching on, through
 the greeting, until SETUP appears. A short press changes the value, a long
-press goes to the next setting. After setting 12 come three pages, each
+press goes to the next setting. After setting 13 come three pages, each
 done with a short press:
 
 - **SAVE** – keep the values and leave the menu
@@ -252,9 +276,9 @@ flash the file.
 
 ![Cell editor](docs/cell-editor.png)
 
-**3. In the hex file:** the settings are 12 BCD coded bytes ("Cells") at
+**3. In the hex file:** the settings are 13 BCD coded bytes ("Cells") at
 address 0xEEE0, in the lines starting with `:10EEE000` (settings 1–8) and
-`:10EEF000` (9–12). Each setting is a pair of bytes: the value, written with
+`:10EEF000` (9–13). Each setting is a pair of bytes: the value, written with
 its decimal digits, and `34`. Example: `10 34` = 10 ms relay pulse. After
 changing a line its checksum (last byte) must be corrected – see
 [Settings](docs/SETTINGS.md#3-directly-in-the-hex-file); the editor does that

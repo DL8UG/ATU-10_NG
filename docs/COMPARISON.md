@@ -29,12 +29,12 @@ against the same models of antennas and of the tuner.
 - In the simulator, NG reaches SWR 1.5 or better in practically every case
   where that is possible at all (99.2 to 100 %); FW 1.6 in about 61 %.
 - FW 1.6 stops at SWR 1.20. Even that target it reaches in only 52 % of the
-  cases where it is possible; NG in 99.8 %.
+  cases where it is possible; NG in 99.7 %.
 - FW 1.6 is faster (about 1.5 s against 5.8 s for a first tune), because it
   stops early, often on the slope of a valley. Back on a band used before,
   NG needs about 2 to 3 s.
 - With a QRP rig that is no 50 Ohm source, FW 1.6 waited for minutes in the
-  model in about 3 of 10 cases (on average almost 2 minutes) and then gave
+  model in about 3 of 10 cases (on average about 3 minutes) and then gave
   up; NG did not.
 - Switched off, NG draws about 15 µA, FW 1.6 75 µA (measured on the
   device).
@@ -137,13 +137,14 @@ the percentages refer to these cases.
 
 | Scenario | Matchable cases | reached SWR ≤ 1.5<br>FW 1.6 / NG | within 0.05 of the best possible<br>FW 1.6 / NG | mean tuning time<br>FW 1.6 / NG |
 |---|---|---|---|---|
-| ideal measurement | 768 | 62.8 % / **100 %** | 45.3 % / **100 %** | 1.5 s / 5.7 s |
-| 3 mV ADC noise | 3840 | 61.2 % / **100 %** | 43.7 % / **100 %** | 1.5 s / 5.8 s |
-| hard: noise, unsteady carrier (3 %), QRP rig with 10 Ohm source resistance, 5 % component tolerance, detector calibration off | 3860 | 52.7 % / **99.2 %** | 38.4 % / **99.0 %** | 34.9 s ¹ / 6.4 s |
-| small QSY (1 to 3 %) after a tune | 2652 | 62.6 % / **100 %** | 44.9 % / **99.8 %** | 1.5 s / 2.9 s |
-| band changes (20 ↔ 30 m, 40 ↔ 20 m, ...) | 2008 | 64.4 % / **100 %** | 40.5 % / **100 %** | 1.4 s / 2.8 s ² |
+| ideal measurement | 768 | 62.9 % / **100 %** | 45.6 % / **100 %** | 1.5 s / 5.7 s |
+| 3 mV ADC noise | 3840 | 61.5 % / **99.9 %** | 43.9 % / **99.9 %** | 1.5 s / 5.8 s |
+| hard: noise, unsteady carrier (3 %), QRP rig with 10 Ohm source resistance, 5 % component tolerance, detector calibration off | 3860 | 53.1 % / **99.2 %** | 38.3 % / **99.2 %** | 61.3 s ¹ / 6.4 s |
+| small QSY (1 to 3 %) after a tune | 2652 | 62.7 % / **99.9 %** | 44.9 % / **99.8 %** | 1.5 s / 2.9 s |
+| band changes (20 ↔ 30 m, 40 ↔ 20 m, ...) | 2008 | 64.5 % / **100 %** | 40.7 % / **99.9 %** | 1.4 s / 2.8 s ² |
 
-¹ In 1374 of 4680 cases FW 1.6 waited up to about 150 s and then gave up
+¹ In 1366 of 4680 cases FW 1.6 waited, about 3 minutes on average and up
+to 9 minutes, and then gave up
 without a result: at a strong mismatch the QRP rig (5 W) drives the forward
 power above 15 W, and FW 1.6 waits for the forward power to come down below
 its maximum tune power. NG checks the power the transmitter delivers instead.
@@ -153,10 +154,10 @@ The other cases took 3.2 s on average.
 searches anew each time.
 
 FW 1.6's own target, SWR 1.20 (3 mV noise, cases where 1.20 is possible):
-FW 1.6 reached it in 52.2 %, NG in 99.8 % of 2605 cases.
+FW 1.6 reached it in 52.4 %, NG in 99.7 % of 2605 cases.
 
-Case by case (3 mV noise): NG ended better in 2943 of 4680 cases, worse in
-6 and equal (within 0.02) in 1731.
+Case by case (3 mV noise): NG ended better in 2941 of 4680 cases, worse in
+7 and equal (within 0.02) in 1732.
 
 ### By antenna type
 
@@ -164,13 +165,13 @@ Case by case (3 mV noise): NG ended better in 2943 of 4680 cases, worse in
 
 | Antenna type | reached SWR ≤ 1.5<br>FW 1.6 / NG | within 0.05 of the best possible<br>FW 1.6 / NG |
 |---|---|---|
-| random wire with 9:1 unun | 66.3 % / 100 % | 47.7 % / 100 % |
-| EFHW for 40 m with 49:1 transformer | 78.8 % / 100 % | 35.4 % / 100 % |
-| resonant dipoles on coax | 73.7 % / 100 % | 56.6 % / 100 % |
-| dipoles with 1:4 balun at the feed point | 64.6 % / 100 % | 38.5 % / 100 % |
-| non-resonant dipoles on coax | 65.0 % / 100 % | 55.2 % / 100 % |
-| doublets on ladder line with 1:4 balun | 30.3 % / 100 % | 25.9 % / 100 % |
-| fixed loads 5 to 2000 Ohm | 53.5 % / 99.8 % | 34.7 % / 99.8 % |
+| random wire with 9:1 unun | 66.8 % / 100 % | 48.7 % / 100 % |
+| EFHW for 40 m with 49:1 transformer | 78.8 % / 100 % | 34.6 % / 100 % |
+| resonant dipoles on coax | 72.2 % / 100 % | 54.1 % / 100 % |
+| dipoles with 1:4 balun at the feed point | 66.9 % / 100 % | 41.1 % / 100 % |
+| non-resonant dipoles on coax | 65.3 % / 100 % | 55.0 % / 100 % |
+| doublets on ladder line with 1:4 balun | 29.4 % / 100 % | 25.1 % / 100 % |
+| fixed loads 5 to 2000 Ohm | 55.6 % / 99.4 % | 37.0 % / 99.4 % |
 
 ### What the numbers say
 
