@@ -143,7 +143,7 @@ int main(void) {
    disp_big(LINE2, 0, "SWR");
    disp_big(LINE2, 42, "=");
    disp_big(LINE2, 60, "1.05");
-   disp_bar(3900);
+   disp_bat_small(3900);
    dump("relays");
    // cells: filled for a set bit, frame only else; 7 columns apart
    for(int i = 0; i < 7; i++) {
@@ -153,26 +153,31 @@ int main(void) {
       CHECK_EQ(px(7 + 7 * i + 2, 11), (0x2C >> i) & 1);
    }
    for(int x = 0; x < 128; x++) CHECK(!px(x, 0) || x < 7 || x >= 56);   // cells start at row 1
-   // the text ends before the bar, one column free
-   for(int y = 0; y < 32; y++) CHECK(!px(124, y) && !px(125, y));
-   // bar: 0..32 rows, both columns the same; nothing else changes
+   // columns 126, 127 stay dark: the display shows x 0..125 only (more
+   // wraps around to the left edge); the power and TX / ANT end at x 122,
+   // one column before the cap of the small battery
+   for(int y = 0; y < 32; y++) CHECK(!px(126, y) && !px(127, y));
+   for(int y = 0; y < 16; y++) CHECK(!px(123, y) && !px(124, y) && !px(125, y));
+   // small battery: frame x 110..123 rows 20..29, behind the SWR value
+   // (x 60..107, one free column at 108, 109), filled from the left
+   for(int y = 16; y < 32; y++) CHECK(!px(108, y) && !px(109, y));
+   CHECK(px(110, 20) && px(123, 29) && px(124, 23) && px(125, 26) && !px(124, 22));
    {
-      int rows[4], k = 0;
+      int cols[4];
       const uint16_t mv[4] = {3000, 3600, 4200, 0};
-      for(k = 0; k < 4; k++) {
-         disp_bar(mv[k]);
-         rows[k] = 0;
-         for(int y = 0; y < 32; y++) {
-            CHECK_EQ(px(126, y), px(127, y));
-            rows[k] += px(126, y);
-         }
-         CHECK(rows[k] == 0 || px(126, 31));     // from the bottom
+      for(int k = 0; k < 4; k++) {
+         disp_bat_small(mv[k]);
+         cols[k] = 0;
+         for(int x = 112; x <= 121; x++) cols[k] += px(x, 24);
+         for(int x = 112; x <= 121; x++)                 // from the left
+            CHECK_EQ(px(x, 24), x - 112 < cols[k]);
       }
-      CHECK_EQ(rows[0], 0);
-      CHECK_EQ(rows[1], 16);
-      CHECK_EQ(rows[2], 32);
-      CHECK_EQ(rows[3], 0);                      // blinking
-      disp_bar(3400);
+      CHECK_EQ(cols[0], 0);
+      CHECK_EQ(cols[1], 5);
+      CHECK_EQ(cols[2], 10);
+      CHECK_EQ(cols[3], 0);                      // blinking: nothing
+      for(int y = 16; y < 32; y++) for(int x = 110; x < 128; x++) CHECK(!px(x, y));
+      disp_bat_small(3400);
       dump("relays_low");
    }
    // 18.5 uH, 4059 pF, C on the transmitter side, 12 W; tuning
@@ -185,7 +190,7 @@ int main(void) {
    disp_big(LINE2, 0, "         ");
    disp_big(LINE2, 0, "TUNE");
    disp_big(LINE2, 60, "1.62");
-   disp_bar(4100);
+   disp_bat_small(4100);
    dump("relays_tune");
    // all cells off again: only the frames left
    disp_cells(1, 7, 0);

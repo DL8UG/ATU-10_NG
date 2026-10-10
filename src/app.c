@@ -76,9 +76,9 @@ static void show_swr_label(void) {
    disp_big(LINE2, 42, "=");
 }
 
-static void show_battery(void) {               // symbol, or the bar in the relay view
+static void show_battery(void) {               // symbol, or the small one in the relay view
    uint16_t mv = batt_blink ? 0 : vbat_mv;
-   if(cfg[CFG_LAYOUT]) disp_bar(mv);
+   if(cfg[CFG_LAYOUT]) disp_bat_small(mv);
    else disp_battery(mv);
 }
 

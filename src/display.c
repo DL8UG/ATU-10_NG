@@ -168,21 +168,25 @@ void disp_battery(uint16_t mv) {
       }
 }
 
-// Battery as a bar at the right edge (x 126..127), filled from the bottom,
-// 0..32 rows from BATT_OFF_MV to 4.2 V; mv 0: empty (blinking)
-void disp_bar(uint16_t mv) {
-   uint8_t p, k, b, fill = 0;
+// Small battery behind the SWR value (relay view): frame x 110..123,
+// rows 20..29, cap x 124..125, filled from the left, 0..10 columns from
+// BATT_OFF_MV to 4.2 V; mv 0: nothing (it blinks)
+void disp_bat_small(uint16_t mv) {
+   uint8_t x, fill = 0;
+   uint16_t col;
    if(mv) {
       if(mv < BATT_OFF_MV) mv = BATT_OFF_MV;
       if(mv > BAT_FULL_MV) mv = BAT_FULL_MV;
-      fill = (uint8_t)((uint16_t)(mv - BATT_OFF_MV) * 32 / (BAT_FULL_MV - BATT_OFF_MV));
+      fill = (uint8_t)((uint16_t)(mv - BATT_OFF_MV) * 10 / (BAT_FULL_MV - BATT_OFF_MV));
    }
-   for(p = 0; p < PAGES; p++) {
-      b = 0;
-      for(k = 0; k < 8; k++)
-         if(p * 8 + k >= 32 - fill) b |= (uint8_t)(1 << k);
-      put8(126, (uint8_t)(p * 8), b, 8);
-      put8(127, (uint8_t)(p * 8), b, 8);
+   for(x = 110; x <= 125; x++) {                  // bit 0 = row 20
+      if(!mv) col = 0;
+      else if(x >= 124) col = 0x0078;             // cap, rows 23..26
+      else if(x == 110 || x == 123) col = 0x03FF; // frame
+      else if(x == 111 || x == 122) col = 0x0201;
+      else col = x - 112 < fill ? 0x02FD : 0x0201; // charge rows 22..27
+      put8(x, 20, (uint8_t)col, 8);
+      put8(x, 28, (uint8_t)(col >> 8), 2);
    }
 }
 
