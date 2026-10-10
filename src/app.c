@@ -76,21 +76,70 @@ static void show_swr_label(void) {
    disp_big(LINE2, 42, "=");
 }
 
+static void show_battery(void) {               // symbol, or the bar in the relay view
+   uint16_t mv = batt_blink ? 0 : vbat_mv;
+   if(cfg[CFG_LAYOUT]) disp_bar(mv);
+   else disp_battery(mv);
+}
+
+// Relay view (Cell 13): the relays as two rows of 7 cells (L, C, the
+// smallest left), their sum, and the side the capacitor is on
+static const uint16_t l_10nh[7] = {10, 22, 45, 100, 220, 450, 1000};   // 0.01 uH
+static const uint16_t c_pf[7] = {22, 47, 100, 220, 470, 1000, 2200};
+static uint16_t shown_rel = 0xFFFF;           // l | c << 7 | sw << 14
+
+static void show_relays(const relays_t *r) {
+   uint16_t key = (uint16_t)(r->l | (uint16_t)r->c << 7 | (uint16_t)r->sw << 14), l = 0, c = 0;
+   uint8_t i;
+   char *e;
+   if(!cfg[CFG_LAYOUT] || key == shown_rel) return;
+   shown_rel = key;
+   for(i = 0; i < 7; i++) {
+      if(r->l & 1 << i) l += l_10nh[i];
+      if(r->c & 1 << i) c += c_pf[i];
+   }
+   disp_cells(1, 7, r->l);
+   disp_cells(9, 7, r->c);
+   // up to 9.99 uH with 2 decimals, then 1 (max 18.47 uH)
+   e = l < 1000 ? fmt_num(buf, l, 2, 4) : fmt_num(buf, (uint16_t)((l + 5) / 10), 1, 4);
+   e[0] = 'u'; e[1] = 'H'; e[2] = 0;
+   disp_small(0, 58, buf);
+   e = fmt_num(buf, c, 0, 4);
+   e[0] = 'p'; e[1] = 'F'; e[2] = 0;
+   disp_small(8, 58, buf);
+   disp_small(8, 100, r->sw ? "  TX" : " ANT");
+}
+
 static void show_screen(void) {
    disp_clear();
-   disp_big(LINE1, 0, "PWR");
-   disp_big(LINE1, 42, "=");
-   disp_big(LINE1, 96, "W");
+   if(cfg[CFG_LAYOUT]) {
+      disp_small(0, 0, "L");
+      disp_small(8, 0, "C");
+      shown_rel = 0xFFFF;
+      show_relays(&rel);
+   }
+   else {
+      disp_big(LINE1, 0, "PWR");
+      disp_big(LINE1, 42, "=");
+      disp_big(LINE1, 96, "W");
+   }
    show_swr_label();
-   disp_battery(batt_blink ? 0 : vbat_mv);     // as battery_check drew it
+   show_battery();                             // as battery_check drew it
    shown_pwr = shown_swr = 0xFFFF;
 }
 
 static void show_power(uint16_t p10) {        // 0.1 W
+   char *e;
    if(p10 == shown_pwr) return;
    shown_pwr = p10;
-   if(p10 < 100) disp_big(LINE1, 60, num(p10, 1, 3));
-   else disp_big(LINE1, 60, num((uint16_t)((p10 + 5) / 10), 0, 3));
+   if(p10 < 100) e = fmt_num(buf, p10, 1, 3);
+   else e = fmt_num(buf, (uint16_t)((p10 + 5) / 10), 0, 3);
+   if(!cfg[CFG_LAYOUT]) disp_big(LINE1, 60, buf);
+   else {                                      // small at the top right
+      e[0] = 'W';
+      e[1] = 0;
+      disp_small(0, 100, buf);
+   }
 }
 
 static void show_swr(uint16_t swr) {          // SWR x 100, 0 = none
@@ -140,8 +189,9 @@ static void save_state(void) {
 }
 
 // called by tune.c
-void hal_progress(uint16_t swr) {
+void hal_progress(const relays_t *best, uint16_t swr) {
    msg_on = 0;
+   show_relays(best);
    show_swr(swr);
    disp_flush();
 }
@@ -264,6 +314,7 @@ static void do_tune(void) {
       save_state();
    }
    if(resume) swr_ref = 0;                     // auto tune goes on with the search
+   show_relays(&rel);                          // the progress showed the best so far
    show_swr_label();
    shown_swr = 0xFFFF;
    show_swr(swr_disp);
@@ -292,6 +343,7 @@ static void bypass_toggle(uint8_t on) {
    else return;
    save_state();
    swr_ref = st.bypass ? 0 : (uint16_t)(st.last_swr ? 100 + st.last_swr : 0);
+   show_relays(&rel);
    show_swr_label();
    message(st.bypass ? "BYPASS" : "TUNED", 800);
    auto_cnt = 0;
@@ -409,7 +461,7 @@ static void battery_check(void) {
    }
    if(batt_lvl == B_OFF) go_off = 2;           // main loop switches off
    batt_blink = batt_lvl >= B_WARN && !batt_blink;
-   disp_battery(batt_blink ? 0 : vbat_mv);
+   show_battery();
    if(batt_lvl != B_LOW) recharge_cnt = 0;     // shown at once when the level comes
    else if(recharge_cnt) recharge_cnt--;
    else if(!msg_on) {

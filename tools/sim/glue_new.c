@@ -60,7 +60,8 @@ void hal_sample(meas_t *m, uint8_t n) {
 
 uint8_t hal_abort(void) { return 0; }
 void hal_wait_ms(uint8_t ms) { time_s += ms / 1000.0; }
-void hal_progress(uint16_t swr) {
+void hal_progress(const relays_t *best, uint16_t swr) {
+   (void)best;
    if(trace) fprintf(stderr, "      progress: best SWR %.2f\n", swr / 100.0);
 }
 

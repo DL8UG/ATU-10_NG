@@ -86,6 +86,6 @@ void hal_sample(meas_t *m, uint8_t n);       // one measurement (meas_take)
 void hal_wait_ms(uint8_t ms);
 #endif
 uint8_t hal_abort(void);                     // 1 = stop tuning now
-void hal_progress(uint16_t swr);             // best SWR so far, for the display (between phases)
+void hal_progress(const relays_t *best, uint16_t swr);   // best setting and SWR so far, for the display (between phases)
 
 #endif

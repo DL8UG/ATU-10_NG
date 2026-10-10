@@ -49,7 +49,7 @@ void hal_sample(meas_t *m, uint8_t n) {
 }
 uint8_t hal_abort(void) { return 0; }
 void hal_wait_ms(uint8_t ms) { (void)ms; }
-void hal_progress(uint16_t swr) { (void)swr; }
+void hal_progress(const relays_t *best, uint16_t swr) { (void)best; (void)swr; }
 
 int main(void) {
    relays_t from = {0, 0, 0};

@@ -130,6 +130,67 @@ int main(void) {
    disp_flush();
    CHECK(writes > 0);
 
+   // ---- relay view (Cell 13), drawn as app.c does it
+   disp_clear();
+   disp_small(0, 0, "L");
+   disp_small(8, 0, "C");
+   disp_cells(1, 7, 0x0D);                       // 0.1 + 0.45 + 1.0 uH
+   disp_cells(9, 7, 0x2C);                       // 100 + 220 + 1000 pF
+   disp_small(0, 58, "1.55uH");
+   disp_small(8, 58, "1320pF");
+   disp_small(0, 100, "5.0W");
+   disp_small(8, 100, " ANT");
+   disp_big(LINE2, 0, "SWR");
+   disp_big(LINE2, 42, "=");
+   disp_big(LINE2, 60, "1.05");
+   disp_bar(3900);
+   dump("relays");
+   // cells: filled for a set bit, frame only else; 7 columns apart
+   for(int i = 0; i < 7; i++) {
+      CHECK_EQ(px(7 + 7 * i + 2, 3), (0x0D >> i) & 1);    // centre
+      CHECK(px(7 + 7 * i, 1) && px(7 + 7 * i + 4, 5));     // frame
+      CHECK(!px(7 + 7 * i + 5, 3) && !px(7 + 7 * i + 6, 3));   // gap
+      CHECK_EQ(px(7 + 7 * i + 2, 11), (0x2C >> i) & 1);
+   }
+   for(int x = 0; x < 128; x++) CHECK(!px(x, 0) || x < 7 || x >= 56);   // cells start at row 1
+   // the text ends before the bar, one column free
+   for(int y = 0; y < 32; y++) CHECK(!px(124, y) && !px(125, y));
+   // bar: 0..32 rows, both columns the same; nothing else changes
+   {
+      int rows[4], k = 0;
+      const uint16_t mv[4] = {3000, 3600, 4200, 0};
+      for(k = 0; k < 4; k++) {
+         disp_bar(mv[k]);
+         rows[k] = 0;
+         for(int y = 0; y < 32; y++) {
+            CHECK_EQ(px(126, y), px(127, y));
+            rows[k] += px(126, y);
+         }
+         CHECK(rows[k] == 0 || px(126, 31));     // from the bottom
+      }
+      CHECK_EQ(rows[0], 0);
+      CHECK_EQ(rows[1], 16);
+      CHECK_EQ(rows[2], 32);
+      CHECK_EQ(rows[3], 0);                      // blinking
+      disp_bar(3400);
+      dump("relays_low");
+   }
+   // 18.5 uH, 4059 pF, C on the transmitter side, 12 W; tuning
+   disp_cells(1, 7, 0x7F);
+   disp_cells(9, 7, 0x7F);
+   disp_small(0, 58, "18.5uH");
+   disp_small(8, 58, "4059pF");
+   disp_small(0, 100, " 12W");
+   disp_small(8, 100, "  TX");
+   disp_big(LINE2, 0, "         ");
+   disp_big(LINE2, 0, "TUNE");
+   disp_big(LINE2, 60, "1.62");
+   disp_bar(4100);
+   dump("relays_tune");
+   // all cells off again: only the frames left
+   disp_cells(1, 7, 0);
+   for(int i = 0; i < 7; i++) CHECK(!px(7 + 7 * i + 2, 3));
+
    // ---- restart of a display that does not answer
    {
       uint32_t t_init[20];

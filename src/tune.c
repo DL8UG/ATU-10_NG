@@ -585,7 +585,7 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
             }
          }
 
-   hal_progress(swr_x100(best_g));
+   hal_progress(&best, swr_x100(best_g));
 
    // 3. local search from each candidate
    for(i = 0; i < n_cand; i++) {
@@ -594,7 +594,7 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
       r = local_search(&p, &v);
       if(r != M_OK && r != M_BUDGET) goto stop;
       keep(res, rv, &n_res, &p, &v);         // with the budget used up: as far as it got
-      hal_progress(swr_x100(best_g));
+      hal_progress(&best, swr_x100(best_g));
       if(r == M_BUDGET || target_reached(&v)) break;
    }
 results:

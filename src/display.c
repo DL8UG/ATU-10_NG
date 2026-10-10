@@ -168,6 +168,33 @@ void disp_battery(uint16_t mv) {
       }
 }
 
+// Battery as a bar at the right edge (x 126..127), filled from the bottom,
+// 0..32 rows from BATT_OFF_MV to 4.2 V; mv 0: empty (blinking)
+void disp_bar(uint16_t mv) {
+   uint8_t p, k, b, fill = 0;
+   if(mv) {
+      if(mv < BATT_OFF_MV) mv = BATT_OFF_MV;
+      if(mv > BAT_FULL_MV) mv = BAT_FULL_MV;
+      fill = (uint8_t)((uint16_t)(mv - BATT_OFF_MV) * 32 / (BAT_FULL_MV - BATT_OFF_MV));
+   }
+   for(p = 0; p < PAGES; p++) {
+      b = 0;
+      for(k = 0; k < 8; k++)
+         if(p * 8 + k >= 32 - fill) b |= (uint8_t)(1 << k);
+      put8(126, (uint8_t)(p * 8), b, 8);
+      put8(127, (uint8_t)(p * 8), b, 8);
+   }
+}
+
+// 7 relay cells of 5 x 5 pixels from pixel row y, 7 columns apart from x:
+// filled for a set bit (bit 0 left), else only the frame
+void disp_cells(uint8_t y, uint8_t x, uint8_t bits) {
+   uint8_t i, k;
+   for(i = 0; i < 7; i++, bits >>= 1)
+      for(k = 0; k < 7; k++, x++)
+         put8(x, y, k >= 5 ? 0 : (bits & 1) || k == 0 || k == 4 ? 0x1F : 0x11, 5);
+}
+
 static void send_page(uint8_t p) {
    uint8_t lo = dirty_lo[p], hi = dirty_hi[p];
    dirty_lo[p] = 0xFF;

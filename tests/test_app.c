@@ -39,7 +39,7 @@ static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
 enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
        M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT, M_BATT_OFF, M_HINT_BLIP, M_HINT_END, M_HINT_CW, M_BATT_HOVER,
-       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL, M_BATT_AUTO, M_BATT_EMPTY };
+       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL, M_BATT_AUTO, M_BATT_EMPTY, M_RELAYS };
 #define M_RESUME(m) ((m) >= M_RESUME_OFF && (m) <= M_RESUME_EMPTY)
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
@@ -51,6 +51,8 @@ static double opt_l = 20, opt_c = 30;   // best match of the load (capacitor at 
 static uint8_t seen1[2][128][128];   // M_RESUME_OFF: settings switched by the 1st / 2nd tune
 static int n_first, n_again;
 static int batt_hidden, recharge_seen, recharge_late, ovl_seen;
+static uint8_t switched[2][128][128];   // M_RELAYS: settings switched by the tune running
+static int live_updates, relays_checks, drawn_prev = -1;
 
 typedef struct { uint32_t from, to; } span_t;
 static span_t press[40] = {         // button held (ms); the setup menu presses are added in main()
@@ -119,6 +121,49 @@ static void check_line2(void) {
    line2_checks++;
 }
 
+// M_RELAYS: the relay setting the cells show (centre pixels), -1 if a
+// cell frame is missing; sw from the text TX / ANT
+static int pix(int x, int y) { return disp_fb()[(y / 8) * 128 + x] >> (y % 8) & 1; }
+static int text_shows(int big, uint8_t y, uint8_t x, const char *s);
+static int drawn_setting(void) {
+   int l = 0, c = 0, sw;
+   for(int i = 0; i < 7; i++) {
+      int x = 7 + 7 * i;
+      if(!pix(x, 1) || !pix(x + 4, 5) || !pix(x, 9) || !pix(x + 4, 13)) return -1;
+      l |= pix(x + 2, 3) << i;
+      c |= pix(x + 2, 11) << i;
+   }
+   if(text_shows(0, 8, 100, "  TX")) sw = 1;
+   else if(text_shows(0, 8, 100, " ANT")) sw = 0;
+   else return -1;
+   return sw << 14 | c << 7 | l;
+}
+static int rel_key(void) { return rel.sw << 14 | rel.c << 7 | rel.l; }
+
+// relay view: after a tune the cells show the relays; while tuning they
+// change only to settings the tune has switched (the best so far)
+static void check_relays(void) {
+   int d;
+   if(!OLED_PWR || !display_lit) return;
+   d = drawn_setting();
+   CHECK(d >= 0);
+   if(d < 0) return;
+   if(!LATDbits.LATD2) {
+      if(d != drawn_prev) {
+         if(getenv("TRACE")) printf("%u ms: cells %d/%d/%d\n", wall, d & 127, (d >> 7) & 127, d >> 14);
+         live_updates++;
+         CHECK(switched[d >> 14][d & 127][(d >> 7) & 127]);
+      }
+   }
+   else if(wall == check_line2_at) {
+      CHECK_EQ(d, rel_key());
+      relays_checks++;
+   }
+   drawn_prev = d;
+   // the bar instead of the symbol: x 124, 125 free, the bar from the bottom
+   for(int y = 0; y < 32; y++) CHECK(!pix(124, y) && !pix(125, y));
+}
+
 void fake_clrwdt(void) {
    last_clr = wall;
    fake_ms(1);
@@ -128,7 +173,10 @@ void fake_ms(uint32_t ms) {
    while(ms--) {
       wall++;
       if(WDTCON0bits.SEN && wall - last_clr > wdt_worst) wdt_worst = wall - last_clr;
-      if(!LATDbits.LATD2 && key_prev) key_falls++;                     // a tune started
+      if(!LATDbits.LATD2 && key_prev) {                                 // a tune started
+         key_falls++;
+         if(mode == M_RELAYS) memset(switched, 0, sizeof switched);
+      }
       if(LATDbits.LATD2 && !key_prev) check_line2_at = wall + 2500;     // ended: check the picture
       key_prev = LATDbits.LATD2;
       if(OLED_PWR && ((ANSELA & 0x0C) || (ANSELD & 0x06))) {        // awake: inputs read
@@ -136,6 +184,7 @@ void fake_ms(uint32_t ms) {
          CHECK_EQ(ANSELD & 0x06, 0);
          ANSELA = ANSELD = 0;                                       // report once
       }
+      if(mode == M_RELAYS && wall >= 5000) check_relays();
       if(wall == check_line2_at) check_line2();
       PORTBbits.RB5 = !in_spans(press, n_press);                        // low = pressed
       if(mode == M_EXTDARK) PORTDbits.RD1 = !(wall >= 3 * MIN && wall < 3 * MIN + 50);   // short pulse
@@ -226,6 +275,7 @@ void relays_set(uint8_t l, uint8_t c, uint8_t sw) {
    rel.l = l; rel.c = c; rel.sw = sw;
    relay_calls++;
    if(!LATDbits.LATD2) key_low_in_tune = 1;
+   if(mode == M_RELAYS && !LATDbits.LATD2) switched[sw & 1][l & 127][c & 127] = 1;
    if(mode == M_RESUME_OFF && !LATDbits.LATD2) {
       uint8_t *m = &seen1[sw & 1][l & 127][c & 127];
       if(key_falls == 1 && !*m) { *m = 1; n_first++; }
@@ -573,6 +623,19 @@ static void checkpoint_variant(uint32_t t) {
    }
    if(mode == M_BATT_OFF && t == 75000)                     // a single low reading after waking:
       CHECK_EQ(sleeps, 1);                                   // the count before the power off is gone
+   if(mode == M_RELAYS && t == 2 * MIN) {                   // tuned: L 3, C 90 at the output,
+      CHECK_EQ(rel_key(), 90 << 7 | 3);                      // 5 W small at the top right
+      CHECK(text_shows(0, 0, 100, "5.0W"));
+      CHECK(text_shows(0, 0, 58, "0.32uH") && text_shows(0, 8, 58, "2937pF"));
+      CHECK(text_shows(0, 0, 0, "L") && text_shows(0, 8, 0, "C"));
+      CHECK(pix(126, 31) && pix(127, 6) && !pix(126, 5));    // 4.0 V: 26 of 32 rows
+   }
+   if(mode == M_RELAYS && t == 3 * MIN + 2000) {            // bypass: all cells empty
+      CHECK_EQ(drawn_setting(), 0);
+      CHECK(text_shows(0, 0, 58, "0.00uH") && text_shows(0, 8, 58, "   0pF"));
+   }
+   if(mode == M_RELAYS && t == 4 * MIN + 2000)              // back: the tuned setting
+      CHECK_EQ(drawn_setting(), 90 << 7 | 3);
    if(t == 40000 && mode == M_BLIP)                         // carrier since 10 s: tuned, so
       CHECK(key_falls >= 1);                                 // not stuck in the setup menu
    if(t == 6 * MIN - 1) {
@@ -595,6 +658,10 @@ static void checkpoint_variant(uint32_t t) {
          CHECK_EQ(key_falls, 1);                             // later: no needless auto tune
          break;
       case M_EXTDARK:
+         break;
+      case M_RELAYS:
+         printf("relay view: %d tunes, %d live updates of the cells\n", key_falls, live_updates);
+         CHECK(key_falls >= 1 && live_updates >= 1 && relays_checks >= 1);
          break;
       case M_EXTTUNE:
          break;
@@ -692,11 +759,17 @@ static int run_variant(void) {
       static const uint8_t c[12] = {0x05, 0x01, 0x10, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02};
       memcpy((void *)Cells, c, 12);
    }
+   if(mode == M_RELAYS) {                                    // Cell 13: relay view; bypass
+      Cells[CFG_LAYOUT] = 0x01;                              // on at 3 min, off at 4 min;
+      opt_l = 3; opt_c = 90;                                 // another load than the saved tune
+      press[0].from = 3 * MIN; press[0].to = 3 * MIN + 100;   // short presses
+      press[1].from = 4 * MIN; press[1].to = 4 * MIN + 100;
+   }
    if(mode == M_EXTDARK) {
       static const uint8_t c[12] = {0x01, 0x30, 0x10, 0x10, 0x15, 0x13, 0x01, 0x04, 0x14, 0x60, 0x05, 0x02};
       memcpy((void *)Cells, c, 12);                          // display off after 1 min
    }
-   n_press = 0;
+   n_press = mode == M_RELAYS ? 2 : 0;
    if(mode == M_BLIP) {                                       // ends 0.4 s after the greeting
       press[0].from = 3800; press[0].to = 4600;
       n_press = 1;
@@ -759,7 +832,8 @@ static int run_variant(void) {
                      : mode == M_HINT_END ? "test_app hint-end" : mode == M_HINT_CW ? "test_app hint-cw"
                      : mode == M_BATT_HOVER ? "test_app batt-hover" : mode == M_BATT_LOW ? "test_app batt-low"
                      : mode == M_BATT_MIX ? "test_app batt-mix" : mode == M_BATT_OVL ? "test_app batt-ovl"
-                     : mode == M_BATT_AUTO ? "test_app batt-auto" : "test_app batt-empty");
+                     : mode == M_BATT_AUTO ? "test_app batt-auto" : mode == M_BATT_EMPTY ? "test_app batt-empty"
+                     : "test_app relays");
 }
 
 int main(int argc, char **argv) {
