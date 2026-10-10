@@ -43,9 +43,9 @@ against the same models of antennas and of the tuner.
 
 Both use the defaults of their hex files.
 
-| | FW 1.6 | ATU-10 NG 1.0.0 |
+| | FW 1.6 | ATU-10 NG 1.1.0 |
 |---|---|---|
-| Settings (Cells) | 10, only in the hex file | 12, in a menu on the tuner, in a browser editor or in the hex file |
+| Settings (Cells) | 10, only in the hex file | 13, in a menu on the tuner, in a browser editor or in the hex file |
 | Display off / power off after | 5 / 30 min | 5 / 30 min |
 | Relay pulse | 7 ms (8 ms below 3.8 V) | 10 ms (11 ms at 3.8 V and below), as the relay data sheets ask |
 | Min. / max. tune power | 1.0 W / 15 W, maximum checked on the forward power | 1.0 W / 15 W, maximum checked on the power the transmitter delivers (forward − reflected) |

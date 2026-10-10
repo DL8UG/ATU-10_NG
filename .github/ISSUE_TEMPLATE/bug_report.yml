@@ -11,7 +11,7 @@ body:
     id: version
     attributes:
       label: Firmware version
-      description: shown in the greeting after switching on, e.g. NG 1.0.0
+      description: shown in the greeting after switching on, e.g. NG 1.1.0
     validations:
       required: true
   - type: textarea

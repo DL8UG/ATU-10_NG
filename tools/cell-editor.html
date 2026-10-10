@@ -79,7 +79,7 @@
     <span class="note">Copy the saved file onto the tuner's USB drive as usual.</span>
   </div>
 
-  <p class="note">The settings ("Cells") are 12 BCD coded bytes at address 0xEEE0 of the hex file
+  <p class="note">The settings ("Cells") are 13 BCD coded bytes (12 up to firmware 1.0.0) at address 0xEEE0 of the hex file
     (records <code>:10EEE000</code> and <code>:10EEF000</code>). The editor changes only these
     bytes and the record checksums. Values saved in the tuner's setup menu take
     precedence until a hex file with other Cells is flashed, or HEX VALUES is chosen

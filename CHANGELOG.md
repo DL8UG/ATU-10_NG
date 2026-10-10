@@ -5,7 +5,7 @@ tag `vX.Y.Z` in this repository; the hex file is on its release page.
 
 ## Contents
 
-- [Not released yet](#not-released-yet)
+- [1.1.0](#110)
 - [1.0.0](#100)
 - [0.9.6](#096)
 - [0.9.5](#095)
@@ -16,7 +16,9 @@ tag `vX.Y.Z` in this repository; the hex file is on its release page.
 - [0.9.0](#090)
 - [0.1.0](#010)
 
-## Not released yet
+## 1.1.0
+
+2026-10-10, [release](https://github.com/DL8UG/ATU-10_NG/releases/tag/v1.1.0), tested on the device
 
 - new: relay view (setting 13, DISPLAY in the setup menu). The upper half of
   the display shows the L and C relays as cells, the sum of the coils and
