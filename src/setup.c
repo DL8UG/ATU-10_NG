@@ -18,15 +18,17 @@
 
 #define TIMEOUT_MS 60000
 
-enum { U_MIN, U_MS, U_W10, U_W, U_DSWR, U_ONOFF, U_DIV10, U_CALA, U_X10MS, U_TARGET, U_EFFORT };
+enum { U_MIN, U_MS, U_W10, U_W, U_DSWR, U_ONOFF, U_DIV10, U_CALA, U_X10MS, U_TARGET, U_EFFORT, U_LAYOUT };
 
 static const char *const names[CELL_COUNT] = {
    "DISPLAY OFF AFTER", "POWER OFF AFTER", "RELAY PULSE", "MIN. TUNE POWER",
    "MAX. TUNE POWER", "AUTO TUNE: SWR CHANGE", "AUTO TUNE", "CALIBRATION B (1 W)",
    "CALIBRATION A (10 W)", "POWER PEAK HOLD", "TUNE TARGET SWR", "SEARCH EFFORT",
+   "DISPLAY",
 };
 static const uint8_t units[CELL_COUNT] = {
    U_MIN, U_MIN, U_MS, U_W10, U_W, U_DSWR, U_ONOFF, U_DIV10, U_CALA, U_X10MS, U_TARGET, U_EFFORT,
+   U_LAYOUT,
 };
 
 // values offered per setting, ascending (other values from the hex file
@@ -45,10 +47,12 @@ static const uint8_t v_target[] = {0, 2, 3, 5, 8, 10, 15, 20};
 static const uint8_t v_effort[] = {1, 2, 3};
 static const uint8_t *const lists[CELL_COUNT] = {
    v_disp, v_off, v_relay, v_minp, v_maxp, v_delta, v_onoff, v_calb, v_cala, v_peak, v_target, v_effort,
+   v_onoff,
 };
 static const uint8_t list_len[CELL_COUNT] = {
    sizeof v_disp, sizeof v_off, sizeof v_relay, sizeof v_minp, sizeof v_maxp, sizeof v_delta,
    sizeof v_onoff, sizeof v_calb, sizeof v_cala, sizeof v_peak, sizeof v_target, sizeof v_effort,
+   sizeof v_onoff,
 };
 
 static char txt[11];
@@ -74,7 +78,8 @@ static void value_text(uint8_t i, uint8_t v) {
       case U_CALA:   fmt(p, (uint16_t)(100 + v), 2); break;
       case U_X10MS:  cat(fmt(p, (uint16_t)v * 10, 0), " MS"); break;
       case U_TARGET: if(v == 0) cat(p, "FULL"); else fmt(p, (uint16_t)(100 + v), 2); break;
-      default:       cat(p, v == 1 ? "QUICK" : v == 3 ? "THOROUGH" : "NORMAL"); break;
+      case U_EFFORT: cat(p, v == 1 ? "QUICK" : v == 3 ? "THOROUGH" : "NORMAL"); break;
+      default:       cat(p, v ? "RELAYS" : "CLASSIC"); break;
    }
 }
 
@@ -84,10 +89,12 @@ static void value_text(uint8_t i, uint8_t v) {
 #define PAGES      (CELL_COUNT + 3)
 
 static void show(uint8_t page) {
-   char head[8];
+   char head[8], *p;
    disp_clear();
    if(page < CELL_COUNT) {
-      cat(fmt(head, (uint16_t)(page + 1), 0), "/12");
+      p = fmt(head, (uint16_t)(page + 1), 0);
+      *p++ = '/';
+      fmt(p, CELL_COUNT, 0);
       disp_small(0, 0, head);
       disp_small(8, 0, names[page]);
       value_text(page, cfg[page]);

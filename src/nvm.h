@@ -3,6 +3,7 @@
 //   0x20..0x2F  settings block of the setup menu (settings.c)
 //   0x30..0x6B  memory of good tunes, 12 slots of 5 bytes
 //   0x70..0xEF  relay state, ring of 16 slots of 8 bytes
+//   0xF0..0xF4  settings block for Cells 13.. (settings.c)
 // The rest is not used (older firmware keeps its data at 0x00..0x08).
 
 #ifndef NVM_H

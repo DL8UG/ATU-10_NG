@@ -773,12 +773,12 @@ int main(int argc, char **argv) {
    PCON0bits.nBOR = 1;
    LATDbits.LATD2 = 1;
    // setup menu, after the greeting (released at 91:07): 2 long presses to
-   // setting 3, a short one (7 -> 8 ms), 10 long ones to the SAVE page, a
+   // setting 3, a short one (10 -> 12 ms), 11 long ones to the SAVE page, a
    // short one
    {
       uint32_t t = 91 * MIN + 9000;
-      for(int i = 0; i < 14; i++, t += 1500) {
-         uint32_t len = (i == 2 || i == 13) ? 100 : 500;
+      for(int i = 0; i < 15; i++, t += 1500) {
+         uint32_t len = (i == 2 || i == 14) ? 100 : 500;
          press[n_press].from = t;
          press[n_press++].to = t + len;
       }

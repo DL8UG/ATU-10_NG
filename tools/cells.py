@@ -16,7 +16,7 @@ Usage:
 import sys
 
 ADDR = 0xEEE0
-COUNT = 12
+COUNT = 13
 RETLW = 0x34
 
 # number, name, unit / meaning, min, max, default  (keep in step with src/cells.c)
@@ -33,6 +33,7 @@ CELLS = [
     (10, 'Peak hold', '10 ms', 1, 99, 60),
     (11, 'Tuning target', 'SWR 1 + value / 100, 0 = always full search', 0, 99, 5),
     (12, 'Search effort', '1 = quick, 2 = normal, 3 = thorough', 1, 3, 2),
+    (13, 'Display', '0 = classic, 1 = relays (firmware 1.1.0 and later)', 0, 1, 0),
 ]
 
 

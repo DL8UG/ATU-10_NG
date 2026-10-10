@@ -56,7 +56,55 @@ int main(void) {
    CHECK_EQ(cfg[CFG_RELAY_MS], 10);
    settings_load();
    CHECK_EQ(cfg[CFG_RELAY_MS], 10);
-   // only 0x20..0x2F used
-   for(int i = 0; i < 256; i++) if(i < 0x20 || i > 0x2F) CHECK_EQ(ee[i], 0xFF);
+   // a block saved by firmware 1.0.0 (12 Cells, hash over 12) still applies
+   {
+      static const uint8_t old[16] = {   // 1.0.0, relay pulse 12 ms, search 3
+         0x5E, 0x00, 0x00, 5, 30, 12, 10, 15, 13, 1, 4, 14, 60, 5, 3, 0 };
+      uint16_t h12 = cells_hash(12);
+      memset(ee, 0xFF, sizeof ee);
+      memcpy(&ee[0x20], old, 16);
+      ee[0x21] = (uint8_t)(h12 >> 8);
+      ee[0x22] = (uint8_t)h12;
+      ee[0x2F] = crc8(&ee[0x20], 15);
+      settings_load();
+      CHECK_EQ(cfg[CFG_RELAY_MS], 12);
+      CHECK_EQ(cfg[CFG_SEARCH], 3);
+      CHECK_EQ(cfg[CFG_LAYOUT], 0);
+   }
+   // Cell 13 from the menu: saved in its own block
+   cfg[CFG_LAYOUT] = 1;
+   settings_save();
+   cfg[CFG_LAYOUT] = 0;
+   cfg[CFG_RELAY_MS] = 0;
+   settings_load();
+   CHECK_EQ(cfg[CFG_LAYOUT], 1);
+   CHECK_EQ(cfg[CFG_RELAY_MS], 12);
+   // a hex file with another Cell 13: its value applies, Cells 1..12 stay
+   Cells[CFG_LAYOUT] = 0x01;
+   cfg[CFG_LAYOUT] = 1;
+   settings_save();
+   Cells[CFG_LAYOUT] = 0x00;
+   settings_load();
+   CHECK_EQ(cfg[CFG_LAYOUT], 0);
+   CHECK_EQ(cfg[CFG_RELAY_MS], 12);
+   // a damaged Cell 13 block is ignored, the other one applies
+   Cells[CFG_LAYOUT] = 0x01;
+   cfg[CFG_LAYOUT] = 0;                          // the menu against the hex value
+   settings_save();
+   settings_load();
+   CHECK_EQ(cfg[CFG_LAYOUT], 0);
+   ee[0xF3] ^= 1;
+   settings_load();
+   CHECK_EQ(cfg[CFG_LAYOUT], 1);
+   CHECK_EQ(cfg[CFG_RELAY_MS], 12);
+   ee[0xF3] ^= 1;
+   settings_load();
+   CHECK_EQ(cfg[CFG_LAYOUT], 0);
+   Cells[CFG_LAYOUT] = 0x00;
+   settings_defaults();
+   CHECK_EQ(ee[0xF0], 0xFF);
+   // only 0x20..0x2F and 0xF0..0xF4 used
+   for(int i = 0; i < 256; i++)
+      if((i < 0x20 || i > 0x2F) && (i < 0xF0 || i > 0xF4)) CHECK_EQ(ee[i], 0xFF);
    return check_done("test_settings");
 }

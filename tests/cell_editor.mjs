@@ -3,12 +3,17 @@
 //        node cell_editor.mjs EDITOR.html --meta HEX                prints min,max,default per Cell
 //                                                                   for the firmware version in HEX
 //        node cell_editor.mjs EDITOR.html --version HEX             prints the firmware version in HEX
+//        node cell_editor.mjs EDITOR.html --count                   Cells shown for some versions
 import { readFileSync, writeFileSync } from "node:fs";
 const [html, inp, out, ...sets] = process.argv.slice(2);
 const core = readFileSync(html, "utf8").match(/<script id="cells-core">([\s\S]*?)<\/script>/)[1];
-const api = new Function(core + "; return { CELLS, parseHex, checkLayout, readCells, writeCells, hexText, fromBcd, fwVersion, defaultsFor };")();
+const api = new Function(core + "; return { CELLS, parseHex, checkLayout, readCells, writeCells, hexText, fromBcd, fwVersion, defaultsFor, cellCount };")();
 if (inp === "--version") {
   console.log(api.fwVersion(api.parseHex(readFileSync(out, "latin1"))));
+  process.exit(0);
+}
+if (inp === "--count") {
+  console.log(["0.9.5", "1.0.0", "1.1.0", "2.0.0"].map(api.cellCount).join(" ") + " " + api.cellCount(null));
   process.exit(0);
 }
 if (inp === "--meta") {

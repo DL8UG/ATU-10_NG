@@ -27,13 +27,17 @@ int main(void) {
    CHECK_EQ(cell_decode(CFG_DISP_OFF, 0x99), 99);
    for(i = 0; i < 100; i++) CHECK_EQ(cell_decode(CFG_DISP_OFF, dec2bcd(i)), i);
    // the hash changes with every Cell
-   h = cells_hash();
+   h = cells_hash(CELL_COUNT);
    for(i = 0; i < CELL_COUNT; i++) {
       uint8_t old = Cells[i];
       Cells[i] = (uint8_t)(old + 1);
-      CHECK(cells_hash() != h);
+      CHECK(cells_hash(CELL_COUNT) != h);
       Cells[i] = old;
    }
-   CHECK_EQ(cells_hash(), h);
+   CHECK_EQ(cells_hash(CELL_COUNT), h);
+   // Cell 13: 0x00 (the spare byte of older hex files) = classic screen
+   CHECK_EQ(cfg[CFG_LAYOUT], 0);
+   CHECK_EQ(cell_decode(CFG_LAYOUT, 0x01), 1);
+   CHECK_EQ(cell_decode(CFG_LAYOUT, 0x02), 0);
    return check_done("test_cells");
 }

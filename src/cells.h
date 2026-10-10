@@ -9,8 +9,8 @@
 #include <stdint.h>
 
 #define CELLS_ADDR  0x7770
-#define CELL_COUNT  12
-// 16 words reserved, the last 4 are spare (0x00): the Cells fill exactly two
+#define CELL_COUNT  13
+// 16 words reserved, the last 3 are spare (0x00): the Cells fill exactly two
 // hex records (:10EEE000 and :10EEF000) that hold nothing else
 #define CELLS_SIZE  16
 
@@ -28,6 +28,7 @@ enum {
    CFG_PEAK,         // 10 peak hold time for the power display in 10 ms
    CFG_TARGET,       // 11 tuning target: SWR 1 + value / 100, 0 = always full search
    CFG_SEARCH,       // 12 search effort 1..3
+   CFG_LAYOUT,       // 13 main screen: 0 = classic, 1 = relays (older hex files: spare 0x00)
 };
 
 extern uint8_t cfg[CELL_COUNT];                 // decoded, decimal
@@ -36,6 +37,6 @@ extern const uint8_t cell_min[CELL_COUNT], cell_max[CELL_COUNT], cell_def[CELL_C
 uint8_t cell_decode(uint8_t i, uint8_t bcd);    // decimal value, default if invalid
 uint8_t dec2bcd(uint8_t v);
 void cells_load(void);                          // hex Cells -> cfg[]
-uint16_t cells_hash(void);                      // checksum of the hex Cells
+uint16_t cells_hash(uint8_t n);                 // checksum of the first n hex Cells
 
 #endif

@@ -110,6 +110,12 @@ const CELLS = [
   ["Tune target", "stop at SWR 1 + value / 100, 0 = always full search", 0, 99, 5,
      v => v ? "SWR " + (1 + v / 100).toFixed(2) : "full search"],
   ["Search effort", "1 quick, 2 normal, 3 thorough", 1, 3, 2, v => ["", "quick", "normal", "thorough"][v]],
+  ["Display", "main screen: 0 classic, 1 relays (L/C matrix)", 0, 1, 0, v => v ? "relays" : "classic"],
+];
+
+// Cells added later: from firmware version on, number of Cells
+const NEW_CELLS = [
+  ["1.1.0", 13],             // Display layout
 ];
 
 // Defaults that changed: from firmware version on, Cell number, default
@@ -118,6 +124,14 @@ const NEW_DEFAULTS = [
 ];
 
 const verNum = v => v.split(".").reduce((n, x) => n * 1000 + Number(x), 0);
+
+// Number of Cells a firmware version has; all of them for an unknown version
+function cellCount(version) {
+  let n = 12;
+  for (const [from, count] of NEW_CELLS)
+    if (version === null || verNum(version) >= verNum(from)) n = count;
+  return n;
+}
 
 // Defaults of a firmware version; the newest ones for an unknown version
 function defaultsFor(version) {
@@ -210,7 +224,7 @@ function hexText(h) {
 
 <script>
 // ---- user interface
-let hex = null, name = "", original = [], defaults = defaultsFor(null);
+let hex = null, name = "", original = [], defaults = defaultsFor(null), count = CELLS.length;
 const $ = id => document.getElementById(id);
 
 function message(text, bad) {
@@ -229,9 +243,10 @@ function load(file) {
       original = readCells(h);
       const version = fwVersion(h);
       defaults = defaultsFor(version);
+      count = cellCount(version);
       $("fname").textContent = file.name + (version ? " (firmware " + version + ")" : "");
       build(original);
-      const invalid = original.filter((r, i) => fromBcd(r, i) === null).length;
+      const invalid = original.slice(0, count).filter((r, i) => fromBcd(r, i) === null).length;
       message(invalid ? invalid + " Cell(s) hold an invalid value; the firmware uses the default for them."
                       : "Cells read. Change the values and save.", invalid > 0);
     } catch (e) {
@@ -245,7 +260,7 @@ function load(file) {
 function build(raws) {
   const rows = $("rows");
   rows.textContent = "";
-  CELLS.forEach(([title, help, min, max, , means], i) => {
+  CELLS.slice(0, count).forEach(([title, help, min, max, , means], i) => {
     const v = fromBcd(raws[i], i), def = defaults[i];
     const tr = document.createElement("tr");
     tr.innerHTML = `<td class="n">${i + 1}</td>
