@@ -44,7 +44,8 @@ static double complex par(double complex a, double complex b) {
    return a * b / (a + b);
 }
 
-// sw = 1: capacitor at the input (transmitter) side, else at the output
+// sw = 1: capacitor at the output (antenna) side, else at the input
+// (transmitter) side, as found on the device with a 4 kOhm load
 double complex zin_of(int l, int c, int sw) {
    double w = 2 * M_PI * freq, L = 0, C = C_STRAY;
    for(int i = 0; i < 7; i++) {
@@ -53,7 +54,7 @@ double complex zin_of(int l, int c, int sw) {
    }
    double complex zl = w * L * 1e-6 * (1.0 / Q_L + I);
    double complex zc = 1.0 / (I * w * C * 1e-12);
-   return sw ? par(zc, zl + z_load) : zl + par(z_load, zc);
+   return sw ? zl + par(z_load, zc) : par(zc, zl + z_load);
 }
 
 double gamma_of(int l, int c, int sw) {

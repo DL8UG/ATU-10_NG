@@ -91,7 +91,7 @@ def landscape(path, out, title):
     W, PW = 760, 128 * S
     top, left, gap = 112, 64, 92
     H = top + PW + 64
-    panels = [(0, 'capacitor at the output (SW 0)'), (1, 'capacitor at the input (SW 1)')]
+    panels = [(0, 'capacitor at the input (SW 0)'), (1, 'capacitor at the output (SW 1)')]
     o = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" '
          f'role="img" aria-label="{title}">', STYLE, f'<rect class="bg" width="{W}" height="{H}"/>',
          f'<text class="title" x="16" y="26">{title}</text>',
