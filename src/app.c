@@ -85,7 +85,9 @@ static void show_battery(void) {               // symbol, or the small one in th
 // Relay view (Cell 13): the relays as two rows of 7 cells (L, C, the
 // smallest left), their sum, and the side the capacitor is on
 static const uint16_t l_10nh[7] = {10, 22, 45, 100, 220, 450, 1000};   // 0.01 uH
-static const uint16_t c_pf[7] = {22, 47, 100, 220, 470, 1000, 2200};
+// the "2200 pF" relay switches 1000 + 1000 + 220 pF (C1, C3, C74 in the
+// schematic traced by VK3PE)
+static const uint16_t c_pf[7] = {22, 47, 100, 220, 470, 1000, 2220};
 static uint16_t shown_rel = 0xFFFF;           // l | c << 7 | sw << 14
 
 static void show_relays(const relays_t *r) {

@@ -181,11 +181,11 @@ int main(void) {
       disp_bat_small(3400);
       dump("relays_low");
    }
-   // 18.5 uH, 4059 pF, C on the transmitter side, 12 W; tuning
+   // 18.5 uH, 4079 pF, C on the transmitter side, 12 W; tuning
    disp_cells(1, 7, 0x7F);
    disp_cells(9, 7, 0x7F);
    disp_small(0, 58, "18.5uH");
-   disp_small(8, 58, "4059pF");
+   disp_small(8, 58, "4079pF");
    disp_small(0, 100, " 12W");
    disp_small(8, 100, "  TX");
    disp_big(LINE2, 0, "         ");

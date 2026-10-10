@@ -627,7 +627,7 @@ static void checkpoint_variant(uint32_t t) {
    if(mode == M_RELAYS && t == 2 * MIN) {                   // tuned: L 3, C 90 at the output,
       CHECK_EQ(rel_key(), 90 << 7 | 3);                      // 5 W small at the top right
       CHECK(text_shows(0, 0, 100, "5.0W"));
-      CHECK(text_shows(0, 0, 58, "0.32uH") && text_shows(0, 8, 58, "2937pF"));
+      CHECK(text_shows(0, 0, 58, "0.32uH") && text_shows(0, 8, 58, "2957pF"));
       CHECK(text_shows(0, 0, 0, "L") && text_shows(0, 8, 0, "C"));
       CHECK(pix(113, 22) && pix(119, 25) && !pix(120, 25));  // 4.0 V: 5 of 7 columns
    }
