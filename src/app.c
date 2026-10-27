@@ -29,7 +29,7 @@
 #define AUTO_STEADY 4          // auto tune after this many measurements in a row
 #define AUTO_HOLD   3000       // ms after a tune without auto tune
 #define RESUME_MS   60000      // a tune within this time continues an interrupted one
-#define SWR_SHOW_UW 100000     // SWR shown from 0.1 W (the lowest Cell 4), also below Cell 4
+#define SWR_SHOW_UW FOLD_MIN_UW // SWR shown from 0.1 W (the lowest Cell 4), also below Cell 4
 #define HINT_MS     1000       // a tune without a suitable carrier: the display says why
 #define CARRIER_MS  (WAIT_START * 10UL)   // ... and gives up, as tune_run would
 #define CARRIER_ON_MS 200      // a carrier that comes while waiting: this long, then tune
@@ -210,12 +210,12 @@ uint8_t hal_abort(void) {
 }
 
 // Carrier power for tuning, the same limits as in tune_run: P_OK or why
-// not (P_NONE below SWR_SHOW_UW = FOLD_MIN_UW, P_LOW below Cell 4 unless
-// the SWR is 1.5 or more, P_HIGH above Cell 5)
+// not (P_NONE below 0.1 W, P_LOW below Cell 4 unless the SWR is 1.6 or
+// more, P_HIGH above Cell 5)
 enum { P_OK, P_NONE, P_LOW, P_HIGH };
 static uint8_t tune_power(const meas_t *m) {
    if(m->pf < SWR_SHOW_UW) return P_NONE;
-   if(m->pf < TUNE_MIN_UW && m->g2 < FOLD_G2) return P_LOW;
+   if(!POWER_OK(m, TUNE_MIN_UW, FOLD_G2_START)) return P_LOW;
    if(pnet_uw(m) > TUNE_MAX_UW) return P_HIGH;
    return P_OK;
 }

@@ -163,7 +163,7 @@ static uint8_t slot_of(uint16_t key) {
 // measures again with more averaging (no step).
 static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
    meas_t m;
-   uint16_t key = key_of(l, c, sw), wait = 0;
+   uint16_t key = key_of(l, c, sw), wait = 0, weak = 0;
    uint8_t s = slot_of(key), unstable = 0;
    if(n != MEAS_N_VERIFY) {
       if(cache_key[s] == key) {
@@ -186,9 +186,10 @@ static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
          m.spread = 0;
          break;
       }
-      if((m.pf < min_uw && (m.pf < FOLD_MIN_UW || m.g2 < FOLD_G2)) || pnet_uw(&m) > max_uw) {
-         if(++wait > (carrier_seen ? WAIT_LOST : WAIT_START))   // a carrier still there is
-            return m.pf >= FOLD_MIN_UW && m.pf < min_uw ? M_TOO_LOW : M_NO_CARRIER;   // too weak
+      if(!POWER_OK(&m, min_uw, FOLD_G2) || pnet_uw(&m) > max_uw) {
+         if(m.pf >= FOLD_MIN_UW && m.pf < min_uw) weak++;
+         // a carrier there for most of the wait was too weak, else it was gone
+         if(++wait > (carrier_seen ? WAIT_LOST : WAIT_START)) return weak > wait / 2 ? M_TOO_LOW : M_NO_CARRIER;
          hal_wait_ms(10);
          continue;
       }
