@@ -513,8 +513,13 @@ static void watch(void) {
    // power compared as in tune_run (not the rounded p10), else auto tune
    // starts tunes that never see a carrier
    pw = tune_power(&m);
-   if(pw == P_OK || pw == P_HIGH) swr_last = swr;
-   if(pw != P_NONE) swr_disp = swr;
+   // only a measurement whose halves agree: one on a key edge (carrier
+   // coming or going between F1 and F2) gives a wrong SWR, which would
+   // stay on the display until the next one
+   if(m.stable) {
+      if(pw == P_OK || pw == P_HIGH) swr_last = swr;
+      if(pw != P_NONE) swr_disp = swr;
+   }
 
    // auto tune: power for tuning, SWR above 1.20 and changed by more than
    // Cell 6 since the last tune (not again right after a tune, and not
