@@ -50,7 +50,7 @@ extern uint16_t tune_mem_dirty;           // bit i: slot i changed
 // setting measures clearly different now (other band, other antenna).
 extern uint8_t tune_resume;        // 1: the next tune_run continues the last search
 extern uint8_t tune_resumable;     // set by tune_run: the next tune may continue this
-                                   // search (carrier gone after new settings were
+                                   // search (carrier gone or too weak after new settings were
                                    // measured, and the search is a continued one or
                                    // found something better than 'from')
 

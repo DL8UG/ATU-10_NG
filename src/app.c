@@ -48,7 +48,8 @@ static meas_t peak;            // peak hold for the display
 static uint32_t t_peak;
 static uint16_t swr_last;      // last SWR measured with enough power
 static uint16_t swr_disp;      // last SWR measured from SWR_SHOW_UW on, for the display
-static uint8_t resume;         // the last tune can be continued (tune_resumable)
+static uint8_t resume;         // the last tune can be continued (tune_resumable): 1, or
+                               // 2 by TUNE only (TOO LOW: auto tune would end the same way)
 
 // ms since the tick value t. Always read the clock fresh: a timestamp set
 // in between (wake, tune) may be later than a value read before, and the
@@ -272,7 +273,7 @@ static uint8_t wait_carrier(uint8_t *why) {
    return r;
 }
 
-static void do_tune(void) {
+static void do_tune(uint8_t by_auto) {
    uint8_t r, same, why = P_NONE;
    relays_t from = rel;
    wake();
@@ -285,14 +286,15 @@ static void do_tune(void) {
    disp_flush();
    r = wait_carrier(&why);
    if(r == TUNE_OK) {
-      tune_resume = resume && since(t_tuned) < RESUME_MS;
+      tune_resume = resume && (resume == 1 || !by_auto) && since(t_tuned) < RESUME_MS;
       // in bypass the relays hold no tune result (the memory has it)
       r = tune_run(&rel, !st.bypass && st.last_swr ? (uint16_t)(100 + st.last_swr) : 0);
       // Carrier gone while the search still measured new settings: the
       // next tune within RESUME_MS goes on with this search, and auto tune
-      // starts it with the next carrier (SWR above 1.20). The step budget
-      // counts on, so the chain ends.
-      resume = tune_resumable;
+      // starts it with the next carrier (SWR above 1.20). After TOO LOW
+      // only TUNE goes on with it (the power raised meanwhile); auto tune
+      // would end the same way. The step budget counts on, so the chain ends.
+      resume = tune_resumable ? (r == TUNE_TOO_LOW ? 2 : 1) : 0;
    }
    else resume = 0;                            // nothing measured: as a tune without a carrier
    same = rel.l == from.l && rel.c == from.c && rel.sw == from.sw;
@@ -317,7 +319,7 @@ static void do_tune(void) {
       swr_last = swr_disp = tune_swr;
       save_state();
    }
-   if(resume) swr_ref = 0;                     // auto tune goes on with the search
+   if(resume == 1) swr_ref = 0;                // auto tune goes on with the search
    show_relays(&rel);                          // the progress showed the best so far
    show_swr_label();
    shown_swr = 0xFFFF;
@@ -585,10 +587,10 @@ void main(void) {
       }
       switch(ev) {
          case EV_SHORT:     wake(); bypass_toggle(!st.bypass); break;
-         case EV_LONG:      do_tune(); break;
+         case EV_LONG:      do_tune(0); break;
          case EV_XLONG:     go_off = 1; break;
          case EV_EXT_SHORT: wake(); bypass_toggle(1); break;
-         case EV_EXT_LONG:  do_tune(); break;
+         case EV_EXT_LONG:  do_tune(0); break;
       }
 
       if(since(t_watch) >= WATCH_MS) {
@@ -597,7 +599,7 @@ void main(void) {
       }
       if(auto_tune) {
          auto_tune = 0;
-         do_tune();
+         do_tune(1);
       }
       if(since(t_show) >= SHOW_MS) {
          t_show = tick_ms();

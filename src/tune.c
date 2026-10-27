@@ -633,10 +633,12 @@ results:
 
 stop:   // aborted or carrier gone: best setting so far
    // Carrier gone while the search still measured new settings (e.g. a CW
-   // key pressed again and again with longer pauses): the next tune may go
-   // on with it. A new search (not a continued one) starts a chain only if
+   // key pressed again and again with longer pauses), or too weak near the
+   // match (TOO LOW, the power is raised then): the next tune may go on
+   // with it. A new search (not a continued one) starts a chain only if
    // it found something better.
-   tune_resumable = r == M_NO_CARRIER && steps > steps0 && (cont || key_of(best.l, best.c, best.sw) != key);
+   tune_resumable = (r == M_NO_CARRIER || r == M_TOO_LOW) && steps > steps0
+                    && (cont || key_of(best.l, best.c, best.sw) != key);
    finish(&best, best_g);
    return r == M_ABORT ? TUNE_ABORTED : r == M_OVERLOAD ? TUNE_OVERLOAD
           : r == M_TOO_LOW ? TUNE_TOO_LOW : TUNE_NO_CARRIER;

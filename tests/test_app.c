@@ -39,7 +39,7 @@ static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
 enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
        M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT, M_BATT_OFF, M_HINT_BLIP, M_HINT_END, M_HINT_CW, M_BATT_HOVER,
-       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL, M_BATT_AUTO, M_BATT_EMPTY, M_RELAYS, M_FOLD, M_EDGE };
+       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL, M_BATT_AUTO, M_BATT_EMPTY, M_RELAYS, M_FOLD, M_EDGE, M_LOW_RESUME };
 #define M_RESUME(m) ((m) >= M_RESUME_OFF && (m) <= M_RESUME_EMPTY)
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
@@ -278,7 +278,7 @@ void relays_set(uint8_t l, uint8_t c, uint8_t sw) {
    relay_calls++;
    if(!LATDbits.LATD2) key_low_in_tune = 1;
    if(mode == M_RELAYS && !LATDbits.LATD2) switched[sw & 1][l & 127][c & 127] = 1;
-   if(mode == M_RESUME_OFF && !LATDbits.LATD2) {
+   if((mode == M_RESUME_OFF || mode == M_LOW_RESUME) && !LATDbits.LATD2) {
       uint8_t *m = &seen1[sw & 1][l & 127][c & 127];
       if(key_falls == 1 && !*m) { *m = 1; n_first++; }
       if(key_falls == 2 && *m == 1) { *m = 2; n_again++; }
@@ -291,7 +291,8 @@ void meas_take(meas_t *m, uint8_t n) {
    double g;
    memset(m, 0, sizeof *m);
    last_clr = wall;                  // meas_take clears the watchdog
-   m->pf = rf_on ? (mode == M_CELLS_MAX ? 12000000 : mode == M_LOWPWR ? 970000 : 5000000) : 0;
+   m->pf = rf_on ? (mode == M_CELLS_MAX ? 12000000 : mode == M_LOWPWR || (mode == M_LOW_RESUME && wall < 40000) ? 970000
+                       : 5000000) : 0;
    if(mode == M_HINT)                // none, 0.5 W, 20 W (above Cell 5), then 5 W
       m->pf = wall < 9000 ? 0 : wall < 10000 ? 500000 : wall < 11000 ? 20000000 : 5000000;
    if(mode == M_HINT_BLIP)           // 30 ms of 5 W while waiting, nothing else
@@ -743,6 +744,12 @@ static void checkpoint_variant(uint32_t t) {
          CHECK(!st.bypass && rel.sw == 0 && d2 >= 2.5 && d2 < 20);   // the match (SWR 1.5 .. 3)
          break;                                              // and does not start again
       }
+      case M_LOW_RESUME:                                     // TUNE after TOO LOW with more
+         printf("after TOO LOW: %d of %d settings measured again\n", n_again, n_first);
+         CHECK_EQ(key_falls, 2);                             // power: goes on with the search
+         CHECK(n_again * 4 <= n_first);                      // (the cached settings are not
+         CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);   // measured again) to the match
+         break;
       case M_EDGE:                                           // CW: an edge reading never shows,
          printf("key edges: SWR 3.00 shown %d times, 1.00 %d times\n", edge_seen, swr_seen);
          CHECK_EQ(edge_seen, 0);                             // and no auto tune because of them
@@ -770,7 +777,7 @@ static int run_variant(void) {
    st.last_swr = 5;
    if(mode == M_UNMATCH) g2_floor = 1.0 / 9;                 // best possible SWR 2.0
    if(mode == M_NOMATCH) g2_floor = 0.99995;                 // SWR 9.99 everywhere
-   if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH || mode == M_LOWPWR || mode == M_EXTTUNE || mode == M_FOLD
+   if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH || mode == M_LOWPWR || mode == M_EXTTUNE || mode == M_FOLD || mode == M_LOW_RESUME
       || mode == M_STOPAUTO || mode == M_OVERLOAD || mode == M_PULSE || mode == M_PULSE_SLOW || M_RESUME(mode) || mode == M_BATT_LOW) {   // start in bypass, so that
       st.r.l = st.r.c = 0;                                   // the carrier causes an auto tune
       st.last_swr = 0;
@@ -807,6 +814,10 @@ static int run_variant(void) {
    n_press = mode == M_RELAYS ? 2 : 0;
    if(mode == M_BLIP) {                                       // ends 0.4 s after the greeting
       press[0].from = 3800; press[0].to = 4600;
+      n_press = 1;
+   }
+   if(mode == M_LOW_RESUME) {                                 // 0.97 W: TOO LOW, then 5 W from
+      press[0].from = 42000; press[0].to = 42600;            // 40 s and TUNE
       n_press = 1;
    }
    if(mode == M_NOPOWER) {                                    // long press, no carrier
@@ -869,7 +880,8 @@ static int run_variant(void) {
                      : mode == M_BATT_MIX ? "test_app batt-mix" : mode == M_BATT_OVL ? "test_app batt-ovl"
                      : mode == M_BATT_AUTO ? "test_app batt-auto" : mode == M_BATT_EMPTY ? "test_app batt-empty"
                      : mode == M_FOLD ? "test_app fold"
-                     : mode == M_EDGE ? "test_app edge" : "test_app relays");
+                     : mode == M_EDGE ? "test_app edge" : mode == M_LOW_RESUME ? "test_app low-resume"
+                     : "test_app relays");
 }
 
 int main(int argc, char **argv) {
