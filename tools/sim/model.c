@@ -18,6 +18,7 @@ double complex z_load;
 int r_l, r_c, r_sw;
 double noise_mv, jitter, r_src = -1, p_tx = 5.0, vdd_mv = 3900;
 double true_a = 1.14, true_b = 0.4;
+double fold_swr, fold_frac;
 long relay_steps, measurements;
 double time_s, relay_ms = 7;
 int trace;
@@ -81,14 +82,16 @@ void model_relay_set(int l, int c, int sw) {
 }
 
 void model_powers(double *pf, double *pr) {
+   double p = p_tx;
+   if(fold_swr > 0 && swr_of(gamma_of(r_l, r_c, r_sw)) > fold_swr) p *= fold_frac;
    if(r_src < 0) {
       double g = gamma_of(r_l, r_c, r_sw);
-      *pf = p_tx;
-      *pr = p_tx * g * g;
+      *pf = p;
+      *pr = p * g * g;
    }
    else {   // the bridge sees (V +- 50 I) / 2 at the tuner input
       double complex zin = zin_of(r_l, r_c, r_sw);
-      double vs = sqrt(p_tx * 50) * (50 + r_src) / 50;   // p_tx into 50 Ohm
+      double vs = sqrt(p * 50) * (50 + r_src) / 50;   // p into 50 Ohm
       double complex i = vs / (zin + r_src), v = i * zin;
       *pf = pow(cabs(v + 50 * i), 2) / 200;
       *pr = pow(cabs(v - 50 * i), 2) / 200;

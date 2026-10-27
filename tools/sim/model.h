@@ -26,6 +26,8 @@ extern double r_src;                 // transmitter source resistance, < 0: cons
 extern double p_tx;                  // transmitter power into 50 Ohm, W
 extern double vdd_mv;                // supply = ADC reference in the Vdd range
 extern double true_a, true_b;        // real detector calibration (P = a V^2 + b V)
+extern double fold_swr, fold_frac;   // SWR protection of the rig: above fold_swr (at the
+                                     // tuner input) it cuts its power to fold_frac; 0 = none
 void model_powers(double *pf, double *pr);          // at the current relay setting
 double model_sample_mv(double p, double scale);     // one detector reading as the ADC sees it, mV
 

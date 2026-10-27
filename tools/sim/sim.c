@@ -17,6 +17,9 @@
 //   --noise mV     gaussian noise per ADC sample
 //   --jitter f     carrier amplitude varies by this fraction (1 sigma)
 //   --rs Ohm       transmitter source resistance (QRP rigs are no 50 Ohm source)
+//   --ptx W        transmitter power into 50 Ohm (default 5 W)
+//   --fold S F     SWR protection of the rig: above SWR S at the tuner input it
+//                  cuts its power to the fraction F (0 = transmitter off)
 //   --tol %        component tolerances (random per seed)
 //   --cal A B      real detector calibration (the firmware assumes 1.14 0.4)
 //   --retune %     tune, move the frequency by this much, report the 2nd tune
@@ -27,6 +30,7 @@
 //                  ("sw l c swr") and the relay steps of the tune ("step sw l c")
 //   --seed n       random seed
 //   --search n     Cell 12 (search effort), --target n  Cell 11
+//   --minpwr n     Cell 4 (min. tune power in 0.1 W; firmware glue only)
 
 #include <math.h>
 #include <stdio.h>
@@ -47,6 +51,7 @@ static const double complex std_loads[] = {
 };
 
 static double retune;
+int sim_minpwr = -1;               // Cell 4 override, read by glue_new.c
 static FILE *map;
 static const antenna_t *cur_ant;
 
@@ -168,6 +173,8 @@ int main(int argc, char **argv) {
       else if(!strcmp(o, "--noise") && more >= 1) noise_mv = atof(argv[++i]);
       else if(!strcmp(o, "--jitter") && more >= 1) jitter = atof(argv[++i]);
       else if(!strcmp(o, "--rs") && more >= 1) r_src = atof(argv[++i]);
+      else if(!strcmp(o, "--ptx") && more >= 1) p_tx = atof(argv[++i]);
+      else if(!strcmp(o, "--fold") && more >= 2) { fold_swr = atof(argv[++i]); fold_frac = atof(argv[++i]); }
       else if(!strcmp(o, "--tol") && more >= 1) tol = atof(argv[++i]);
       else if(!strcmp(o, "--retune") && more >= 1) retune = atof(argv[++i]);
       else if(!strcmp(o, "--seed") && more >= 1) seed = (unsigned)atoi(argv[++i]);
@@ -176,6 +183,7 @@ int main(int argc, char **argv) {
       else if(!strcmp(o, "--map") && more >= 1) map_file = argv[++i];
       else if(!strcmp(o, "--search") && more >= 1) search = atoi(argv[++i]);
       else if(!strcmp(o, "--target") && more >= 1) target = atoi(argv[++i]);
+      else if(!strcmp(o, "--minpwr") && more >= 1) sim_minpwr = atoi(argv[++i]);
       else if(!strcmp(o, "--cal") && more >= 2) { true_a = atof(argv[++i]); true_b = atof(argv[++i]); }
       else if(!strcmp(o, "--case") && more >= 3) {
          case_mhz = atof(argv[++i]); case_r = atof(argv[++i]); case_x = atof(argv[++i]);

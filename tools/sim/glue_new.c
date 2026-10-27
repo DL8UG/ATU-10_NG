@@ -17,6 +17,7 @@ static relays_t cur;
 static uint16_t last_swr;
 
 extern double gauss(void);
+extern int sim_minpwr;
 
 // as detector() in meas.c: start in the FVR 1.024 V range, move up when a
 // sample does not fit, average n samples; result in 1/8 mV
@@ -69,6 +70,7 @@ void glue_init(int search, int target) {
    cells_load();
    if(search > 0) cfg[CFG_SEARCH] = (uint8_t)search;
    if(target >= 0) cfg[CFG_TARGET] = (uint8_t)target;
+   if(sim_minpwr > 0) cfg[CFG_MIN_PWR] = (uint8_t)sim_minpwr;
    relay_ms = cfg[CFG_RELAY_MS];
 }
 
