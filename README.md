@@ -129,7 +129,8 @@ seconds, a tune on a band used before about 2 to 3 seconds.
 - Rigs with an SWR protection, which cut their power when the SWR is high,
   work too: where the SWR is 1.5 or more, 0.1 W is enough to measure. If
   the power stays below setting 4 where the SWR is below 1.5, the tune ends
-  with TOO LOW and keeps the best setting found so far.
+  with TOO LOW and keeps the best setting found so far. Raise the power and
+  press TUNE again within a minute: the tune goes on from there.
 - If the transmitter is too strong for the measurement (the detector is
   above its range, from about 14 to 22 W depending on the battery), the
   tune stops after a few dozen relay steps with OVERLOAD.

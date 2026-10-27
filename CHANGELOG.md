@@ -26,7 +26,12 @@ tag `vX.Y.Z` in this repository; the hex file is on its release page.
   before. TUNE and the auto tune start with such a carrier too.
 - changed: if the power stays below setting 4 at a setting with an SWR
   below 1.5, the tune ends with TOO LOW and keeps the best setting found so
-  far. Before, a carrier below setting 4 did not start a tune at all.
+  far. Before, a carrier below setting 4 did not start a tune at all. Press
+  TUNE again within a minute with more power, and it goes on with that
+  search instead of starting again.
+- fixed: with CW, a reading taken just as the key went down or up could
+  show a wrong SWR, which stayed until the next reading. Only steady
+  readings change the SWR shown now.
 
 ## 1.1.0
 
