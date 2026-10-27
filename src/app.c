@@ -210,11 +210,12 @@ uint8_t hal_abort(void) {
 }
 
 // Carrier power for tuning, the same limits as in tune_run: P_OK or why
-// not (P_NONE below SWR_SHOW_UW, P_LOW below Cell 4, P_HIGH above Cell 5)
+// not (P_NONE below SWR_SHOW_UW = FOLD_MIN_UW, P_LOW below Cell 4 unless
+// the SWR is 1.5 or more, P_HIGH above Cell 5)
 enum { P_OK, P_NONE, P_LOW, P_HIGH };
 static uint8_t tune_power(const meas_t *m) {
    if(m->pf < SWR_SHOW_UW) return P_NONE;
-   if(m->pf < TUNE_MIN_UW) return P_LOW;
+   if(m->pf < TUNE_MIN_UW && m->g2 < FOLD_G2) return P_LOW;
    if(pnet_uw(m) > TUNE_MAX_UW) return P_HIGH;
    return P_OK;
 }
@@ -323,6 +324,7 @@ static void do_tune(void) {
    show_swr(swr_disp);
    if(r == TUNE_NO_CARRIER)                    // as the hint said while waiting
       message(why == P_LOW ? "TOO LOW" : why == P_HIGH ? "TOO HIGH" : "NO POWER", 2000);
+   else if(r == TUNE_TOO_LOW) message("TOO LOW", 2000);
    else if(r == TUNE_NO_MATCH) message("NO MATCH", 2000);
    else if(r == TUNE_ABORTED) message("STOP", 1000);
    else if(r == TUNE_OVERLOAD) message("OVERLOAD", 2000);

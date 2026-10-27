@@ -39,7 +39,7 @@ static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
 enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
        M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT, M_BATT_OFF, M_HINT_BLIP, M_HINT_END, M_HINT_CW, M_BATT_HOVER,
-       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL, M_BATT_AUTO, M_BATT_EMPTY, M_RELAYS };
+       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL, M_BATT_AUTO, M_BATT_EMPTY, M_RELAYS, M_FOLD };
 #define M_RESUME(m) ((m) >= M_RESUME_OFF && (m) <= M_RESUME_EMPTY)
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
@@ -50,7 +50,7 @@ static int adc_on = 1;               // ADC and reference (meas_init / meas_off)
 static double opt_l = 20, opt_c = 30;   // best match of the load (capacitor at the output)
 static uint8_t seen1[2][128][128];   // M_RESUME_OFF: settings switched by the 1st / 2nd tune
 static int n_first, n_again;
-static int batt_hidden, recharge_seen, recharge_late, ovl_seen;
+static int batt_hidden, recharge_seen, recharge_late, ovl_seen, low_seen, nopower_seen;
 static uint8_t switched[2][128][128];   // M_RELAYS: settings switched by the tune running
 static int live_updates, relays_checks, drawn_prev = -1;
 
@@ -302,6 +302,7 @@ void meas_take(meas_t *m, uint8_t n) {
    g = d2 / (d2 + 60);
    if(mode == M_STOPAUTO) g = 0.25;                       // SWR 3.00 at every setting
    m->g2 = (uint32_t)(G2_ONE * (g2_floor + (1 - g2_floor) * g));
+   if(mode == M_FOLD && m->g2 > G2_ONE / 4) m->pf /= 10;   // SWR protection: 0.5 W above SWR 3
    if((mode == M_OVERLOAD || mode == M_BATT_OVL) && rf_on) {   // 30 W: the forward detector
       m->pf = 19000000;                                   // clips at every setting
       m->overflow = 1;
@@ -602,6 +603,10 @@ static void checkpoint_variant(uint32_t t) {
       CHECK(text_shows(1, LINE2, 0, "RECHARGE"));            // 0.3 s too much power: OVERLOAD
    if(mode == M_BATT_OVL && t >= 26000 && t < 26400 && t % 10 == 0)   // replaces it at once
       ovl_seen += text_shows(1, LINE2, 0, "OVERLOAD");
+   if((mode == M_LOWPWR || mode == M_FOLD) && t % 10 == 0) {
+      low_seen += text_shows(1, LINE2, 0, "TOO LOW");
+      nopower_seen += text_shows(1, LINE2, 0, "NO POWER");
+   }
    if(mode == M_BATT_OVL && t == 27000)
       CHECK(ovl_seen > 20);
    if(mode == M_BATT_LOW && t == 40000)                     // RECHARGE 1.5 s of 9 s: the SWR
@@ -717,9 +722,19 @@ static void checkpoint_variant(uint32_t t) {
          CHECK(line2_checks >= 1);
          CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);
          break;
-      case M_LOWPWR:                                         // 0.97 W, Cell 4 = 1.0 W: the
-         CHECK_EQ(key_falls, 0);                             // tune would not see a carrier,
-         break;                                              // so no auto tune either
+      case M_LOWPWR: {                                       // 0.97 W, Cell 4 = 1.0 W: in bypass
+         double d2 = (rel.l - opt_l) * (rel.l - opt_l) + (rel.c - opt_c) * (rel.c - opt_c);
+         printf("0.97 W: %d tunes, L %d C %d sw %d\n", key_falls, rel.l, rel.c, rel.sw);
+         CHECK_EQ(key_falls, 1);                             // (SWR above 1.5) the auto tune
+         CHECK(low_seen > 0 && nopower_seen == 0);           // starts, ends with TOO LOW near
+         CHECK(!st.bypass && rel.sw == 0 && d2 >= 2.5 && d2 < 20);   // the match (SWR 1.5 .. 3)
+         break;                                              // and does not start again
+      }
+      case M_FOLD:                                           // SWR protection of the rig: the
+         CHECK_EQ(key_falls, 1);                             // reduced power is enough at the
+         CHECK(low_seen == 0 && nopower_seen == 0);          // bad settings, the tune finds the
+         CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);   // match at full power
+         break;
       case M_UNMATCH:                                        // best possible SWR 2.0, default
       case M_NOMATCH:                                        // threshold / nothing matches:
          printf("%s: %d tunes in 5 min\n", mode == M_UNMATCH ? "SWR 2 load" : "no match",
@@ -736,7 +751,7 @@ static int run_variant(void) {
    st.last_swr = 5;
    if(mode == M_UNMATCH) g2_floor = 1.0 / 9;                 // best possible SWR 2.0
    if(mode == M_NOMATCH) g2_floor = 0.99995;                 // SWR 9.99 everywhere
-   if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH || mode == M_LOWPWR || mode == M_EXTTUNE
+   if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH || mode == M_LOWPWR || mode == M_EXTTUNE || mode == M_FOLD
       || mode == M_STOPAUTO || mode == M_OVERLOAD || mode == M_PULSE || mode == M_PULSE_SLOW || M_RESUME(mode) || mode == M_BATT_LOW) {   // start in bypass, so that
       st.r.l = st.r.c = 0;                                   // the carrier causes an auto tune
       st.last_swr = 0;
@@ -834,7 +849,7 @@ static int run_variant(void) {
                      : mode == M_BATT_HOVER ? "test_app batt-hover" : mode == M_BATT_LOW ? "test_app batt-low"
                      : mode == M_BATT_MIX ? "test_app batt-mix" : mode == M_BATT_OVL ? "test_app batt-ovl"
                      : mode == M_BATT_AUTO ? "test_app batt-auto" : mode == M_BATT_EMPTY ? "test_app batt-empty"
-                     : "test_app relays");
+                     : mode == M_FOLD ? "test_app fold" : "test_app relays");
 }
 
 int main(int argc, char **argv) {

@@ -113,7 +113,7 @@ typedef struct {
    uint8_t sp;                       // noise estimate, relative, 1/256
 } val_t;
 
-enum { M_OK, M_ABORT, M_NO_CARRIER, M_BUDGET, M_OVERLOAD };
+enum { M_OK, M_ABORT, M_NO_CARRIER, M_BUDGET, M_OVERLOAD, M_TOO_LOW };
 
 #ifdef TUNE_STATS      // simulator: relay steps per phase
 long tune_stats[6];
@@ -186,8 +186,9 @@ static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
          m.spread = 0;
          break;
       }
-      if(m.pf < min_uw || pnet_uw(&m) > max_uw) {
-         if(++wait > (carrier_seen ? WAIT_LOST : WAIT_START)) return M_NO_CARRIER;
+      if((m.pf < min_uw && (m.pf < FOLD_MIN_UW || m.g2 < FOLD_G2)) || pnet_uw(&m) > max_uw) {
+         if(++wait > (carrier_seen ? WAIT_LOST : WAIT_START))   // a carrier still there is
+            return m.pf >= FOLD_MIN_UW && m.pf < min_uw ? M_TOO_LOW : M_NO_CARRIER;   // too weak
          hal_wait_ms(10);
          continue;
       }
@@ -636,5 +637,6 @@ stop:   // aborted or carrier gone: best setting so far
    // it found something better.
    tune_resumable = r == M_NO_CARRIER && steps > steps0 && (cont || key_of(best.l, best.c, best.sw) != key);
    finish(&best, best_g);
-   return r == M_ABORT ? TUNE_ABORTED : r == M_OVERLOAD ? TUNE_OVERLOAD : TUNE_NO_CARRIER;
+   return r == M_ABORT ? TUNE_ABORTED : r == M_OVERLOAD ? TUNE_OVERLOAD
+          : r == M_TOO_LOW ? TUNE_TOO_LOW : TUNE_NO_CARRIER;
 }

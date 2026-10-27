@@ -24,6 +24,8 @@ enum {
                                    // relays in bypass
    TUNE_OVERLOAD,                  // a detector above the ADC range at OVF_RUN_MAX settings
                                    // in a row: relays unchanged or best so far
+   TUNE_TOO_LOW,                   // a carrier below Cell 4 at a setting below SWR 1.5:
+                                   // relays unchanged or best so far
 };
 
 // Memory of the last good tunes. The tuner does not know the frequency; it
@@ -59,6 +61,14 @@ extern uint8_t tune_resumable;     // set by tune_run: the next tune may continu
 #define TUNE_MIN_UW  ((uint32_t)cfg[CFG_MIN_PWR] * 100000)
 #define TUNE_MAX_UW  ((uint32_t)cfg[CFG_MAX_PWR] * 1000000)
 #define WAIT_START   1000          // x 10 ms (and a measurement each)
+// A rig with SWR protection cuts its power at a bad setting, often below
+// Cell 4. From SWR 1.5 on a forward power from FOLD_MIN_UW on is enough
+// to measure a setting: Pr / Pf stays right, and a bad setting needs no
+// precision. Below SWR 1.5 Cell 4 applies.
+#define FOLD_MIN_UW  100000        // 0.1 W
+#ifndef FOLD_G2
+#define FOLD_G2      (G2_ONE / 25) // SWR 1.5
+#endif
 
 // Result of the last tune
 extern relays_t tune_best;
