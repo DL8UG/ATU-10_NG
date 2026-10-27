@@ -140,7 +140,6 @@ static uint8_t ovf_run;                       // settings in a row with a clippe
 static uint16_t steps;                        // relay settings measured by the search so far
 uint8_t tune_resume;
 uint8_t tune_resumable;
-static uint8_t ended_low;                     // the last search stopped with TOO LOW
 static uint16_t budget;
 static uint32_t min_uw, max_uw;
 static relays_t best;                         // best setting measured so far
@@ -497,7 +496,7 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
       hi = best_g < G2_ONE ? best_g : G2_ONE;
       if(lo > hi) { d = lo; lo = hi; hi = d; }
       d = hi - lo;
-      cont = d <= lo + SAME_LOAD_ABS && d <= G2_ONE - hi + SAME_LOAD_ABS;
+      if(d <= lo + SAME_LOAD_ABS && d <= G2_ONE - hi + SAME_LOAD_ABS) cont = tune_resume;
    }
    tune_resume = 0;
    PHASE(0);
@@ -508,7 +507,7 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
       // a setting a bit better than that got a value too high. With the
       // power raised now, those up to FOLD_RECHECK_G2 are measured again
       // (dropped, not emptied: the slots after them stay reachable).
-      if(ended_low) {
+      if(cont == RESUME_TUNE) {
          i = 0;
          do if((cache_key[i] & 0x8000) && cache_g[i] < (uint16_t)(FOLD_RECHECK_G2 >> 8))
                cache_key[i] = 1;
@@ -654,9 +653,9 @@ stop:   // aborted or carrier gone: best setting so far
    // match (TOO LOW, the power is raised then): the next tune may go on
    // with it. A new search (not a continued one) starts a chain only if
    // it found something better.
-   tune_resumable = (r == M_NO_CARRIER || r == M_TOO_LOW) && steps > steps0
-                    && (cont || key_of(best.l, best.c, best.sw) != key);
-   ended_low = r == M_TOO_LOW;
+   if((r == M_NO_CARRIER || r == M_TOO_LOW) && steps > steps0
+      && (cont || key_of(best.l, best.c, best.sw) != key))
+      tune_resumable = r == M_TOO_LOW ? RESUME_TUNE : RESUME_ANY;
    finish(&best, best_g);
    return r == M_ABORT ? TUNE_ABORTED : r == M_OVERLOAD ? TUNE_OVERLOAD
           : r == M_TOO_LOW ? TUNE_TOO_LOW : TUNE_NO_CARRIER;

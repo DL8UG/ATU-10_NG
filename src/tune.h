@@ -42,17 +42,21 @@ extern uint8_t tune_mem_n;                // slots in use (0..n-1)
 extern uint16_t tune_mem_dirty;           // bit i: slot i changed
 
 // Search state over tunes: a tune whose carrier went away while it still
-// measured new settings can be continued by the next one (tune_resume = 1
-// before tune_run): the settings measured so far are not measured again
-// and the step budget counts on, so a chain of continued tunes ends like
-// one tune. A new search starts instead when the relays no longer hold
-// the best setting so far (bypass switched meanwhile) or when that
-// setting measures clearly different now (other band, other antenna).
-extern uint8_t tune_resume;        // 1: the next tune_run continues the last search
-extern uint8_t tune_resumable;     // set by tune_run: the next tune may continue this
-                                   // search (carrier gone or too weak after new settings were
-                                   // measured, and the search is a continued one or
-                                   // found something better than 'from')
+// measured new settings can be continued by the next one (tune_resume =
+// tune_resumable before tune_run): the settings measured so far are not
+// measured again and the step budget counts on, so a chain of continued
+// tunes ends like one tune. A new search starts instead when the relays
+// no longer hold the best setting so far (bypass switched meanwhile) or
+// when that setting measures clearly different now (other band, other
+// antenna). After TOO LOW only TUNE should go on with it (the power
+// raised meanwhile); an auto tune would end the same way.
+#define RESUME_ANY   1             // carrier gone: any tune may go on with the search
+#define RESUME_TUNE  2             // TOO LOW: TUNE may go on with it
+extern uint8_t tune_resume;        // not 0: the next tune_run continues the last search
+extern uint8_t tune_resumable;     // set by tune_run: 0, or how the next tune may continue
+                                   // this search (new settings were measured before the
+                                   // carrier went or got too weak, and the search is a
+                                   // continued one or found something better than 'from')
 
 // Carrier power a tune works with (uW, cfg[] from cells.h): forward power
 // from Cell 4 on, net power up to Cell 5. tune_run waits up to WAIT_START

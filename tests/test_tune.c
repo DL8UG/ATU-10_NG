@@ -191,7 +191,7 @@ int main(void) {
    CHECK(tune_resumable);
    CHECK(now.l == 40 && now.c == 40 && now.sw == 1);   // best so far: SWR 1.03
    from = now;
-   tune_resume = 1;
+   tune_resume = RESUME_ANY;
    probes = 0;
    r = tune_run(&from, 0);
    printf("continued at SWR 1.03: %d relay steps\n", probes);
@@ -216,7 +216,7 @@ int main(void) {
       CHECK_EQ(cache_key[slot], key);
       cache_key[slot] = 0;                 // as if not stored
       from = now;
-      tune_resume = 1;
+      tune_resume = RESUME_ANY;
       probes = 0;
       cut = 5;
       r = tune_run(&from, 0);
@@ -241,7 +241,7 @@ int main(void) {
    {
       uint16_t s1 = steps;
       from = (relays_t){0, 0, 0};          // bypass
-      tune_resume = 1;
+      tune_resume = RESUME_ANY;
       probes = 0;
       cut = 5;
       r = tune_run(&from, 0);
