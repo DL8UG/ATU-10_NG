@@ -61,6 +61,7 @@
 #define SAME_LOAD_ABS  (G2_ONE / 128)  // continued search: tolerance near g2 0 and 1 (SWR 1.2)
 #define NO_MATCH_SWR   120           // bypass wins above this SWR: NO MATCH (below: good as it is)
 #define WAIT_LOST      300           // x 10 ms: carrier lost during the search
+#define FOLD_RECHECK_G2 (G2_ONE / 9)  // after TOO LOW: settings cached below SWR 2.0 measured again
 #define UNSTABLE_MAX   3             // an unsteady measurement is accepted the 3rd time
 #ifndef OVF_RUN_MAX
 #define OVF_RUN_MAX    64            // settings in a row with a clipped detector: too much power
@@ -129,7 +130,7 @@ static uint8_t phase;
 // measured but not stored. g2 is kept with 16 bits (g2 / 256: resolution
 // SWR 1.008, below the measurement noise) to fit 256 entries in 1.3 kB.
 #define CACHE_SIZE 256
-static uint16_t cache_key[CACHE_SIZE];       // 0 = empty, else 0x8000 | sw << 14 | l << 7 | c
+static uint16_t cache_key[CACHE_SIZE];       // 0 = empty, 1 = dropped, else 0x8000 | sw << 14 | l << 7 | c
 static uint16_t cache_g[CACHE_SIZE];
 static uint8_t cache_sp[CACHE_SIZE];
 static uint16_t cache_used;
@@ -139,6 +140,7 @@ static uint8_t ovf_run;                       // settings in a row with a clippe
 static uint16_t steps;                        // relay settings measured by the search so far
 uint8_t tune_resume;
 uint8_t tune_resumable;
+static uint8_t ended_low;                     // the last search stopped with TOO LOW
 static uint16_t budget;
 static uint32_t min_uw, max_uw;
 static relays_t best;                         // best setting measured so far
@@ -497,7 +499,20 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
    }
    tune_resume = 0;
    PHASE(0);
-   if(cont) best_g = v.g;                    // the setting the relays hold, measured now
+   if(cont) {
+      best_g = v.g;                          // the setting the relays hold, measured now
+      // After TOO LOW the settings near the match were measured with too
+      // little power, where only readings from SWR 1.5 on count (FOLD_G2):
+      // a setting a bit better than that got a value too high. With the
+      // power raised now, those up to FOLD_RECHECK_G2 are measured again
+      // (dropped, not emptied: the slots after them stay reachable).
+      if(ended_low) {
+         i = 0;
+         do if((cache_key[i] & 0x8000) && cache_g[i] < (uint16_t)(FOLD_RECHECK_G2 >> 8))
+               cache_key[i] = 1;
+         while(++i);
+      }
+   }
    else {                                    // a new search
       i = 0;
       do cache_key[i] = 0; while(++i);       // all 256
@@ -639,6 +654,7 @@ stop:   // aborted or carrier gone: best setting so far
    // it found something better.
    tune_resumable = (r == M_NO_CARRIER || r == M_TOO_LOW) && steps > steps0
                     && (cont || key_of(best.l, best.c, best.sw) != key);
+   ended_low = r == M_TOO_LOW;
    finish(&best, best_g);
    return r == M_ABORT ? TUNE_ABORTED : r == M_OVERLOAD ? TUNE_OVERLOAD
           : r == M_TOO_LOW ? TUNE_TOO_LOW : TUNE_NO_CARRIER;

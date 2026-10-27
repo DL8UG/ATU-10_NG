@@ -50,6 +50,8 @@ static int adc_on = 1;               // ADC and reference (meas_init / meas_off)
 static double opt_l = 20, opt_c = 30;   // best match of the load (capacitor at the output)
 static uint8_t seen1[2][128][128];   // M_RESUME_OFF: settings switched by the 1st / 2nd tune
 static int n_first, n_again;
+static uint8_t band1[2][128][128];   // M_LOW_RESUME: measured at 0.97 W between SWR 1.5 and 2.0,
+static int n_band, n_band_again;     // then again by the 2nd tune
 static int batt_hidden, recharge_seen, recharge_late, ovl_seen, low_seen, nopower_seen, edge_seen, swr_seen;
 static uint8_t switched[2][128][128];   // M_RELAYS: settings switched by the tune running
 static int live_updates, relays_checks, drawn_prev = -1;
@@ -282,6 +284,10 @@ void relays_set(uint8_t l, uint8_t c, uint8_t sw) {
       uint8_t *m = &seen1[sw & 1][l & 127][c & 127];
       if(key_falls == 1 && !*m) { *m = 1; n_first++; }
       if(key_falls == 2 && *m == 1) { *m = 2; n_again++; }
+      if(key_falls == 2 && band1[sw & 1][l & 127][c & 127] == 1) {
+         band1[sw & 1][l & 127][c & 127] = 2;
+         n_band_again++;
+      }
    }
    delay_ms(26);
 }
@@ -301,10 +307,15 @@ void meas_take(meas_t *m, uint8_t n) {
       m->pf = wall >= 6000 && wall < 20000 ? 20000000 : wall >= 25000 ? 500000 : 0;
    if(mode == M_HINT_CW)             // CW at 0.5 W: 60 ms key down, 60 ms up
       m->pf = wall >= 7000 && (wall - 7000) % 120 < 60 ? 500000 : 0;
-   g = d2 / (d2 + 60);
+   g = d2 / (d2 + (mode == M_LOW_RESUME ? 600 : 60));   // (LOW_RESUME: a broad valley)
    if(mode == M_STOPAUTO) g = 0.25;                       // SWR 3.00 at every setting
    m->g2 = (uint32_t)(G2_ONE * (g2_floor + (1 - g2_floor) * g));
    if(mode == M_FOLD && m->g2 > G2_ONE / 4) m->pf /= 10;   // SWR protection: 0.5 W above SWR 3
+   if(mode == M_LOW_RESUME && key_falls == 1 && rf_on && m->pf < 1000000 && !LATDbits.LATD2
+      && m->g2 >= G2_ONE / 25 && m->g2 < G2_ONE / 9 && !band1[rel.sw & 1][rel.l & 127][rel.c & 127]) {
+      band1[rel.sw & 1][rel.l & 127][rel.c & 127] = 1;
+      n_band++;
+   }
    if(mode == M_EDGE && rf_on && ((wall - 10000) % 120 < 3 || (wall - 10000) % 120 >= 57)) {
       m->g2 = G2_ONE / 4;                                  // on a key edge: the halves do not
       m->pr = m->pf / 4;                                   // agree, SWR 3.00 instead of 1.00
@@ -745,10 +756,13 @@ static void checkpoint_variant(uint32_t t) {
          break;                                              // and does not start again
       }
       case M_LOW_RESUME:                                     // TUNE after TOO LOW with more
-         printf("after TOO LOW: %d of %d settings measured again\n", n_again, n_first);
+         printf("after TOO LOW: %d of %d settings measured again, %d of %d between SWR 1.5 and 2.0\n",
+                n_again, n_first, n_band_again, n_band);
          CHECK_EQ(key_falls, 2);                             // power: goes on with the search
          CHECK(n_again * 4 <= n_first);                      // (the cached settings are not
-         CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);   // measured again) to the match
+         CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);   // measured again) to the match,
+         CHECK(n_band > 0 && n_band_again == n_band);        // but those near SWR 1.5 are: a
+                                                             // weak carrier left their values too high
          break;
       case M_EDGE:                                           // CW: an edge reading never shows,
          printf("key edges: SWR 3.00 shown %d times, 1.00 %d times\n", edge_seen, swr_seen);
