@@ -38,6 +38,7 @@
 static uint32_t t_batt, t_watch, t_show, t_refresh, t_active, t_led, t_msg, t_tuned;
 static uint8_t led_on, msg_on, auto_cnt, auto_tune, go_off, low_cnt;
 enum { B_OK, B_WARN, B_LOW, B_OFF };
+enum { R_NONE, R_ANY, R_TUNE };   // resume, see below
 static uint8_t batt_lvl, batt_blink;   // battery level, symbol hidden this time
 static uint8_t row_lvl;        // the mildest level of the readings in the row so far
 static uint8_t recharge_cnt;   // battery readings until RECHARGE shows again
@@ -48,8 +49,8 @@ static meas_t peak;            // peak hold for the display
 static uint32_t t_peak;
 static uint16_t swr_last;      // last SWR measured with enough power
 static uint16_t swr_disp;      // last SWR measured from SWR_SHOW_UW on, for the display
-static uint8_t resume;         // the last tune can be continued (tune_resumable): 1, or
-                               // 2 by TUNE only (TOO LOW: auto tune would end the same way)
+static uint8_t resume;         // the last tune can be continued (tune_resumable): R_ANY, or
+                               // R_TUNE (TOO LOW: auto tune would end the same way)
 
 // ms since the tick value t. Always read the clock fresh: a timestamp set
 // in between (wake, tune) may be later than a value read before, and the
@@ -286,7 +287,7 @@ static void do_tune(uint8_t by_auto) {
    disp_flush();
    r = wait_carrier(&why);
    if(r == TUNE_OK) {
-      tune_resume = resume && (resume == 1 || !by_auto) && since(t_tuned) < RESUME_MS;
+      tune_resume = (resume == R_ANY || (resume == R_TUNE && !by_auto)) && since(t_tuned) < RESUME_MS;
       // in bypass the relays hold no tune result (the memory has it)
       r = tune_run(&rel, !st.bypass && st.last_swr ? (uint16_t)(100 + st.last_swr) : 0);
       // Carrier gone while the search still measured new settings: the
@@ -294,9 +295,9 @@ static void do_tune(uint8_t by_auto) {
       // starts it with the next carrier (SWR above 1.20). After TOO LOW
       // only TUNE goes on with it (the power raised meanwhile); auto tune
       // would end the same way. The step budget counts on, so the chain ends.
-      resume = tune_resumable ? (r == TUNE_TOO_LOW ? 2 : 1) : 0;
+      resume = !tune_resumable ? R_NONE : r == TUNE_TOO_LOW ? R_TUNE : R_ANY;
    }
-   else resume = 0;                            // nothing measured: as a tune without a carrier
+   else resume = R_NONE;                       // nothing measured: as a tune without a carrier
    same = rel.l == from.l && rel.c == from.c && rel.sw == from.sw;
    if(r != TUNE_OK && r != TUNE_NO_MATCH && same) {
       // Stopped without a change (no carrier, or stopped before anything
@@ -319,14 +320,14 @@ static void do_tune(uint8_t by_auto) {
       swr_last = swr_disp = tune_swr;
       save_state();
    }
-   if(resume == 1) swr_ref = 0;                // auto tune goes on with the search
+   if(resume == R_ANY) swr_ref = 0;            // auto tune goes on with the search
    show_relays(&rel);                          // the progress showed the best so far
    show_swr_label();
    shown_swr = 0xFFFF;
    show_swr(swr_disp);
-   if(r == TUNE_NO_CARRIER)                    // as the hint said while waiting
-      message(why == P_LOW ? "TOO LOW" : why == P_HIGH ? "TOO HIGH" : "NO POWER", 2000);
-   else if(r == TUNE_TOO_LOW) message("TOO LOW", 2000);
+   if(r == TUNE_TOO_LOW || (r == TUNE_NO_CARRIER && why == P_LOW)) message("TOO LOW", 2000);
+   else if(r == TUNE_NO_CARRIER)               // as the hint said while waiting
+      message(why == P_HIGH ? "TOO HIGH" : "NO POWER", 2000);
    else if(r == TUNE_NO_MATCH) message("NO MATCH", 2000);
    else if(r == TUNE_ABORTED) message("STOP", 1000);
    else if(r == TUNE_OVERLOAD) message("OVERLOAD", 2000);
@@ -415,7 +416,7 @@ static void batt_start(void) {
 // display again (start_screen) - one hardware stack level less.
 static void power_off(void) {
    uint8_t n;
-   resume = 0;                                 // the clock stands still while sleeping:
+   resume = R_NONE;                            // the clock stands still while sleeping:
                                                // RESUME_MS would go on after waking
    disp_power(0);
    LED_RED = 1;
