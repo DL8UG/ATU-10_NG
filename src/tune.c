@@ -190,8 +190,10 @@ static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
       }
       if(!POWER_OK(&m, min_uw, FOLD_G2) || pnet_uw(&m) > max_uw) {
          if(m.pf >= FOLD_MIN_UW && m.pf < min_uw) weak++;
-         // a carrier there for most of the wait was too weak, else it was gone
-         if(++wait > (carrier_seen ? WAIT_LOST : WAIT_START)) return weak > wait / 2 ? M_TOO_LOW : M_NO_CARRIER;
+         // A carrier there for a good part of the wait was too weak, else it
+         // was gone. A quarter: a keyed carrier (CW, SSB) is down only part
+         // of the time, the fading carrier of a released key only for a moment
+         if(++wait > (carrier_seen ? WAIT_LOST : WAIT_START)) return weak > wait / 4 ? M_TOO_LOW : M_NO_CARRIER;
          hal_wait_ms(10);
          continue;
       }
