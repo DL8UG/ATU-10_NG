@@ -71,7 +71,7 @@ extern uint8_t tune_resumable;     // set by tune_run: the next tune may continu
 #endif
 // TUNE and auto tune start in that band only from SWR 1.6 on: their quick
 // measurement must not let a tune start whose finer first one is below 1.5
-#define FOLD_G2_START (G2_ONE / 19) // SWR 1.6
+#define FOLD_G2_START (FOLD_G2 / 3 * 4) // a third more reflected: SWR 1.6
 // enough power to measure: from min_uw on, or in the band above
 #define POWER_OK(m, min_uw, g2_min) \
    ((m)->pf >= (min_uw) || ((m)->pf >= FOLD_MIN_UW && (m)->g2 >= (g2_min)))
