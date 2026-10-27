@@ -5,6 +5,7 @@ tag `vX.Y.Z` in this repository; the hex file is on its release page.
 
 ## Contents
 
+- [Not released yet](#not-released-yet)
 - [1.1.0](#110)
 - [1.0.0](#100)
 - [0.9.6](#096)
@@ -15,6 +16,17 @@ tag `vX.Y.Z` in this repository; the hex file is on its release page.
 - [0.9.1](#091)
 - [0.9.0](#090)
 - [0.1.0](#010)
+
+## Not released yet
+
+- new: tuning with rigs that have an SWR protection. Many QRP rigs cut their
+  power when the SWR is high, often below setting 4, so the tune did not
+  start or stopped after a few seconds. Where the SWR is 1.5 or more, 0.1 W
+  is now enough to measure a setting; below SWR 1.5 setting 4 applies as
+  before. TUNE and the auto tune start with such a carrier too.
+- changed: if the power stays below setting 4 at a setting with an SWR
+  below 1.5, the tune ends with TOO LOW and keeps the best setting found so
+  far. Before, a carrier below setting 4 did not start a tune at all.
 
 ## 1.1.0
 

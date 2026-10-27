@@ -33,7 +33,7 @@ There are three ways, for the same 13 settings:
 | 1 | Display off after | minutes without activity, 0 = never | 0..99 | 5 min | 0 (never), 1, 2, 3, 5, 10, 15, 20, 30, 45, 60, 99 |
 | 2 | Power off after | minutes without activity, 0 = never | 0..99 | 30 min | 0 (never), 5, 10, 15, 20, 30, 45, 60, 90, 99 |
 | 3 | Relay pulse | ms per relay pulse | 2..30 | 10 ms | 3 .. 10, 12, 15, 20, 25, 30 |
-| 4 | Min. tune power | in 0.1 W | 1..99 | 1.0 W | 0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0 W |
+| 4 | Min. tune power | in 0.1 W; where the SWR is 1.5 or more, 0.1 W is enough (rigs with an SWR protection) | 1..99 | 1.0 W | 0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0 W |
 | 5 | Max. tune power | in W | 1..99 | 15 W | 3, 5, 8, 10, 12, 15, 20 W |
 | 6 | Auto tune: SWR change | tune again when the SWR changed by more than (value − 10) / 10; from 90 on practically never | 11..99 | 13 (0.3) | 0.1, 0.2, 0.3, 0.5, 1.0, 1.5, 2.0 |
 | 7 | Auto tune | 1 = on, 0 = off | 0..1 | on | off, on |

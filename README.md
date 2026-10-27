@@ -126,6 +126,10 @@ seconds, a tune on a band used before about 2 to 3 seconds.
   new search starts. Switching off ends the interrupted search.
 - A short press during tuning stops it; the tuner keeps the best setting
   found so far (STOP).
+- Rigs with an SWR protection, which cut their power when the SWR is high,
+  work too: where the SWR is 1.5 or more, 0.1 W is enough to measure. If
+  the power stays below setting 4 where the SWR is below 1.5, the tune ends
+  with TOO LOW and keeps the best setting found so far.
 - If the transmitter is too strong for the measurement (the detector is
   above its range, from about 14 to 22 W depending on the battery), the
   tune stops after a few dozen relay steps with OVERLOAD.
@@ -152,7 +156,7 @@ the middle of a search, it goes on with the next carrier (SWR above 1.2).
 | WAITING FOR RF, POWER TOO LOW, POWER TOO HIGH | small, next to TUNE: the tune waits for a carrier between settings 4 and 5 |
 | BYPASS / TUNED | after a short press: bypass on / back to the tuned setting |
 | NO POWER | no carrier for tuning |
-| TOO LOW, TOO HIGH | no tune: the power stayed below setting 4 / above setting 5 |
+| TOO LOW, TOO HIGH | the power stayed below setting 4 / above setting 5; TOO LOW also ends a tune near the match (see [Tuning](#tuning)) |
 | NO MATCH | nothing better than the direct connection found (SWR above 1.2), the relays are off |
 | STOP | tuning stopped by a button press |
 | OVERLOAD | too much power for the measurement; a tune stops |
@@ -298,6 +302,13 @@ tries harder.
 **Tuning takes long.** A first tune usually takes 4 to 7 seconds (rarely up to
 15), a tune on a band used before about 2 to 3 seconds. Search effort 1 (setting
 12) is quicker but finds the best match less often.
+
+**My rig cuts its power when the SWR is high.** That is its SWR protection,
+and the tuner works with it: where the SWR is 1.5 or more, 0.1 W is enough
+to measure. If the rig cuts its power already below SWR 1.5, set setting 4
+lower (down to 0.1 W). A rig that switches its transmitter off completely
+leaves nothing to measure; if it can, set its protection to reduce the power
+instead.
 
 **The tuner tunes again and again.** Auto tune reacts to a changing SWR. If
 that is not wanted (e.g. with SSB on a critical antenna), switch it off
