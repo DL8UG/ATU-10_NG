@@ -570,6 +570,7 @@ void main(void) {
    swr_ref = st.last_swr ? (uint16_t)(100 + st.last_swr) : 0;
    EXT_KEY_OUT = 1;
    if(batt_lvl == B_OFF) {                     // empty: LOW BATT at once, no greeting
+      PCON0 = 0x3F;                            // no reset reason, but the flags armed
       go_off = 2;
       buttons_clear();
    }

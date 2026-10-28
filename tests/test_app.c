@@ -673,8 +673,10 @@ static void checkpoint_variant(uint32_t t) {
       CHECK_EQ(recharge_late, 0);
       CHECK_EQ(sleeps, 0);
    }
-   if(mode == M_BATT_EMPTY && t == 3000)                    // no greeting: LOW BATT and off
-      CHECK_EQ(sleeps, 1);
+   if(mode == M_BATT_EMPTY && t == 3000) {                  // no greeting: LOW BATT and off,
+      CHECK_EQ(sleeps, 1);                                   // the reset flags armed all the
+      CHECK_EQ(PCON0_reg, 0x3F);                             // same (a later brown-out shows)
+   }
    if(mode == M_BATT_EMPTY && t == 50000) {                 // charged: woken as usual, the
       CHECK(OLED_PWR && swr_shows("-.--"));                  // main screen, no tune
       CHECK_EQ(centred_checks, 2);
