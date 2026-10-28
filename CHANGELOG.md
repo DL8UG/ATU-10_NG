@@ -26,12 +26,23 @@ tag `vX.Y.Z` in this repository; the hex file is on its release page.
   before. TUNE and the auto tune start with such a carrier too.
 - changed: if the power stays below setting 4 at a setting with an SWR
   below 1.5, the tune ends with TOO LOW and keeps the best setting found so
-  far. Before, a carrier below setting 4 did not start a tune at all. Press
-  TUNE again within a minute with more power, and it goes on with that
-  search instead of starting again.
+  far, with a keyed carrier (CW, SSB) too. Before, a carrier below
+  setting 4 did not start a tune at all. Press TUNE again within a minute
+  with more power, and it goes on with that search instead of starting
+  again; the settings near the match are measured again with the higher
+  power.
 - fixed: with CW, a reading taken just as the key went down or up could
   show a wrong SWR, which stayed until the next reading. Only steady
   readings change the SWR shown now.
+- fixed: a tune whose power rose above setting 5 on the way ended with
+  NO POWER. It ends with TOO HIGH now, and TUNE within a minute goes on
+  with that search.
+- fixed: while the detector was above its range (OVERLOAD), the display
+  showed a wrong SWR in between. Such readings no longer change the SWR
+  shown.
+- fixed: after a start with an empty battery, a later brown-out was not
+  recognized until the next power-up, and the relays were pulsed on the
+  weak battery.
 
 ## 1.1.0
 

@@ -129,8 +129,13 @@ seconds, a tune on a band used before about 2 to 3 seconds.
 - Rigs with an SWR protection, which cut their power when the SWR is high,
   work too: where the SWR is 1.5 or more, 0.1 W is enough to measure. If
   the power stays below setting 4 where the SWR is below 1.5, the tune ends
-  with TOO LOW and keeps the best setting found so far. Raise the power and
-  press TUNE again within a minute: the tune goes on from there.
+  with TOO LOW and keeps the best setting found so far, with a keyed
+  carrier (CW, SSB) too. Raise the power and press TUNE again within a
+  minute: the tune goes on from there and measures the settings near the
+  match again with the higher power. If the power rises above setting 5
+  on the way (a rig that gives its full power only near the match), the
+  tune ends with TOO HIGH; lower the power and press TUNE again within a
+  minute.
 - If the transmitter is too strong for the measurement (the detector is
   above its range, from about 14 to 22 W depending on the battery), the
   tune stops after a few dozen relay steps with OVERLOAD.
@@ -157,7 +162,7 @@ the middle of a search, it goes on with the next carrier (SWR above 1.2).
 | WAITING FOR RF, POWER TOO LOW, POWER TOO HIGH | small, next to TUNE: the tune waits for a carrier between settings 4 and 5 |
 | BYPASS / TUNED | after a short press: bypass on / back to the tuned setting |
 | NO POWER | no carrier for tuning |
-| TOO LOW, TOO HIGH | the power stayed below setting 4 / above setting 5; TOO LOW also ends a tune near the match (see [Tuning](#tuning)) |
+| TOO LOW, TOO HIGH | the power stayed below setting 4 / above setting 5; TOO LOW also ends a tune near the match, TOO HIGH a tune where the power rises above setting 5 on the way (see [Tuning](#tuning)) |
 | NO MATCH | nothing better than the direct connection found (SWR above 1.2), the relays are off |
 | STOP | tuning stopped by a button press |
 | OVERLOAD | too much power for the measurement; a tune stops |
