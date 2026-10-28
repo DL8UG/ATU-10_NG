@@ -149,12 +149,15 @@ static uint16_t key_of(uint8_t l, uint8_t c, uint8_t sw) {
    return (uint16_t)(0x8000 | (uint16_t)sw << 14 | (uint16_t)l << 7 | c);
 }
 
-// slot holding key, or the empty slot where it belongs; one slot always
-// stays empty, so the search ends
+// slot holding key, else the first dropped slot on the way or the empty
+// slot where it belongs; one slot always stays empty, so the search ends
 static uint8_t slot_of(uint16_t key) {
-   uint8_t s = (uint8_t)(key * 37u ^ key >> 7);
-   while(cache_key[s] != key && cache_key[s] != 0) s++;   // wraps at 256
-   return s;
+   uint8_t s = (uint8_t)(key * 37u ^ key >> 7), d = 0, dropped = 0;
+   while(cache_key[s] != key && cache_key[s] != 0) {   // wraps at 256
+      if(cache_key[s] == 1 && !dropped) { d = s; dropped = 1; }
+      s++;
+   }
+   return cache_key[s] == 0 && dropped ? d : s;
 }
 
 // g2 of a setting. Switches the relays and takes one valid measurement:
@@ -205,11 +208,11 @@ static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
    if(n == MEAS_N_VERIFY) return M_OK;
    steps++;
    COUNT();
-   if(cache_used < CACHE_SIZE - 1) {
+   if(cache_key[s] == 1 || cache_used < CACHE_SIZE - 1) {   // a dropped slot is in use already
+      if(cache_key[s] == 0) cache_used++;
       cache_key[s] = key;
       cache_g[s] = m.g2 >= G2_ONE ? 0xFFFF : (uint16_t)(m.g2 >> 8);
       cache_sp[s] = m.spread;
-      cache_used++;
    }
    if(v->g < best_g) {
       best_g = v->g;

@@ -13,6 +13,7 @@ volatile uint8_t Cells[16] = {
 static relays_t now;                 // relays as set
 static int bypass_verified, probes, model, grid_end_seen;
 static int cut = -1, verify_cut, off;   // carrier gone from probe 'cut' on / at the final comparison
+static int weak_near;                // 0.5 W below SWR 1.5 (a rig set too low, Cell 4 = 1.0 W)
 void hal_relay_set(uint8_t l, uint8_t c, uint8_t sw) {
    now.l = l; now.c = c; now.sw = sw; probes++;
    if(l == 64 && c == 64 && sw == 1) grid_end_seen = 1;   // last point of grid 1
@@ -32,6 +33,9 @@ static double g2_of(void) {
    case 4:   // as the default, but SWR 1.03 at the best match
       d2 = (now.l - 40.0) * (now.l - 40.0) + (now.c - 40.0) * (now.c - 40.0) + (now.sw ? 0 : 900);
       return 0.00024 + 0.99 * d2 / (d2 + 50);
+   case 5:   // as the default, a broad valley
+      d2 = (now.l - 40.0) * (now.l - 40.0) + (now.c - 40.0) * (now.c - 40.0) + (now.sw ? 0 : 9000);
+      return 0.01 + 0.99 * d2 / (d2 + 500);
    default:  // best match at L 40, C 40, side 1
       d2 = (now.l - 40.0) * (now.l - 40.0) + (now.c - 40.0) * (now.c - 40.0) + (now.sw ? 0 : 900);
       return 0.01 + 0.99 * d2 / (d2 + 50);
@@ -41,7 +45,7 @@ void hal_sample(meas_t *m, uint8_t n) {
    double g = g2_of();
    memset(m, 0, sizeof *m);
    if((cut >= 0 && probes >= cut) || (verify_cut && n == MEAS_N_VERIFY)) off = 1;
-   m->pf = off ? 0 : 5000000;
+   m->pf = off ? 0 : weak_near && g < 0.04 ? 500000 : 5000000;
    m->g2 = (uint32_t)(G2_ONE * (g < 1 ? g : 1));
    m->pr = (uint32_t)((double)m->pf * m->g2 / G2_ONE);
    m->stable = 1;
@@ -249,6 +253,36 @@ int main(void) {
       off = 0;
       CHECK_EQ(r, TUNE_NO_CARRIER);
       CHECK(steps < s1);                   // counted from 0 again
+   }
+
+   // TUNE after TOO LOW measures the settings near SWR 1.5 again: they
+   // take the slots of their dropped entries, the cache does not fill up
+   // with a chain of such tunes
+   cfg[CFG_MIN_PWR] = 10;
+   tune_mem_n = 0;                         // no quick retune to a remembered match
+   model = 5;
+   from = (relays_t){0, 0, 0};
+   weak_near = 1;
+   r = tune_run(&from, 0);
+   CHECK_EQ(r, TUNE_TOO_LOW);
+   CHECK_EQ(tune_resumable, RESUME_TUNE);
+   {
+      uint16_t used = cache_used, i, dropped = 0, left = 0, valid = 0;
+      for(i = 0; i < CACHE_SIZE; i++) dropped += (cache_key[i] & 0x8000) && cache_g[i] < (FOLD_RECHECK_G2 >> 8);
+      weak_near = 0;
+      from = now;
+      tune_resume = RESUME_TUNE;
+      r = tune_run(&from, 0);
+      for(i = 0; i < CACHE_SIZE; i++) {
+         left += cache_key[i] == 1;
+         valid += (cache_key[i] & 0x8000) != 0;
+      }
+      printf("after TOO LOW: %u entries, %u dropped; then %u entries, %u still dropped\n",
+             used, dropped, cache_used, left);
+      CHECK_EQ(r, TUNE_OK);
+      CHECK(now.l == 40 && now.c == 40 && now.sw == 1);
+      CHECK(dropped > 0 && left < dropped);
+      CHECK_EQ(cache_used, valid + left);
    }
    cfg[CFG_TARGET] = 5;
    return check_done("test_tune");
