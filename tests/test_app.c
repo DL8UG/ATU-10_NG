@@ -39,7 +39,7 @@ static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
 enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
        M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT, M_BATT_OFF, M_HINT_BLIP, M_HINT_END, M_HINT_CW, M_BATT_HOVER,
-       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL, M_BATT_AUTO, M_BATT_EMPTY, M_RELAYS, M_FOLD, M_EDGE, M_LOW_RESUME, M_LOW_CW, M_HIGH_FOLD };
+       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL, M_BATT_AUTO, M_BATT_EMPTY, M_RELAYS, M_FOLD, M_EDGE, M_LOW_RESUME, M_LOW_CW, M_HIGH_FOLD, M_EDGE_TUNE };
 #define M_RESUME(m) ((m) >= M_RESUME_OFF && (m) <= M_RESUME_EMPTY)
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
@@ -51,7 +51,8 @@ static double opt_l = 20, opt_c = 30;   // best match of the load (capacitor at 
 static uint8_t seen1[2][128][128];   // M_RESUME_OFF: settings switched by the 1st / 2nd tune
 static int n_first, n_again;
 static uint8_t band1[2][128][128];   // M_LOW_RESUME: measured at 0.97 W between SWR 1.5 and 2.0,
-static int n_band, n_band_again;     // then again by the 2nd tune
+static int n_band, n_band_again;
+static int edge_done;                // M_EDGE_TUNE: the first reading of TUNE was on a key edge     // then again by the 2nd tune
 static int batt_hidden, recharge_seen, recharge_late, ovl_seen, low_seen, nopower_seen, edge_seen, swr_seen, high_seen;
 static uint8_t switched[2][128][128];   // M_RELAYS: settings switched by the tune running
 static int live_updates, relays_checks, drawn_prev = -1;
@@ -307,6 +308,8 @@ void meas_take(meas_t *m, uint8_t n) {
       m->pf = wall >= 11000 && wall < 11030 ? 5000000 : 0;
    if(mode == M_HINT_END)            // 20 W (above Cell 5), later 0.5 W (below Cell 4)
       m->pf = wall >= 6000 && wall < 20000 ? 20000000 : wall >= 25000 ? 500000 : 0;
+   if(mode == M_EDGE_TUNE)           // 0.5 W from 5 s on
+      m->pf = wall >= 5000 ? 500000 : 0;
    if(mode == M_HINT_CW)             // CW at 0.5 W: 60 ms key down, 60 ms up
       m->pf = wall >= 7000 && (wall - 7000) % 120 < 60 ? 500000 : 0;
    g = d2 / (d2 + (mode == M_LOW_RESUME ? 600 : 60));   // (LOW_RESUME: a broad valley)
@@ -323,6 +326,15 @@ void meas_take(meas_t *m, uint8_t n) {
    if(mode == M_EDGE && rf_on && ((wall - 10000) % 120 < 3 || (wall - 10000) % 120 >= 57)) {
       m->g2 = G2_ONE / 4;                                  // on a key edge: the halves do not
       m->pr = m->pf / 4;                                   // agree, SWR 3.00 instead of 1.00
+      m->stable = 0;
+      m->spread = 255;
+      fake_ms(n > 8 ? 4 : 1);
+      return;
+   }
+   if(mode == M_EDGE_TUNE && !LATDbits.LATD2 && !edge_done) {   // TUNE: its first reading is
+      edge_done = 1;                                       // on a key edge, SWR 3.00 instead
+      m->g2 = G2_ONE / 4;                                  // of 1.00
+      m->pr = m->pf / 4;
       m->stable = 0;
       m->spread = 255;
       fake_ms(n > 8 ? 4 : 1);
@@ -571,6 +583,8 @@ static void checkpoint_variant(uint32_t t) {
       CHECK(!swr_shows("-.--"));                             // but the SWR is shown
    if(mode == M_HINT && t == 8500)                          // TUNE pressed, no carrier
       CHECK(small_shows(17, 60, "WAITING") && small_shows(25, 60, "FOR RF"));
+   if(mode == M_EDGE_TUNE && t == 9500)                     // 0.5 W, Cell 4 = 1.0 W: TUNE waits
+      CHECK(small_shows(17, 60, "POWER") && small_shows(25, 60, "TOO LOW"));   // and says why
    if(mode == M_HINT && t == 9500) {                        // 0.5 W, Cell 4 = 1.0 W
       CHECK(small_shows(17, 60, "POWER") && small_shows(25, 60, "TOO LOW"));
       CHECK(text_shows(1, LINE1, 60, "0.5"));                // the power meanwhile
@@ -765,6 +779,11 @@ static void checkpoint_variant(uint32_t t) {
          CHECK(low_seen > 0 && nopower_seen == 0);           // time: near the match the carrier
          CHECK_EQ(key_falls, 1);                             // was too weak, not gone (TOO LOW,
          break;                                              // no auto tune going on with it)
+      case M_EDGE_TUNE:                                      // nothing tuned, nothing changed
+         CHECK(edge_done);
+         CHECK_EQ(key_falls, 1);
+         CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);
+         break;
       case M_HIGH_FOLD:                                      // 20 W near the match, above
          printf("20 W near the match: %d tunes, L %d C %d sw %d\n", key_falls, rel.l, rel.c, rel.sw);
          CHECK(high_seen > 0 && nopower_seen == 0);          // Cell 5: the tune says TOO HIGH,
@@ -857,7 +876,7 @@ static int run_variant(void) {
       press[0].from = 12500; press[0].to = 12600;
       n_press = 1;
    }
-   if(mode == M_HINT || mode == M_HINT_BLIP || mode == M_HINT_CW) {   // long press: TUNE without a carrier
+   if(mode == M_HINT || mode == M_HINT_BLIP || mode == M_HINT_CW || mode == M_EDGE_TUNE) {   // long press: TUNE
       press[0].from = 6000; press[0].to = 6600;
       n_press = 1;
    }
@@ -910,7 +929,7 @@ static int run_variant(void) {
                      : mode == M_BATT_AUTO ? "test_app batt-auto" : mode == M_BATT_EMPTY ? "test_app batt-empty"
                      : mode == M_FOLD ? "test_app fold"
                      : mode == M_EDGE ? "test_app edge" : mode == M_LOW_RESUME ? "test_app low-resume"
-                     : mode == M_LOW_CW ? "test_app low-cw" : mode == M_HIGH_FOLD ? "test_app high-fold"
+                     : mode == M_LOW_CW ? "test_app low-cw" : mode == M_HIGH_FOLD ? "test_app high-fold" : mode == M_EDGE_TUNE ? "test_app edge-tune"
                      : "test_app relays");
 }
 

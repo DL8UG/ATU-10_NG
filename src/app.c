@@ -234,7 +234,9 @@ static void hint(const char *a, const char *b) {
 // meanwhile. A carrier that is there at once starts the tune at once
 // (auto tune has checked it already); one that comes while waiting must
 // last CARRIER_ON_MS, else a blip or a CW element would start a tune that
-// waits again in tune_run, without a hint. TUNE_OK: there is one, else
+// waits again in tune_run, without a hint. So must one whose first
+// reading is unsteady: on a key edge the SWR reads too high and may let
+// a carrier below Cell 4 pass (from SWR 1.6 on 0.1 W is enough). TUNE_OK: there is one, else
 // TUNE_NO_CARRIER (*why: the reason shown last) or TUNE_ABORTED (button,
 // as during the tune).
 static uint8_t wait_carrier(uint8_t *why) {
@@ -244,7 +246,7 @@ static uint8_t wait_carrier(uint8_t *why) {
    for(;;) {
       meas_take(&m, 4);
       p = tune_power(&m);
-      if(p != P_OK) {
+      if(p != P_OK || (!waited && !m.stable)) {
          waited = 1;
          t_bad = tick_ms();
       }
