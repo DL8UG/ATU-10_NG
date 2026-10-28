@@ -520,10 +520,12 @@ static void watch(void) {
    pw = tune_power(&m);
    // only a measurement whose halves agree: one on a key edge (carrier
    // coming or going between F1 and F2) gives a wrong SWR, which would
-   // stay on the display until the next one
+   // stay on the display until the next one. The display skips one with
+   // a clipped detector too (wrong Pr / Pf); swr_last takes it, auto tune
+   // compares the same readings with it (no new tune after OVERLOAD)
    if(m.stable) {
       if(pw == P_OK || pw == P_HIGH) swr_last = swr;
-      if(pw != P_NONE) swr_disp = swr;
+      if(pw != P_NONE && !m.overflow) swr_disp = swr;
    }
 
    // auto tune: power for tuning, SWR above 1.20 and changed by more than

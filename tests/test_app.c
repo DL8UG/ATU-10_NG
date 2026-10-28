@@ -39,7 +39,7 @@ static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
 enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
        M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT, M_BATT_OFF, M_HINT_BLIP, M_HINT_END, M_HINT_CW, M_BATT_HOVER,
-       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL, M_BATT_AUTO, M_BATT_EMPTY, M_RELAYS, M_FOLD, M_EDGE, M_LOW_RESUME, M_LOW_CW, M_HIGH_FOLD, M_EDGE_TUNE };
+       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL, M_BATT_AUTO, M_BATT_EMPTY, M_RELAYS, M_FOLD, M_EDGE, M_LOW_RESUME, M_LOW_CW, M_HIGH_FOLD, M_EDGE_TUNE, M_OVL_SWR };
 #define M_RESUME(m) ((m) >= M_RESUME_OFF && (m) <= M_RESUME_EMPTY)
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
@@ -52,7 +52,8 @@ static uint8_t seen1[2][128][128];   // M_RESUME_OFF: settings switched by the 1
 static int n_first, n_again;
 static uint8_t band1[2][128][128];   // M_LOW_RESUME: measured at 0.97 W between SWR 1.5 and 2.0,
 static int n_band, n_band_again;
-static int edge_done;                // M_EDGE_TUNE: the first reading of TUNE was on a key edge     // then again by the 2nd tune
+static int edge_done;
+static int ovl_swr_seen;             // M_OVL_SWR: the SWR of a clipped reading shown                // M_EDGE_TUNE: the first reading of TUNE was on a key edge     // then again by the 2nd tune
 static int batt_hidden, recharge_seen, recharge_late, ovl_seen, low_seen, nopower_seen, edge_seen, swr_seen, high_seen;
 static uint8_t switched[2][128][128];   // M_RELAYS: settings switched by the tune running
 static int live_updates, relays_checks, drawn_prev = -1;
@@ -215,6 +216,7 @@ void fake_ms(uint32_t ms) {
       else if(mode == M_LOW_CW)                                         // 1 s, then keyed: 40 ms
          rf_on = wall >= 10000 && (wall < 11000 || (wall - 11000) % 120 < 40);   // down, 80 ms up
       else if(mode == M_BATT_OVL) rf_on = wall >= 26000 && wall < 26300;   // a short overload
+      else if(mode == M_OVL_SWR) rf_on = wall >= 10000 && wall < 10300;
       else rf_on = mode ? wall >= 10000 && wall < 5 * MIN : in_spans(carrier, sizeof carrier / sizeof *carrier);
       if(wall == 100 * MIN && !mode) vbat_mv = 2900;                    // battery empty
       if(mode == M_RESUME_OFF) vbat_mv = wall >= 15000 && wall < 25000 ? 2900 : 4000;   // LOW BATT
@@ -344,6 +346,11 @@ void meas_take(meas_t *m, uint8_t n) {
       m->pf = 19000000;                                   // clips at every setting
       m->overflow = 1;
       m->g2 = (uint32_t)(G2_ONE * g);
+   }
+   if(mode == M_OVL_SWR && rf_on) {   // 30 W, only the forward detector clips: Pr / Pf and
+      m->pf = 19000000;               // the SWR read too high (3.00 at the match)
+      m->overflow = 1;
+      m->g2 = G2_ONE / 4;
    }
    m->pr = (uint32_t)((double)m->pf * m->g2 / G2_ONE);
    m->stable = 1;
@@ -651,6 +658,8 @@ static void checkpoint_variant(uint32_t t) {
       high_seen += text_shows(1, LINE2, 0, "TOO HIGH");
       nopower_seen += text_shows(1, LINE2, 0, "NO POWER");
    }
+   if(mode == M_OVL_SWR && t >= 10000 && t % 10 == 0)
+      ovl_swr_seen += swr_shows("3.00");
    if(mode == M_BATT_OVL && t == 27000)
       CHECK(ovl_seen > 20);
    if(mode == M_BATT_LOW && t == 40000)                     // RECHARGE 1.5 s of 9 s: the SWR
@@ -779,6 +788,10 @@ static void checkpoint_variant(uint32_t t) {
          CHECK(low_seen > 0 && nopower_seen == 0);           // time: near the match the carrier
          CHECK_EQ(key_falls, 1);                             // was too weak, not gone (TOO LOW,
          break;                                              // no auto tune going on with it)
+      case M_OVL_SWR:                                        // a clipped reading: its SWR
+         CHECK_EQ(ovl_swr_seen, 0);                          // is never shown (auto tune may
+         CHECK(rel.l == 20 && rel.c == 30 && rel.sw == 0);   // start, as with 'overload')
+         break;
       case M_EDGE_TUNE:                                      // nothing tuned, nothing changed
          CHECK(edge_done);
          CHECK_EQ(key_falls, 1);
@@ -929,7 +942,7 @@ static int run_variant(void) {
                      : mode == M_BATT_AUTO ? "test_app batt-auto" : mode == M_BATT_EMPTY ? "test_app batt-empty"
                      : mode == M_FOLD ? "test_app fold"
                      : mode == M_EDGE ? "test_app edge" : mode == M_LOW_RESUME ? "test_app low-resume"
-                     : mode == M_LOW_CW ? "test_app low-cw" : mode == M_HIGH_FOLD ? "test_app high-fold" : mode == M_EDGE_TUNE ? "test_app edge-tune"
+                     : mode == M_LOW_CW ? "test_app low-cw" : mode == M_HIGH_FOLD ? "test_app high-fold" : mode == M_EDGE_TUNE ? "test_app edge-tune" : mode == M_OVL_SWR ? "test_app ovl-swr"
                      : "test_app relays");
 }
 
