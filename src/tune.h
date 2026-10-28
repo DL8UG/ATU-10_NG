@@ -17,8 +17,7 @@ typedef struct {
 
 enum {
    TUNE_OK,                        // tuned (or already good)
-   TUNE_NO_CARRIER,                // no carrier, or one above Cell 5: relays unchanged or
-                                   // best so far
+   TUNE_NO_CARRIER,                // no carrier: relays unchanged or best so far
    TUNE_ABORTED,                   // button: relays on the best setting so far
    TUNE_NO_MATCH,                  // nothing better than bypass, which is above SWR 1.20:
                                    // relays in bypass
@@ -26,6 +25,8 @@ enum {
                                    // in a row: relays unchanged or best so far
    TUNE_TOO_LOW,                   // a carrier below Cell 4 at a setting below SWR 1.5:
                                    // relays unchanged or best so far
+   TUNE_TOO_HIGH,                  // a carrier above Cell 5 (e.g. a rig with SWR protection
+                                   // near the match): relays unchanged or best so far
 };
 
 // Memory of the last good tunes. The tuner does not know the frequency; it
@@ -48,10 +49,10 @@ extern uint16_t tune_mem_dirty;           // bit i: slot i changed
 // tunes ends like one tune. A new search starts instead when the relays
 // no longer hold the best setting so far (bypass switched meanwhile) or
 // when that setting measures clearly different now (other band, other
-// antenna). After TOO LOW only TUNE should go on with it (the power
-// raised meanwhile); an auto tune would end the same way.
+// antenna). After TOO LOW / TOO HIGH only TUNE should go on with it (the
+// power changed meanwhile); an auto tune would end the same way.
 #define RESUME_ANY   1             // carrier gone: any tune may go on with the search
-#define RESUME_TUNE  2             // TOO LOW: TUNE may go on with it
+#define RESUME_TUNE  2             // TOO LOW / TOO HIGH: TUNE may go on with it
 extern uint8_t tune_resume;        // not 0: the next tune_run continues the last search
 extern uint8_t tune_resumable;     // set by tune_run: 0, or how the next tune may continue
                                    // this search (new settings were measured before the

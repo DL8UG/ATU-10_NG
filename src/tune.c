@@ -114,7 +114,7 @@ typedef struct {
    uint8_t sp;                       // noise estimate, relative, 1/256
 } val_t;
 
-enum { M_OK, M_ABORT, M_NO_CARRIER, M_BUDGET, M_OVERLOAD, M_TOO_LOW };
+enum { M_OK, M_ABORT, M_NO_CARRIER, M_BUDGET, M_OVERLOAD, M_TOO_LOW, M_TOO_HIGH };
 
 #ifdef TUNE_STATS      // simulator: relay steps per phase
 long tune_stats[6];
@@ -167,7 +167,7 @@ static uint8_t slot_of(uint16_t key) {
 // measures again with more averaging (no step).
 static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
    meas_t m;
-   uint16_t key = key_of(l, c, sw), wait = 0, weak = 0;
+   uint16_t key = key_of(l, c, sw), wait = 0, weak = 0, strong = 0;
    uint8_t s = slot_of(key), unstable = 0;
    if(n != MEAS_N_VERIFY) {
       if(cache_key[s] == key) {
@@ -192,10 +192,13 @@ static uint8_t probe(uint8_t l, uint8_t c, uint8_t sw, uint8_t n, val_t *v) {
       }
       if(!POWER_OK(&m, min_uw, FOLD_G2) || pnet_uw(&m) > max_uw) {
          if(m.pf >= FOLD_MIN_UW && m.pf < min_uw) weak++;
-         // A carrier there for a good part of the wait was too weak, else it
-         // was gone. A quarter: a keyed carrier (CW, SSB) is down only part
-         // of the time, the fading carrier of a released key only for a moment
-         if(++wait > (carrier_seen ? WAIT_LOST : WAIT_START)) return weak > wait / 4 ? M_TOO_LOW : M_NO_CARRIER;
+         else if(m.pf >= min_uw) strong++;   // above Cell 5
+         // A carrier there for a good part of the wait was too weak or too
+         // strong, else it was gone. A quarter: a keyed carrier (CW, SSB) is
+         // down only part of the time, the fading carrier of a released key
+         // only for a moment
+         if(++wait > (carrier_seen ? WAIT_LOST : WAIT_START))
+            return strong > wait / 4 ? M_TOO_HIGH : weak > wait / 4 ? M_TOO_LOW : M_NO_CARRIER;
          hal_wait_ms(10);
          continue;
       }
@@ -507,9 +510,10 @@ uint8_t tune_run(const relays_t *from, uint16_t last_swr) {
       best_g = v.g;                          // the setting the relays hold, measured now
       // After TOO LOW the settings near the match were measured with too
       // little power, where only readings from SWR 1.5 on count (FOLD_G2):
-      // a setting a bit better than that got a value too high. With the
-      // power raised now, those up to FOLD_RECHECK_G2 are measured again
-      // (dropped, not emptied: the slots after them stay reachable).
+      // a setting a bit better than that got a value too high (after TOO
+      // HIGH too: a rig with SWR protection had little power there). With
+      // the power changed now, those up to FOLD_RECHECK_G2 are measured
+      // again (dropped, not emptied: the slots after them stay reachable).
       if(cont == RESUME_TUNE) {
          i = 0;
          do if((cache_key[i] & 0x8000) && cache_g[i] < (uint16_t)(FOLD_RECHECK_G2 >> 8))
@@ -652,14 +656,14 @@ results:
 
 stop:   // aborted or carrier gone: best setting so far
    // Carrier gone while the search still measured new settings (e.g. a CW
-   // key pressed again and again with longer pauses), or too weak near the
-   // match (TOO LOW, the power is raised then): the next tune may go on
-   // with it. A new search (not a continued one) starts a chain only if
-   // it found something better.
-   if((r == M_NO_CARRIER || r == M_TOO_LOW) && steps > steps0
+   // key pressed again and again with longer pauses), or too weak / too
+   // strong on the way (TOO LOW / TOO HIGH, the power is changed then):
+   // the next tune may go on with it. A new search (not a continued one)
+   // starts a chain only if it found something better.
+   if((r == M_NO_CARRIER || r == M_TOO_LOW || r == M_TOO_HIGH) && steps > steps0
       && (cont || key_of(best.l, best.c, best.sw) != key))
-      tune_resumable = r == M_TOO_LOW ? RESUME_TUNE : RESUME_ANY;
+      tune_resumable = r == M_NO_CARRIER ? RESUME_ANY : RESUME_TUNE;
    finish(&best, best_g);
    return r == M_ABORT ? TUNE_ABORTED : r == M_OVERLOAD ? TUNE_OVERLOAD
-          : r == M_TOO_LOW ? TUNE_TOO_LOW : TUNE_NO_CARRIER;
+          : r == M_TOO_LOW ? TUNE_TOO_LOW : r == M_TOO_HIGH ? TUNE_TOO_HIGH : TUNE_NO_CARRIER;
 }

@@ -39,7 +39,7 @@ static int rf_on, sleeps, relay_calls, key_low_in_tune, in_tune;
 static int mode;                     // 0: the main run, else a start-up / Cells variant
 enum { M_MAIN, M_BOR, M_WDT, M_CELLS_MIN, M_CELLS_MAX, M_BLIP, M_UNMATCH, M_NOMATCH, M_EXTDARK, M_NOPOWER, M_LOWPWR, M_EXTTUNE, M_STOPAUTO, M_OVERLOAD, M_PULSE, M_PULSE_SLOW,
        M_RESUME_OFF, M_RESUME_QSY, M_RESUME_EMPTY, M_BATT_DIP, M_HINT, M_BATT_OFF, M_HINT_BLIP, M_HINT_END, M_HINT_CW, M_BATT_HOVER,
-       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL, M_BATT_AUTO, M_BATT_EMPTY, M_RELAYS, M_FOLD, M_EDGE, M_LOW_RESUME, M_LOW_CW };
+       M_BATT_LOW, M_BATT_MIX, M_BATT_OVL, M_BATT_AUTO, M_BATT_EMPTY, M_RELAYS, M_FOLD, M_EDGE, M_LOW_RESUME, M_LOW_CW, M_HIGH_FOLD };
 #define M_RESUME(m) ((m) >= M_RESUME_OFF && (m) <= M_RESUME_EMPTY)
 static uint32_t last_clr, wdt_worst;
 static int display_lit;              // the display shows something (switched on)
@@ -52,7 +52,7 @@ static uint8_t seen1[2][128][128];   // M_RESUME_OFF: settings switched by the 1
 static int n_first, n_again;
 static uint8_t band1[2][128][128];   // M_LOW_RESUME: measured at 0.97 W between SWR 1.5 and 2.0,
 static int n_band, n_band_again;     // then again by the 2nd tune
-static int batt_hidden, recharge_seen, recharge_late, ovl_seen, low_seen, nopower_seen, edge_seen, swr_seen;
+static int batt_hidden, recharge_seen, recharge_late, ovl_seen, low_seen, nopower_seen, edge_seen, swr_seen, high_seen;
 static uint8_t switched[2][128][128];   // M_RELAYS: settings switched by the tune running
 static int live_updates, relays_checks, drawn_prev = -1;
 
@@ -313,6 +313,8 @@ void meas_take(meas_t *m, uint8_t n) {
    if(mode == M_STOPAUTO) g = 0.25;                       // SWR 3.00 at every setting
    m->g2 = (uint32_t)(G2_ONE * (g2_floor + (1 - g2_floor) * g));
    if(mode == M_FOLD && m->g2 > G2_ONE / 4) m->pf /= 10;   // SWR protection: 0.5 W above SWR 3
+   if(mode == M_HIGH_FOLD && rf_on)                        // SWR protection, a rig set to 20 W
+      m->pf = m->g2 > G2_ONE / 9 ? 2000000 : 20000000;      // (Cell 5 = 15 W): 2 W above SWR 2
    if(mode == M_LOW_RESUME && key_falls == 1 && rf_on && m->pf < 1000000 && !LATDbits.LATD2
       && m->g2 >= G2_ONE / 25 && m->g2 < G2_ONE / 9 && !band1[rel.sw & 1][rel.l & 127][rel.c & 127]) {
       band1[rel.sw & 1][rel.l & 127][rel.c & 127] = 1;
@@ -630,8 +632,9 @@ static void checkpoint_variant(uint32_t t) {
       edge_seen += swr_shows("3.00");                        // shows, the steady one does
       swr_seen += swr_shows("1.00");
    }
-   if((mode == M_LOWPWR || mode == M_FOLD || mode == M_LOW_CW) && t % 10 == 0) {
+   if((mode == M_LOWPWR || mode == M_FOLD || mode == M_LOW_CW || mode == M_HIGH_FOLD) && t % 10 == 0) {
       low_seen += text_shows(1, LINE2, 0, "TOO LOW");
+      high_seen += text_shows(1, LINE2, 0, "TOO HIGH");
       nopower_seen += text_shows(1, LINE2, 0, "NO POWER");
    }
    if(mode == M_BATT_OVL && t == 27000)
@@ -762,6 +765,11 @@ static void checkpoint_variant(uint32_t t) {
          CHECK(low_seen > 0 && nopower_seen == 0);           // time: near the match the carrier
          CHECK_EQ(key_falls, 1);                             // was too weak, not gone (TOO LOW,
          break;                                              // no auto tune going on with it)
+      case M_HIGH_FOLD:                                      // 20 W near the match, above
+         printf("20 W near the match: %d tunes, L %d C %d sw %d\n", key_falls, rel.l, rel.c, rel.sw);
+         CHECK(high_seen > 0 && nopower_seen == 0);          // Cell 5: the tune says TOO HIGH,
+         CHECK_EQ(key_falls, 1);                             // not NO POWER, and auto tune does
+         break;                                              // not go on with it
       case M_LOW_RESUME:                                     // TUNE after TOO LOW with more
          printf("after TOO LOW: %d of %d settings measured again, %d of %d between SWR 1.5 and 2.0\n",
                 n_again, n_first, n_band_again, n_band);
@@ -798,7 +806,7 @@ static int run_variant(void) {
    st.last_swr = 5;
    if(mode == M_UNMATCH) g2_floor = 1.0 / 9;                 // best possible SWR 2.0
    if(mode == M_NOMATCH) g2_floor = 0.99995;                 // SWR 9.99 everywhere
-   if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH || mode == M_LOWPWR || mode == M_EXTTUNE || mode == M_FOLD || mode == M_LOW_RESUME || mode == M_LOW_CW
+   if(mode == M_BLIP || mode == M_UNMATCH || mode == M_NOMATCH || mode == M_LOWPWR || mode == M_EXTTUNE || mode == M_FOLD || mode == M_LOW_RESUME || mode == M_LOW_CW || mode == M_HIGH_FOLD
       || mode == M_STOPAUTO || mode == M_OVERLOAD || mode == M_PULSE || mode == M_PULSE_SLOW || M_RESUME(mode) || mode == M_BATT_LOW) {   // start in bypass, so that
       st.r.l = st.r.c = 0;                                   // the carrier causes an auto tune
       st.last_swr = 0;
@@ -902,7 +910,7 @@ static int run_variant(void) {
                      : mode == M_BATT_AUTO ? "test_app batt-auto" : mode == M_BATT_EMPTY ? "test_app batt-empty"
                      : mode == M_FOLD ? "test_app fold"
                      : mode == M_EDGE ? "test_app edge" : mode == M_LOW_RESUME ? "test_app low-resume"
-                     : mode == M_LOW_CW ? "test_app low-cw"
+                     : mode == M_LOW_CW ? "test_app low-cw" : mode == M_HIGH_FOLD ? "test_app high-fold"
                      : "test_app relays");
 }
 

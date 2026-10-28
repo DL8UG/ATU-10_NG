@@ -291,9 +291,10 @@ static void do_tune(uint8_t by_auto) {
       r = tune_run(&rel, !st.bypass && st.last_swr ? (uint16_t)(100 + st.last_swr) : 0);
       // Carrier gone while the search still measured new settings: the
       // next tune within RESUME_MS goes on with this search, and auto tune
-      // starts it with the next carrier (SWR above 1.20). After TOO LOW
-      // only TUNE goes on with it (the power raised meanwhile); auto tune
-      // would end the same way. The step budget counts on, so the chain ends.
+      // starts it with the next carrier (SWR above 1.20). After TOO LOW /
+      // TOO HIGH only TUNE goes on with it (the power changed meanwhile);
+      // auto tune would end the same way. The step budget counts on, so
+      // the chain ends.
       resume = tune_resumable;
    }
    else resume = 0;                       // nothing measured: as a tune without a carrier
@@ -325,8 +326,8 @@ static void do_tune(uint8_t by_auto) {
    shown_swr = 0xFFFF;
    show_swr(swr_disp);
    if(r == TUNE_TOO_LOW || (r == TUNE_NO_CARRIER && why == P_LOW)) message("TOO LOW", 2000);
-   else if(r == TUNE_NO_CARRIER)               // as the hint said while waiting
-      message(why == P_HIGH ? "TOO HIGH" : "NO POWER", 2000);
+   else if(r == TUNE_TOO_HIGH || (r == TUNE_NO_CARRIER && why == P_HIGH)) message("TOO HIGH", 2000);
+   else if(r == TUNE_NO_CARRIER) message("NO POWER", 2000);
    else if(r == TUNE_NO_MATCH) message("NO MATCH", 2000);
    else if(r == TUNE_ABORTED) message("STOP", 1000);
    else if(r == TUNE_OVERLOAD) message("OVERLOAD", 2000);
